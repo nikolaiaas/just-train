@@ -1,6 +1,6 @@
 {
   "version": 3,
-  "updatedAt": "2026-08-20T20:35:27.296Z",
+  "updatedAt": "2026-08-20T20:56:33.741Z",
   "items": [
     {
       "id": "auth-environment-slice",
@@ -47,24 +47,13 @@
       "updatedAt": "2026-08-20T19:48:09.561Z"
     },
     {
-      "id": "91ad33af-c452-4780-bf37-5020ac9ad4d4",
-      "title": "Forbind administrationens login",
-      "details": "Byg email-, kode- og magic-link-flow og beskyt administrationen med en serverkontrolleret is_admin-rolle.",
-      "implementationNotes": "",
-      "evidence": [],
-      "status": "todo",
-      "priority": 0,
-      "createdAt": "2026-08-20T19:52:36.384Z",
-      "updatedAt": "2026-08-20T19:56:04.042Z"
-    },
-    {
       "id": "25d3bfc2-3592-4e67-ab7c-9de6e02ee7bc",
       "title": "Konfigurér mailafsender til Hosted Development",
       "details": "Vælg og tilslut en brugerdefineret SMTP-udbyder i Supabase, indsæt den danske kode- og magic-link-template, slå link-tracking fra, og test kun med en syntetisk eller voksen adresse.",
       "implementationNotes": "",
       "evidence": [],
       "status": "todo",
-      "priority": 1,
+      "priority": 0,
       "createdAt": "2026-08-20T20:34:52.396Z",
       "updatedAt": "2026-08-20T20:35:20.548Z"
     },
@@ -75,7 +64,7 @@
       "implementationNotes": "",
       "evidence": [],
       "status": "todo",
-      "priority": 2,
+      "priority": 1,
       "createdAt": "2026-08-20T19:52:36.390Z",
       "updatedAt": "2026-08-20T19:56:04.048Z"
     },
@@ -86,7 +75,7 @@
       "implementationNotes": "",
       "evidence": [],
       "status": "todo",
-      "priority": 3,
+      "priority": 2,
       "createdAt": "2026-08-20T19:56:04.018Z",
       "updatedAt": "2026-08-20T19:56:04.054Z"
     },
@@ -97,7 +86,7 @@
       "implementationNotes": "",
       "evidence": [],
       "status": "todo",
-      "priority": 4,
+      "priority": 3,
       "createdAt": "2026-08-20T19:52:36.397Z",
       "updatedAt": "2026-08-20T19:56:04.060Z"
     },
@@ -108,7 +97,7 @@
       "implementationNotes": "",
       "evidence": [],
       "status": "todo",
-      "priority": 5,
+      "priority": 4,
       "createdAt": "2026-08-20T19:56:04.024Z",
       "updatedAt": "2026-08-20T19:56:04.066Z"
     },
@@ -119,7 +108,7 @@
       "implementationNotes": "",
       "evidence": [],
       "status": "todo",
-      "priority": 6,
+      "priority": 5,
       "createdAt": "2026-08-20T19:52:36.403Z",
       "updatedAt": "2026-08-20T19:56:04.072Z"
     },
@@ -130,20 +119,20 @@
       "implementationNotes": "",
       "evidence": [],
       "status": "todo",
-      "priority": 7,
+      "priority": 6,
       "createdAt": "2026-08-20T19:52:36.409Z",
       "updatedAt": "2026-08-20T19:56:04.078Z"
     },
     {
-      "id": "0797327d-20ba-456f-89fb-1c8f09768572",
-      "title": "Byg fælles login- og sessionsflow",
-      "details": "Udvid den delte Supabase-klient med OTP-anmodning, kodebekræftelse, web/app-callbacks, session-gendannelse og logout uden passwords.",
+      "id": "91ad33af-c452-4780-bf37-5020ac9ad4d4",
+      "title": "Forbind administrationens login",
+      "details": "Byg email-, kode- og magic-link-flow og beskyt administrationen med en serverkontrolleret is_admin-rolle.",
       "implementationNotes": "",
       "evidence": [],
       "status": "doing",
       "priority": 0,
-      "createdAt": "2026-08-20T19:56:04.012Z",
-      "updatedAt": "2026-08-20T20:35:27.296Z"
+      "createdAt": "2026-08-20T19:52:36.384Z",
+      "updatedAt": "2026-08-20T20:56:33.741Z"
     },
     {
       "id": "dev-console",
@@ -194,6 +183,23 @@
       "priority": 2,
       "createdAt": "2026-08-20T19:52:36.377Z",
       "updatedAt": "2026-08-20T20:34:40.190Z"
+    },
+    {
+      "id": "0797327d-20ba-456f-89fb-1c8f09768572",
+      "title": "Byg fælles login- og sessionsflow",
+      "details": "Udvid den delte Supabase-klient med OTP-anmodning, kodebekræftelse, web/app-callbacks, session-gendannelse og logout uden passwords.",
+      "implementationNotes": "Den delte Supabase-klient har nu et samlet passwordfrit flow til email-anmodning, sekscifret OTP, PKCE-callbacks, session-gendannelse, auth-events og lokal logout. Klienter bruger eksplicit PKCE uden automatisk URL-forbrug, separate session-navnerum pr. app/miljø, eksplicit konto-oprettelse og valgfri CAPTCHA. Offentlige klienter afviser hemmelige nøgler, usikre backend-adresser og Auth-debugging, der kunne lække sessioner. 24 fokuserede tests samt hele repository-suiten består.",
+      "evidence": [
+        {
+          "kind": "link",
+          "label": "Automatiske login- og sessionstests",
+          "url": "https://github.com/nikolaiaas/just-train/blob/main/packages/api-client/test/auth.test.mjs"
+        }
+      ],
+      "status": "done",
+      "priority": 3,
+      "createdAt": "2026-08-20T19:56:04.012Z",
+      "updatedAt": "2026-08-20T20:56:27.049Z"
     }
   ]
 }
