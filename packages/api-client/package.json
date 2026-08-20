@@ -1,0 +1,26 @@
+{
+  "name": "@bare-traen/api-client",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "@bare-traen/domain": "workspace:*",
+    "@supabase/supabase-js": "2.112.3"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}

@@ -1,0 +1,47 @@
+# Initial architecture decisions
+
+## Repository shape
+
+| Area              | Responsibility                                                             |
+| ----------------- | -------------------------------------------------------------------------- |
+| `apps/mobile`     | Parent/child experience built with Expo and React Native                   |
+| `apps/admin`      | Content administration built with Next.js App Router                       |
+| `packages/domain` | Framework-independent types, fixtures, and business rules                  |
+| `packages/design` | Portable visual tokens shared by native and web code                       |
+| `supabase`        | Reproducible database migrations, policies, tests, and synthetic seed data |
+
+This is one pnpm workspace so domain rules can be tested once and used by both interfaces. Mobile-specific components and web-specific components remain in their own applications.
+
+## Environments and previews
+
+| Environment  | Interface                                               | Backend                                                                  | Data policy                                      |
+| ------------ | ------------------------------------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------ |
+| Local        | Next.js on localhost; Expo web/Simulator                | Supabase CLI in Docker                                                   | Synthetic seed only                              |
+| Development  | Local UI or shared preview                              | Hosted `bare-traen-development` Supabase project in Stockholm            | Synthetic test data only                         |
+| Pull request | Vercel preview; later EAS Update                        | Shared development initially; isolated Supabase branch if Pro is adopted | Disposable synthetic data                        |
+| Pilot        | Protected web preview; EAS internal build or TestFlight | Separate persistent staging project/branch                               | Consented pilot data only after the privacy gate |
+| Production   | Public releases later                                   | Separate production project                                              | Production data                                  |
+
+Supabase preview branches are useful once parallel schema work justifies the Pro plan. They provide isolated backend resources, not a frontend hosting surface. Vercel is the intended administration preview host and Expo/EAS is the mobile preview channel.
+
+## Security boundaries
+
+- Row-Level Security is default-deny. A parent may access only families where their authenticated profile has an active membership.
+- Child profiles do not log in directly in the initial slice. A parent owns the authenticated session and chooses a child context.
+- Content administration is restricted by an explicit profile role and is separated from family data.
+- Browser and mobile clients receive only a Supabase URL and publishable key. Elevated database keys remain in trusted server or worker environments.
+- OpenRouter will be called only from a server route, Edge Function, or worker. `OPENROUTER_API_KEY` must never use `EXPO_PUBLIC_*` or `NEXT_PUBLIC_*` prefixes.
+- Development and previews contain synthetic people and media. Real child media is blocked until consent, retention, deletion, processor, and threat-model work is approved.
+
+## First vertical slice
+
+The first backend-connected implementation should prove:
+
+1. An administrator publishes one topic, goal, and ordered exercise set.
+2. A parent authenticates and can see only their own family and child profiles.
+3. The child chooses the football goal and records a manual result.
+4. A timestamp-based session survives backgrounding and a result can be submitted idempotently.
+5. Progress remains after the app restarts.
+6. Automated RLS tests prove that another family cannot read or modify the records.
+
+AI generation, camera/avatar work, personalized video, speech recognition, rewards, notifications, and full offline support remain outside this slice.

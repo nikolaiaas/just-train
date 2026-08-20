@@ -1,0 +1,15 @@
+.next
+.expo
+coverage
+dist
+node_modules
+pnpm-lock.yaml
+*.html
+.editorconfig
+.gitignore
+.mise.toml
+.nvmrc
+.npmrc
+.prettierignore
+.env
+.env.*

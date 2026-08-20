@@ -1,0 +1,32 @@
+{
+  "name": "bare-traen",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.33.1",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "dev": "concurrently -n admin,mobile -c blue,green \"pnpm dev:admin\" \"pnpm dev:mobile\"",
+    "dev:admin": "pnpm --filter @bare-traen/admin dev",
+    "dev:mobile": "pnpm --filter @bare-traen/mobile start",
+    "build": "pnpm -r --if-present build",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "lint": "pnpm -r --if-present lint",
+    "test": "pnpm -r --if-present test",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "supabase:start": "supabase start",
+    "supabase:stop": "supabase stop",
+    "supabase:status": "supabase status",
+    "supabase:reset": "supabase db reset",
+    "supabase:test": "supabase test db",
+    "supabase:lint": "supabase db lint --local --level warning",
+    "supabase:types": "supabase gen types typescript --local > packages/domain/src/database.generated.ts"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "prettier": "^3.6.2",
+    "supabase": "^2.39.2"
+  }
+}
