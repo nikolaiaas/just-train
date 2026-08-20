@@ -55,8 +55,27 @@ pnpm dev:mobile
 ```
 
 - Administration opens at [http://localhost:3000](http://localhost:3000).
-- Expo prints a QR code and shortcuts for web, iOS Simulator, and Android.
-- Expo Go is enough for the current UI preview. Use the development build once native capabilities are added.
+- The hosted fixture preview is available at [just-train-admin.vercel.app](https://just-train-admin.vercel.app). Vercel protects pull-request deployments with team login, while the app also sends no-index metadata and headers.
+- Expo prints shortcuts for web, iOS Simulator, and Android.
+- Expo Go is enough for the current JavaScript-only preview. Use the EAS `development` build when the app begins to depend on custom native capabilities.
+
+### Expo Go on an iPhone over LAN
+
+Expo Go is the quickest route to a real iPhone and does not require Xcode or an Apple Developer membership:
+
+1. Install Expo Go on the iPhone and connect the Mac and phone to the same local network.
+2. Put the hosted development project's public Supabase URL and publishable key in the ignored `apps/mobile/.env.local`. Do not use the example's `127.0.0.1` URL on a physical phone: that address would point back to the phone itself.
+3. Start Metro explicitly in Expo Go/LAN mode from the repository root:
+
+   ```bash
+   pnpm --filter @bare-traen/mobile exec expo start --go --lan
+   ```
+
+4. Scan the QR code with Expo Go. Keep Metro running while using the app.
+
+The current screens still use fixtures, but the hosted `bare-traen-development` Supabase project is the intended backend for physical-device development. `.env.local` is ignored and is never uploaded to EAS.
+
+### Local Supabase
 
 Start the local backend and Supabase Studio:
 
@@ -70,18 +89,49 @@ Studio is normally available at [http://localhost:54323](http://localhost:54323)
 
 The local Supabase stack is development-only and must not be exposed to the public internet. A physical iPhone should normally use the hosted development project rather than the Mac's local database.
 
-The shared `bare-traen-development` project runs in Supabase's Stockholm region.
-Its schema is deployed exclusively from `supabase/migrations`; the credential-bearing
-local fixture seed is deliberately blocked from hosted environments. Put the hosted
-project's public URL and publishable key in each app's ignored `.env.local` file.
+The shared `bare-traen-development` project runs in Supabase's Stockholm region. Its schema is deployed exclusively from `supabase/migrations`; the credential-bearing local fixture seed is deliberately blocked from hosted environments. Put only the hosted project's public URL and publishable key in each app's ignored `.env.local` file.
 
 ## iPhone without an App Store release
 
-There are three useful stages:
+The Expo app is linked to [`@bare-traen/bare-traen`](https://expo.dev/accounts/bare-traen/projects/bare-traen). Confirm the active login and link from `apps/mobile`:
 
-1. For the owner's phone, install an Expo development build directly from the Mac with `pnpm --filter @bare-traen/mobile exec expo run:ios --device`. A free Apple Account works, but the Personal Team provisioning expires after seven days.
-2. For a small test group, use the `preview` profile in `apps/mobile/eas.json`. EAS internal distribution creates a private install link and avoids App Store review, but each iPhone UDID must be registered and a paid Apple Developer membership is required.
-3. For a broader pilot, use TestFlight. It is still private beta distribution rather than a public App Store launch, although the first external build can require beta review.
+```bash
+cd apps/mobile
+pnpm dlx eas-cli@latest project:info
+```
+
+The `development` and `preview` profiles in `apps/mobile/eas.json` both use EAS internal distribution:
+
+- `development` builds **Bare Træn Dev** with `expo-dev-client`. Install it once, then run Metro with `pnpm --filter @bare-traen/mobile exec expo start --dev-client --lan` from the repository root while developing.
+- `preview` builds **Bare Træn Preview** as a production-like, standalone app. It opens without Metro and is the better build to send to a small test group.
+
+For either EAS profile, register every iPhone before creating the build, then build from `apps/mobile`:
+
+```bash
+pnpm dlx eas-cli@latest device:create
+pnpm dlx eas-cli@latest build --platform ios --profile development
+pnpm dlx eas-cli@latest build --platform ios --profile preview
+```
+
+Only run the profile you need. EAS provides an install link when the build finishes. Stable iOS ad-hoc distribution requires a paid Apple Developer membership, and the provisioning profile must contain each test device's UDID. A newly registered device requires a new build or a re-signed build before it can install the app. Cloud EAS builds do not require Xcode on this Mac.
+
+Ignored `.env.local` files are not available to EAS cloud builders. The linked Expo project's `development` and `preview` environments already contain the hosted Supabase URL and publishable key as sensitive build variables. These are still public client values once bundled; never add a service-role key or `OPENROUTER_API_KEY` to an Expo environment that is bundled into the app.
+
+Compatible JavaScript, styling, and asset changes can be sent to an installed preview build through its configured EAS Update channel:
+
+```bash
+pnpm dlx eas-cli@latest update --channel preview --environment preview --message "Describe the preview"
+```
+
+Adding or changing native libraries, permissions, Expo SDK versions, or native configuration still requires a fresh iOS build.
+
+For a local USB-installed build instead, run this from the repository root:
+
+```bash
+pnpm --filter @bare-traen/mobile exec expo run:ios --device
+```
+
+That local path still requires the full Xcode application; Apple's command-line tools alone are insufficient. A free Apple Account can use Personal Team signing for short-lived owner-device testing, but provisioning normally expires after seven days. Use the paid membership and EAS internal distribution for a stable pilot. TestFlight remains the later option for a broader private beta.
 
 The committed `development`, `preview`, and `production` variants use different app names and bundle identifiers so they can coexist on one phone.
 

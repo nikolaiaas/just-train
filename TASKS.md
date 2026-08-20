@@ -99,9 +99,10 @@ Exit condition: local development does not depend on hand-created dashboard stat
 - [ ] Add a separate safe bootstrap for shared synthetic hosted data without known-password accounts.
 - [ ] Configure separate local, development, preview, and production environment names.
 - [x] Ensure only the Supabase URL and publishable key reach client applications; never expose a service-role or secret key.
-- [ ] Connect the Next.js administration app to Vercel preview deployments.
-- [ ] Protect preview deployments from public indexing and unauthorized access.
-- [ ] Configure preview environment variables for the hosted development backend.
+- [x] Connect the Next.js administration app to Vercel preview deployments.
+- [x] Protect preview deployments from public indexing with robots metadata and response headers.
+- [x] Require Vercel team login for pull-request previews; keep the public production URL fixture-only until application authentication exists.
+- [x] Configure Vercel and EAS preview environment variables for the hosted development backend.
 - [x] Add CI that resets the database, runs migrations, generates/checks types, and executes RLS tests before preview deployment.
 - [x] Document the optional Supabase Pro upgrade path for per-pull-request preview branches.
 - [ ] If Supabase branching is enabled, connect each Vercel preview to its matching Supabase branch and synthetic seed.
@@ -111,7 +112,7 @@ Exit condition: a pull request gets a safe administration preview without touchi
 
 ## 4. Put the app on an iPhone early
 
-- [ ] Create the Expo/EAS project and development, preview, and production build profiles. (Profiles are committed; EAS account linking remains.)
+- [x] Create the Expo/EAS project and development, preview, and production build profiles.
 - [ ] Use Expo Go for the first JavaScript-only screen work. (The web preview works; physical-phone check remains.)
 - [ ] Install Xcode and connect the owner's iPhone with Developer Mode enabled.
 - [ ] Build and install locally with `npx expo run:ios --device` using an Apple Account.
@@ -123,8 +124,8 @@ Exit condition: a pull request gets a safe administration preview without touchi
 - [ ] Point the phone build at the hosted development Supabase project.
 - [ ] Confirm live local development through Metro on the same network or a tunnel.
 - [ ] Create a production-like EAS internal-distribution preview build that runs without Metro.
-- [ ] Configure a `preview` EAS Update channel so JavaScript, styling, and asset changes usually do not require a new binary.
-- [ ] Document that native-library, permission, and native-configuration changes require a new build.
+- [x] Configure a `preview` EAS Update channel so JavaScript, styling, and asset changes usually do not require a new binary.
+- [x] Document that native-library, permission, and native-configuration changes require a new build.
 - [ ] Keep TestFlight as the later route for a larger tester group; it is beta distribution, not a public App Store launch.
 
 Exit condition: the owner can run Bare Træn on the iPhone without App Store publication. With paid distribution enabled, the same build can be installed from a private link and receive compatible preview updates.
@@ -233,7 +234,7 @@ Exit condition: a failed permission test, migration, type check, or core-flow sm
 ## Initial-phase completion checklist
 
 - [ ] A new developer can start the complete local stack from the README.
-- [ ] The administration app has a shareable preview URL.
+- [x] The administration app has a shareable preview URL.
 - [ ] A private Bare Træn build is installed on the owner's iPhone without public App Store release.
 - [ ] The functional parent-to-completed-exercise pilot works locally and on the iPhone.
 - [ ] The administration pilot can publish versioned content consumed by the mobile app.

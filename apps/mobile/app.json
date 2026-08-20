@@ -40,6 +40,19 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "50f7b492-8b24-4bae-9dda-ecfc7dcebbff"
+      }
+    },
+    "owner": "bare-traen",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/50f7b492-8b24-4bae-9dda-ecfc7dcebbff"
     }
   }
 }
