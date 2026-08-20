@@ -31,7 +31,7 @@ The administration slice is:
 
 Supabase provides the backend, not frontend preview hosting. Supabase Preview Branches can create an isolated database, Auth, Storage, Realtime, and Edge Functions environment per pull request. They currently require a Pro plan. Vercel should host administration previews, and Expo/EAS should distribute mobile previews.
 
-Running a frontend on localhost does not select its backend. Until the planned localhost sign-in selector is implemented, this Mac's ignored client environment normally targets hosted Development; local Supabase remains the explicit choice for migrations, tests, Studio, and full-local integration work.
+Running a frontend on localhost does not select its backend. The administration login has a localhost-only selector between Local Supabase and Hosted Development, with isolated sessions and no Production option. The mobile app deliberately uses the backend fixed by its ignored `.env.local`; local Supabase remains the explicit choice for migrations, tests, Studio, and full-local integration work.
 
 For the initial phase, use:
 
@@ -100,6 +100,7 @@ Exit condition: local development does not depend on hand-created dashboard stat
 
 - [x] Create a hosted non-production Supabase project in a specific EU region.
 - [x] Apply the tested migration, without the credential-bearing local seed, to the hosted development project.
+- [ ] Deploy the tested parent-onboarding migration to Hosted Development after explicit authorization; never deploy the local seed.
 - [ ] Add a separate safe bootstrap for shared synthetic hosted data without known-password accounts.
 - [ ] Configure separate local, development, preview, and production environment names.
 - [x] Ensure only the Supabase URL and publishable key reach client applications; never expose a service-role or secret key.
@@ -125,13 +126,14 @@ Exit condition: a pull request gets a safe administration preview without touchi
 - [x] Confirm that a paid Apple Developer Program membership is available for stable distribution and additional testers.
 - [ ] Confirm the Apple Developer Program account that will own long-lived signing credentials.
 - [ ] When enabling EAS distribution, register the owner's iPhone for ad hoc provisioning.
-- [ ] Build an Expo development client through EAS and install it from the unlisted link/QR code.
+- [ ] Build and install a fresh Expo `1.1.0` development client through EAS from the unlisted link/QR code.
 - [ ] Point the phone build at the hosted development Supabase project.
 - [ ] Confirm live local development through Metro on the same network or a tunnel.
+- [ ] Verify native OTP, cold and warm magic-link callbacks, session restoration, and logout in the fresh `1.1.0` build.
 - [ ] Create a production-like EAS internal-distribution preview build that runs without Metro.
 - [ ] Disable unauthenticated EAS internal-build access, or otherwise document and enforce who may receive unlisted build URLs.
 - [x] Configure a `preview` EAS Update channel so JavaScript, styling, and asset changes usually do not require a new binary.
-- [x] Document that native-library, permission, and native-configuration changes require a new build.
+- [x] Document that native-library, permission, and native-configuration changes require a new build, and that the `1.1.0` Auth slice must not be sent to an old `1.0.0` binary through EAS Update.
 - [ ] Keep TestFlight as the later route for a larger tester group; it is beta distribution, not a public App Store launch.
 
 Exit condition: the owner can run Bare Træn on the iPhone without App Store publication. With paid distribution enabled, the same build can be installed from a restricted or carefully shared unlisted link and receive compatible preview updates.
@@ -160,7 +162,7 @@ Exit condition: pilot screens can be assembled from reviewed components rather t
 - [x] Configure six-digit passwordless email locally, remove fixture passwords, and protect magic links behind an explicit scanner-safe confirmation page.
 - [x] Implement administrator email/OTP sign-in with server-side session handling and an `is_admin` route guard.
 - [ ] Add CAPTCHA or server-side throttling before exposing passwordless login publicly.
-- [ ] Implement parent email/OTP authentication.
+- [x] Implement parent email/OTP authentication, session restoration, and logout; verify the browser flow against Local Supabase.
 - [ ] Add a nullable link for future direct child authentication.
 - [x] Add administrator roles in protected metadata and server-side route guards.
 - [ ] Write RLS policies for parent, child, content administrator, and worker access.
@@ -171,8 +173,9 @@ Exit condition: access is denied by the database itself when a client attempts t
 
 ## 7. Build the functional mobile vertical slice
 
-- [ ] Implement welcome and parent sign-in.
-- [ ] Implement family child selection and child creation.
+- [x] Implement welcome and parent sign-in.
+- [x] Load the authenticated parent's profile and family, create the first family safely, and select existing active child profiles.
+- [ ] Implement consent-gated child creation under the parent's session.
 - [ ] Use a preset avatar during the pilot; keep the camera route behind a feature flag.
 - [ ] Implement topic selection, goal list, and goal detail for the seeded football content.
 - [ ] Implement goal enrolment and the child's home screen.

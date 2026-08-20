@@ -40,6 +40,7 @@ export function Screen({ children, contentStyle, footer }: ScreenProps) {
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={[styles.screen, contentStyle]}
+        keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
         {children}
@@ -79,6 +80,7 @@ type ButtonProps = {
   onPress: () => void;
   variant?: "primary" | "secondary" | "danger";
   accessibilityLabel?: string;
+  disabled?: boolean;
 };
 
 export function ActionButton({
@@ -86,16 +88,20 @@ export function ActionButton({
   onPress,
   variant = "primary",
   accessibilityLabel,
+  disabled = false,
 }: ButtonProps) {
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
+      accessibilityState={{ disabled }}
+      disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [
         styles.action,
         variant === "secondary" && styles.actionSecondary,
         variant === "danger" && styles.actionDanger,
+        disabled && styles.actionDisabled,
         pressed && styles.pressed,
       ]}
     >
@@ -202,6 +208,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   actionDanger: { backgroundColor: colors.coral },
+  actionDisabled: { opacity: 0.48 },
   actionText: {
     color: colors.onPrimary,
     fontFamily: typography.families.systemRounded,

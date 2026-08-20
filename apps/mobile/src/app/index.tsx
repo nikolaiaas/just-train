@@ -9,7 +9,18 @@ import {
   getGoalProgress,
 } from "@bare-traen/domain";
 import { useRouter } from "expo-router";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useState } from "react";
+import {
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
+
+import { useAuth } from "@/auth/auth-provider";
+import type { ParentBootstrap, ParentChild } from "@/auth/parent-data";
 
 import {
   ActionButton,
@@ -26,19 +37,306 @@ const currentExercise = getCurrentExercise(demoExercises, demoProgress);
 const football = demoTopics.find((topic) => topic.id === demoGoal.topicId)!;
 
 export default function TodayScreen() {
+  const {
+    bootstrap,
+    completeOnboarding,
+    logout,
+    logoutError,
+    refreshParent,
+    selectChild,
+    selectedChild,
+  } = useAuth();
+
+  if (bootstrap.status === "idle" || bootstrap.status === "loading") {
+    return (
+      <Screen contentStyle={styles.stateScreen}>
+        <ActivityIndicator color={colors.primaryDeep} size="large" />
+        <Title>Henter din familie…</Title>
+        <Body style={styles.centerText}>
+          Vi finder kun de profiler, din forælderkonto har adgang til.
+        </Body>
+      </Screen>
+    );
+  }
+
+  if (bootstrap.status === "error") {
+    return (
+      <Screen contentStyle={styles.stateScreen}>
+        <Text style={styles.stateEmoji}>🌧️</Text>
+        <Title style={styles.centerText}>Familien kunne ikke hentes</Title>
+        <Body style={styles.centerText}>
+          Kontrollér forbindelsen, og prøv igen. Ingen eksempeldata vises som
+          erstatning for din familie.
+        </Body>
+        <View style={styles.stateActions}>
+          <ActionButton onPress={refreshParent}>Prøv igen</ActionButton>
+          <ActionButton variant="secondary" onPress={() => void logout()}>
+            Log ud
+          </ActionButton>
+          {logoutError && <AccountError message={logoutError} />}
+        </View>
+      </Screen>
+    );
+  }
+
+  if (!bootstrap.data.family) {
+    return (
+      <ParentOnboarding
+        initialDisplayName={bootstrap.data.profile.displayName}
+        onComplete={completeOnboarding}
+        onLogout={logout}
+        logoutError={logoutError}
+      />
+    );
+  }
+
+  if (bootstrap.data.children.length === 0 || !selectedChild) {
+    return (
+      <NoChildren
+        bootstrap={bootstrap.data}
+        logoutError={logoutError}
+        onLogout={logout}
+      />
+    );
+  }
+
+  return (
+    <FixtureToday
+      bootstrap={bootstrap.data}
+      logoutError={logoutError}
+      onLogout={logout}
+      onSelectChild={selectChild}
+      selectedChild={selectedChild}
+    />
+  );
+}
+
+function ParentOnboarding({
+  initialDisplayName,
+  logoutError,
+  onComplete,
+  onLogout,
+}: {
+  initialDisplayName: string;
+  logoutError: string | null;
+  onComplete(input: { displayName: string; familyName: string }): Promise<void>;
+  onLogout(): Promise<void>;
+}) {
+  const [displayName, setDisplayName] = useState(initialDisplayName);
+  const [familyName, setFamilyName] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function submit() {
+    setBusy(true);
+    setError(null);
+
+    try {
+      await onComplete({ displayName, familyName });
+    } catch {
+      setError(
+        "Familien kunne ikke oprettes. Kontrollér felterne, og prøv igen.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Screen contentStyle={styles.onboardingScreen}>
+      <View style={styles.stateIcon}>
+        <Text style={styles.stateEmoji}>🏡</Text>
+      </View>
+      <Kicker>Første opsætning</Kicker>
+      <Title>Gør din familie klar</Title>
+      <Body>
+        Start med den voksnes navn og et navn til familien. Børneprofilen kommer
+        som et særskilt næste trin.
+      </Body>
+      <View style={styles.formCard}>
+        <View style={styles.fieldGroup}>
+          <Text style={styles.fieldLabel}>Dit navn</Text>
+          <TextInput
+            accessibilityLabel="Dit navn"
+            autoCapitalize="words"
+            autoComplete="name"
+            editable={!busy}
+            maxLength={80}
+            onChangeText={(value) => {
+              setDisplayName(value);
+              setError(null);
+            }}
+            placeholder="For eksempel Nikolaj"
+            placeholderTextColor={colors.muted}
+            style={styles.input}
+            textContentType="name"
+            value={displayName}
+          />
+        </View>
+        <View style={styles.fieldGroup}>
+          <Text style={styles.fieldLabel}>Familiens navn</Text>
+          <TextInput
+            accessibilityLabel="Familiens navn"
+            autoCapitalize="words"
+            editable={!busy}
+            maxLength={80}
+            onChangeText={(value) => {
+              setFamilyName(value);
+              setError(null);
+            }}
+            onSubmitEditing={() => void submit()}
+            placeholder="For eksempel Familien Demo"
+            placeholderTextColor={colors.muted}
+            returnKeyType="done"
+            style={styles.input}
+            value={familyName}
+          />
+        </View>
+        {error && (
+          <View
+            accessibilityLiveRegion="polite"
+            accessibilityRole="alert"
+            style={styles.errorBox}
+          >
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        )}
+        <ActionButton
+          disabled={
+            busy ||
+            displayName.trim().length === 0 ||
+            familyName.trim().length === 0
+          }
+          onPress={() => void submit()}
+        >
+          {busy ? "Gør familien klar…" : "Opret familien"}
+        </ActionButton>
+        <ActionButton
+          disabled={busy}
+          variant="secondary"
+          onPress={() => void onLogout()}
+        >
+          Log ud
+        </ActionButton>
+        {logoutError && <AccountError message={logoutError} />}
+      </View>
+    </Screen>
+  );
+}
+
+function NoChildren({
+  bootstrap,
+  logoutError,
+  onLogout,
+}: {
+  bootstrap: ParentBootstrap;
+  logoutError: string | null;
+  onLogout(): Promise<void>;
+}) {
+  return (
+    <Screen contentStyle={styles.stateScreen}>
+      <View style={styles.stateIcon}>
+        <Text style={styles.stateEmoji}>🌱</Text>
+      </View>
+      <Kicker>{bootstrap.family?.name}</Kicker>
+      <Title style={styles.centerText}>Din familie er klar</Title>
+      <Body style={styles.centerText}>
+        Der er endnu ingen aktive børneprofiler. Oprettelse af en børneprofil
+        bygges i næste trin, så vi ikke gemmer oplysninger uden den aftalte
+        samtykkeproces.
+      </Body>
+      <View style={styles.emptyNotice}>
+        <Text style={styles.emptyNoticeTitle}>Næste trin</Text>
+        <Body>Opret barn, vælg en foruddefineret avatar, og giv samtykke.</Body>
+      </View>
+      <View style={styles.stateActions}>
+        <ActionButton variant="secondary" onPress={() => void onLogout()}>
+          Log ud
+        </ActionButton>
+        {logoutError && <AccountError message={logoutError} />}
+      </View>
+    </Screen>
+  );
+}
+
+function FixtureToday({
+  bootstrap,
+  logoutError,
+  onLogout,
+  onSelectChild,
+  selectedChild,
+}: {
+  bootstrap: ParentBootstrap;
+  logoutError: string | null;
+  onLogout(): Promise<void>;
+  onSelectChild(childId: string): void;
+  selectedChild: ParentChild;
+}) {
   const router = useRouter();
 
   return (
     <Screen contentStyle={styles.screen}>
+      <View style={styles.accountRow}>
+        <View style={styles.accountCopy}>
+          <Kicker>{bootstrap.family?.name}</Kicker>
+          <Text style={styles.accountName}>
+            {bootstrap.profile.displayName}
+          </Text>
+        </View>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Log forælderen ud"
+          hitSlop={10}
+          onPress={() => void onLogout()}
+          style={({ pressed }) => [
+            styles.logoutButton,
+            pressed && styles.cardPressed,
+          ]}
+        >
+          <Text style={styles.logoutText}>Log ud</Text>
+        </Pressable>
+      </View>
+      {logoutError && <AccountError message={logoutError} />}
+
+      {bootstrap.children.length > 1 && (
+        <View style={styles.childPicker}>
+          <Kicker>Vælg barn</Kicker>
+          <View accessibilityRole="radiogroup" style={styles.childPickerRow}>
+            {bootstrap.children.map((child) => (
+              <Pressable
+                key={child.id}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: child.id === selectedChild.id }}
+                onPress={() => onSelectChild(child.id)}
+                style={[
+                  styles.childChoice,
+                  child.id === selectedChild.id && styles.childChoiceSelected,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.childChoiceText,
+                    child.id === selectedChild.id &&
+                      styles.childChoiceTextSelected,
+                  ]}
+                >
+                  {child.displayName}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      )}
+
       <View style={styles.header}>
         <View>
           <Kicker>God eftermiddag</Kicker>
-          <Title>Hej, {demoChild.name}!</Title>
+          <Title>Hej, {selectedChild.displayName}!</Title>
         </View>
         <View
           accessible
           accessibilityRole="image"
-          accessibilityLabel={demoChild.avatarAlt}
+          accessibilityLabel={`${selectedChild.displayName}s foruddefinerede træningsavatar`}
           style={styles.avatar}
         >
           <Text style={styles.avatarEmoji}>👧</Text>
@@ -47,7 +345,9 @@ export default function TodayScreen() {
 
       <View style={styles.utilityRow}>
         <View style={styles.pointsPill}>
-          <Text style={styles.pointsText}>⭐ {demoChild.points} point</Text>
+          <Text style={styles.pointsText}>
+            Preview · ⭐ {demoChild.points} point
+          </Text>
         </View>
         <Pressable
           accessibilityRole="button"
@@ -115,15 +415,152 @@ export default function TodayScreen() {
 
       <View style={styles.previewNote}>
         <Text style={styles.previewNoteText}>
-          Fixture-preview · backend kobles på i næste slice
+          Valgt barn kommer fra Supabase · mål, øvelser og point er stadig
+          preview
         </Text>
       </View>
     </Screen>
   );
 }
 
+function AccountError({ message }: { message: string }) {
+  return (
+    <View
+      accessibilityLiveRegion="polite"
+      accessibilityRole="alert"
+      style={styles.errorBox}
+    >
+      <Text style={styles.errorText}>{message}</Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   screen: { gap: spacing.lg },
+  stateScreen: {
+    minHeight: 500,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.md,
+  },
+  onboardingScreen: {
+    minHeight: 590,
+    justifyContent: "center",
+    gap: spacing.md,
+  },
+  centerText: { maxWidth: 380, textAlign: "center" },
+  stateIcon: {
+    width: 86,
+    height: 86,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: radii.full,
+    backgroundColor: colors.softWarm,
+  },
+  stateEmoji: { fontSize: 42 },
+  stateActions: { width: "100%", maxWidth: 360, gap: spacing.sm },
+  formCard: {
+    gap: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii["2xl"],
+    backgroundColor: colors.surface,
+    padding: spacing.lg,
+  },
+  fieldGroup: { gap: spacing.xs },
+  fieldLabel: {
+    color: colors.ink,
+    fontFamily: typography.families.systemRounded,
+    fontSize: typography.sizes.body,
+    fontWeight: typography.weights.bold,
+  },
+  input: {
+    minHeight: 52,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    backgroundColor: colors.surface,
+    color: colors.ink,
+    fontFamily: typography.families.systemRounded,
+    fontSize: 16,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  errorBox: {
+    borderRadius: radii.md,
+    backgroundColor: colors.dangerSoft,
+    padding: spacing.md,
+  },
+  errorText: {
+    color: colors.coral,
+    fontFamily: typography.families.systemRounded,
+    fontSize: typography.sizes.body,
+    fontWeight: typography.weights.semibold,
+  },
+  emptyNotice: {
+    width: "100%",
+    maxWidth: 380,
+    gap: spacing.xs,
+    borderRadius: radii.lg,
+    backgroundColor: colors.soft,
+    padding: spacing.lg,
+  },
+  emptyNoticeTitle: {
+    color: colors.primaryDeep,
+    fontFamily: typography.families.systemRounded,
+    fontSize: typography.sizes.body,
+    fontWeight: typography.weights.bold,
+  },
+  accountRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.md,
+  },
+  accountCopy: { flex: 1 },
+  accountName: {
+    color: colors.ink,
+    fontFamily: typography.families.systemRounded,
+    fontSize: typography.sizes.body,
+    fontWeight: typography.weights.bold,
+  },
+  logoutButton: {
+    minHeight: 44,
+    justifyContent: "center",
+    paddingHorizontal: spacing.sm,
+  },
+  logoutText: {
+    color: colors.primaryDeep,
+    fontFamily: typography.families.systemRounded,
+    fontSize: typography.sizes.body,
+    fontWeight: typography.weights.bold,
+  },
+  childPicker: {
+    gap: spacing.sm,
+    borderRadius: radii.lg,
+    backgroundColor: colors.surface,
+    padding: spacing.md,
+  },
+  childPickerRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  childChoice: {
+    minHeight: 44,
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.full,
+    paddingHorizontal: spacing.md,
+  },
+  childChoiceSelected: {
+    borderColor: colors.primary,
+    backgroundColor: colors.soft,
+  },
+  childChoiceText: {
+    color: colors.muted,
+    fontFamily: typography.families.systemRounded,
+    fontSize: typography.sizes.body,
+    fontWeight: typography.weights.semibold,
+  },
+  childChoiceTextSelected: { color: colors.primaryDeep },
   header: {
     flexDirection: "row",
     alignItems: "center",

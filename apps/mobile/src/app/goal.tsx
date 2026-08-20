@@ -7,10 +7,19 @@ import {
   getGoalProgress,
 } from "@bare-traen/domain";
 import { useRouter } from "expo-router";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+
+import { useAuth } from "@/auth/auth-provider";
 
 import {
   BackButton,
+  ActionButton,
   Body,
   Kicker,
   ProgressBar,
@@ -23,11 +32,51 @@ const progress = getGoalProgress(demoGoal, demoProgress);
 
 export default function GoalScreen() {
   const router = useRouter();
+  const { bootstrap, refreshParent, selectedChild } = useAuth();
+
+  if (bootstrap.status === "idle" || bootstrap.status === "loading") {
+    return (
+      <Screen contentStyle={styles.stateScreen}>
+        <ActivityIndicator color={colors.primaryDeep} size="large" />
+        <Title>Henter barnets mål…</Title>
+      </Screen>
+    );
+  }
+
+  if (bootstrap.status === "error") {
+    return (
+      <Screen contentStyle={styles.stateScreen}>
+        <Title style={styles.centerText}>Målet kunne ikke hentes</Title>
+        <Body style={styles.centerText}>
+          Kontrollér forbindelsen, og hent familiens oplysninger igen.
+        </Body>
+        <View style={styles.stateAction}>
+          <ActionButton onPress={refreshParent}>Prøv igen</ActionButton>
+        </View>
+      </Screen>
+    );
+  }
+
+  if (!selectedChild) {
+    return (
+      <Screen contentStyle={styles.stateScreen}>
+        <Title style={styles.centerText}>Vælg et barn først</Title>
+        <Body style={styles.centerText}>
+          Træningspreviewet åbnes først, når familien har en aktiv børneprofil.
+        </Body>
+        <View style={styles.stateAction}>
+          <ActionButton onPress={() => router.replace("/")}>
+            Gå til familien
+          </ActionButton>
+        </View>
+      </Screen>
+    );
+  }
 
   return (
     <Screen contentStyle={styles.screen}>
       <BackButton label="I dag" onPress={() => router.back()} />
-      <Kicker>Dit træningsmål</Kicker>
+      <Kicker>{selectedChild.displayName} · preview-mål</Kicker>
       <Title>{demoGoal.title}</Title>
       <Body>
         Hvert trin gør dig klar til det næste. Du træner i dit eget tempo.
@@ -107,12 +156,24 @@ export default function GoalScreen() {
           );
         })}
       </View>
+      <Kicker style={styles.previewNote}>
+        Målet og fremskridtet er fortsat fixture-indhold i denne slice.
+      </Kicker>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { gap: spacing.sm },
+  stateScreen: {
+    minHeight: 460,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.md,
+  },
+  centerText: { maxWidth: 360, textAlign: "center" },
+  stateAction: { width: "100%", maxWidth: 320 },
+  previewNote: { marginTop: spacing.lg, textAlign: "center" },
   summary: {
     gap: spacing.md,
     marginVertical: spacing.lg,

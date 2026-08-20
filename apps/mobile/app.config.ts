@@ -34,7 +34,9 @@ function getVariant(): AppVariant {
 }
 
 export default ({ config }: ConfigContext): ExpoConfig => {
-  const variant = variants[getVariant()];
+  const appVariant = getVariant();
+  const variant = variants[appVariant];
+  const plugins = config.plugins ?? [];
 
   return {
     ...config,
@@ -48,6 +50,19 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     android: {
       ...config.android,
       package: variant.bundleIdentifier,
+    },
+    plugins: [
+      ...plugins,
+      [
+        "expo-secure-store",
+        {
+          configureAndroidBackup: true,
+        },
+      ],
+    ],
+    extra: {
+      ...config.extra,
+      appVariant,
     },
   };
 };

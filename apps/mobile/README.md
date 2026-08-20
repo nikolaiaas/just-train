@@ -1,6 +1,6 @@
 # Bare Træn mobile
 
-Expo 57 application for the Bare Træn parent/child experience. The current fixture-backed preview covers today's mission, the goal journey, a timestamp-based training timer, and a completion state. Supabase persistence and authentication are the next vertical slice.
+Expo 57 application for the Bare Træn parent/child experience. Parent authentication, profile/family onboarding, and selection of existing active child profiles are backed by Supabase. Today's mission, the goal journey, training progress, and saved results remain clearly labelled fixture content while the next persistence slices are built.
 
 The app is linked to the Expo/EAS project [`@bare-traen/bare-traen`](https://expo.dev/accounts/bare-traen/projects/bare-traen). `app.config.ts` gives the development, preview, and production variants distinct names, URL schemes, and application identifiers.
 
@@ -21,6 +21,20 @@ The App Store version of Expo Go is currently incompatible with this Expo SDK 57
 Copy `.env.example` to the ignored `.env.local` for local development. On a physical iPhone, use the hosted `bare-traen-development` project's public URL and publishable key. Do not use `http://127.0.0.1:54321`, because loopback on the phone does not reach the Mac.
 
 Only `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` belong in the Expo client. Never add a Supabase secret/service-role key or `OPENROUTER_API_KEY`; AI calls must go through trusted server code.
+
+## Parent passwordless login
+
+The app uses the single backend configured by the two public Expo variables; there is no production/local selector in the native app. Native builds reject loopback and other non-HTTPS backend addresses, while the Safari development preview can use the exact local Supabase endpoint when that is an intentional integration run.
+
+A parent enters an email address and receives both a six-digit code and a magic-link choice. The first successful login may create the parent account. A magic link must return to the same browser/app installation that requested it because the PKCE verifier stays on that device; the six-digit code is the fallback when the mail is opened elsewhere. Child profiles remain parent-owned and do not get Auth accounts in this phase.
+
+After login, the app loads only the authenticated adult's profile, first family membership, and active child profiles under Row-Level Security. A new adult can create the first family through a retry-safe authenticated database operation. Existing children can be selected, while a family without children gets an honest empty state. Consent-gated child creation is the next task and is intentionally not part of this slice.
+
+The email-to-code, session restoration, first-family onboarding, empty-family, existing-child, and logout flows have been tested in local Safari with synthetic data. Local Mailpit and all local browser/app callbacks are ready. Hosted Development already has the exact callbacks, but the parent-onboarding migration has not been deployed there. Custom hosted SMTP with the Danish template and CAPTCHA or server-side throttling remain separate gates.
+
+On iOS and Android, the full Supabase session is encrypted with Expo Crypto AES-256-GCM before its ciphertext is written to AsyncStorage. The encryption key is kept separately in SecureStore and is restricted to the unlocked device. Safari uses a separate origin-scoped browser adapter so native storage modules never enter its bundle.
+
+This slice adds `expo-crypto`, `expo-secure-store`, and AsyncStorage plus the SecureStore config plugin. It therefore requires a fresh EAS development/preview binary; it cannot be delivered to an older binary as a JavaScript-only update. The app and runtime version were advanced to `1.1.0` so an update containing these imports cannot target the previous `1.0.0` native runtime. Native OTP, cold and warm magic-link callbacks, session restoration, and logout remain acceptance checks for that fresh build.
 
 ## EAS builds for an iPhone
 

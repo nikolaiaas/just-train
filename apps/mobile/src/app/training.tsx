@@ -6,7 +6,15 @@ import {
 } from "@bare-traen/domain";
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+
+import { useAuth } from "@/auth/auth-provider";
 
 import {
   ActionButton,
@@ -31,6 +39,7 @@ function formatElapsed(totalSeconds: number) {
 
 export default function TrainingScreen() {
   const router = useRouter();
+  const { bootstrap, refreshParent, selectedChild } = useAuth();
   const startedAt = useRef<number | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [finished, setFinished] = useState(false);
@@ -59,6 +68,45 @@ export default function TrainingScreen() {
       setElapsedSeconds(Math.floor((Date.now() - startedAt.current) / 1000));
     }
     setFinished(true);
+  }
+
+  if (bootstrap.status === "idle" || bootstrap.status === "loading") {
+    return (
+      <Screen contentStyle={styles.stateScreen}>
+        <ActivityIndicator color={colors.primaryDeep} size="large" />
+        <Title>Henter træningen…</Title>
+      </Screen>
+    );
+  }
+
+  if (bootstrap.status === "error") {
+    return (
+      <Screen contentStyle={styles.stateScreen}>
+        <Title style={styles.centerText}>Træningen kunne ikke hentes</Title>
+        <Body style={styles.centerText}>
+          Kontrollér forbindelsen, og hent familiens oplysninger igen.
+        </Body>
+        <View style={styles.stateAction}>
+          <ActionButton onPress={refreshParent}>Prøv igen</ActionButton>
+        </View>
+      </Screen>
+    );
+  }
+
+  if (!selectedChild) {
+    return (
+      <Screen contentStyle={styles.stateScreen}>
+        <Title style={styles.centerText}>Vælg et barn først</Title>
+        <Body style={styles.centerText}>
+          Træningspreviewet kræver en aktiv børneprofil.
+        </Body>
+        <View style={styles.stateAction}>
+          <ActionButton onPress={() => router.replace("/")}>
+            Gå til familien
+          </ActionButton>
+        </View>
+      </Screen>
+    );
   }
 
   if (finished) {
@@ -138,7 +186,9 @@ export default function TrainingScreen() {
   return (
     <Screen contentStyle={styles.screen}>
       <BackButton label="Målet" onPress={() => router.back()} />
-      <Kicker>Fodbold · Trin 3 af 6</Kicker>
+      <Kicker>
+        {selectedChild.displayName} · Fodbold-preview · Trin 3 af 6
+      </Kicker>
       <Title>{currentExercise.title}</Title>
 
       <View style={styles.liveRow}>
@@ -190,6 +240,13 @@ export default function TrainingScreen() {
 
 const styles = StyleSheet.create({
   screen: { gap: spacing.md },
+  stateScreen: {
+    minHeight: 460,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.md,
+  },
+  stateAction: { width: "100%", maxWidth: 320 },
   liveRow: {
     flexDirection: "row",
     alignItems: "center",

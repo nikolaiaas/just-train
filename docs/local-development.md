@@ -12,7 +12,7 @@ Bare Træn has three parts:
 
 The **Bare Træn Dev Console** at `http://127.0.0.1:11009` starts and monitors those parts. It is a local helper rather than a deployed part of the product.
 
-The screens currently use synthetic example data, so normal visual work in Safari does not need Docker or a database reset. Start local Supabase when a task changes the database, sign-in, saving, or permissions.
+Parent sign-in, profile loading, and family onboarding now use Supabase, while training goals, exercises, progress, and results still use clearly labelled synthetic fixture content. Pure visual work in Safari does not need Docker, but a complete local sign-in or family-flow test does.
 
 ## One-time setup on this Mac
 
@@ -88,7 +88,7 @@ cd "/Users/nikolaiaas/Documents/Bare Træn"
 mise exec -- pnpm supabase:start
 ```
 
-Open Supabase Studio at [http://localhost:54323](http://localhost:54323).
+Open Supabase Studio at [http://localhost:54323](http://localhost:54323). Local passwordless emails appear in Mailpit at [http://127.0.0.1:54324](http://127.0.0.1:54324). Use only a synthetic or adult test address, and never capture the inbox, a code, or a magic link as task evidence.
 
 Useful commands are:
 
@@ -105,15 +105,17 @@ mise exec -- pnpm supabase:stop
 
 `supabase:reset` deliberately deletes and recreates the **local** development data. Use it only when a clean synthetic database is wanted. Never run a reset against a hosted project.
 
-Starting local Supabase does **not** automatically switch the apps away from the hosted development backend. Local Supabase is used directly for schema work, tests, and Studio. If a task needs Safari connected to the local database, ask the agent to temporarily replace only the two public Supabase client values and to restore the hosted values before iPhone work.
+Starting local Supabase does **not** automatically switch either app away from its configured backend. The administration login has a localhost-only **Udviklingsmiljø** choice between Local Supabase and Hosted Development. The mobile app has no runtime selector: its backend is fixed when it starts from the two public values in its ignored `.env.local`. If a task needs mobile Safari connected to Local Supabase, ask the agent to replace only those two public values temporarily and restore the hosted values before iPhone work.
 
-The local Auth callback list already contains ports 11000/11001 and the development, preview, and production app schemes. Before sign-in is connected to the hosted backend, the same callbacks must be added to hosted Supabase Auth while keeping its hosted site URL intact.
+The local Auth callback list is ready for ports 11000/11001 and the development, preview, and production app schemes. The same exact callbacks are already registered in Hosted Development. The parent-onboarding migration is not deployed there yet, and it requires explicit authorization before deployment. Custom hosted SMTP with the Danish template and CAPTCHA or server-side throttling remain separate gates before passwordless login is exposed publicly.
 
 Supabase hosts the backend, not the visible previews. The administration preview belongs on Vercel, and iPhone previews belong on Expo/EAS.
 
 ## First installation on your iPhone
 
 The project uses Expo SDK 57. The App Store version of Expo Go does not currently support this SDK, even when Expo Go is freshly installed. Keep SDK 57 and install the project's own **Bare Træn Dev** app instead.
+
+Parent login adds native storage and cryptography modules and advances the app/runtime version to `1.1.0`. An installed `1.0.0` development or preview app must therefore be replaced with a fresh EAS build. Do not publish this slice as an EAS Update to the old native runtime.
 
 Your paid Apple Developer membership lets EAS build and sign this app in the cloud. Full Xcode is not required for this route.
 
@@ -170,7 +172,7 @@ If the local network blocks the connection, stop the command with Control-C and 
 mise exec -- pnpm dev:iphone:tunnel
 ```
 
-The phone should normally use the hosted development Supabase project. `127.0.0.1` on an iPhone means the phone itself, not this Mac.
+The phone should normally use the hosted development Supabase project. `127.0.0.1` on an iPhone means the phone itself, not this Mac. New-parent family onboarding cannot be accepted on the phone until the tested onboarding migration has been explicitly approved and deployed to Hosted Development.
 
 ## A standalone preview for another tester
 
@@ -184,7 +186,7 @@ mise exec -- pnpm dlx eas-cli@latest build --platform ios --profile preview
 
 Register the tester's phone first, then share the unlisted EAS installation link only with that tester. Apple still restricts installation to registered devices, but the build page itself may be reachable by anyone who has its URL unless unauthenticated build access is disabled in the Expo project settings. This is ad-hoc distribution; it does not publish the app in the App Store.
 
-JavaScript, styling, and image updates can often be sent to an installed preview build through EAS Update. Native libraries, permissions, Expo SDK changes, and other native configuration require a new build.
+JavaScript, styling, and image updates can often be sent to a compatible installed preview build through EAS Update. Native libraries, permissions, Expo SDK changes, and other native configuration require a new build. In particular, never send the `1.1.0` parent-login slice to an installed `1.0.0` binary.
 
 ## Accounts: individual, not shared
 
