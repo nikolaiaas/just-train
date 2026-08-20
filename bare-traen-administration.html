@@ -1,0 +1,2236 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; style-src 'unsafe-inline' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; img-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; font-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; media-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; worker-src blob:; connect-src blob: data:; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<title>Bare Traen Administration</title>
+<style>:root{color-scheme:light dark;background:light-dark(rgb(255 255 255), rgb(24 24 24))}html,body{margin:0}body{box-sizing:border-box;padding:1rem;background:inherit}iframe{display:block;width:100%;height:calc(100vh - 2rem);margin:0 auto;border:0}</style>
+</head>
+<body>
+<iframe sandbox="allow-scripts" referrerpolicy="no-referrer" title="Bare Traen Administration" srcdoc="&lt;!doctype html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;utf-8&quot;&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;
+&lt;meta name=&quot;referrer&quot; content=&quot;no-referrer&quot;&gt;
+&lt;meta http-equiv=&quot;Content-Security-Policy&quot; content=&quot;default-src &#x27;none&#x27;; script-src &#x27;unsafe-inline&#x27; &#x27;unsafe-eval&#x27; &#x27;wasm-unsafe-eval&#x27; blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; style-src &#x27;unsafe-inline&#x27; blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; img-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; font-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; media-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; worker-src blob:; connect-src blob: data:; frame-src &#x27;none&#x27;; object-src &#x27;none&#x27;; base-uri &#x27;none&#x27;; form-action &#x27;none&#x27;&quot;&gt;
+&lt;title&gt;Bare Traen Administration&lt;/title&gt;
+&lt;style&gt;:root {
+  color-scheme: light dark;
+  background-color: var(
+    --background,
+    var(--color-background-primary, light-dark(rgb(255 255 255), rgb(24 24 24)))
+  ) !important;
+
+  /* Agent-facing contract; keep in sync with SKILL.md. */
+  --background: var(
+    --color-background-primary,
+    light-dark(rgb(255 255 255), rgb(24 24 24))
+  );
+  --foreground: var(
+    --color-text-primary,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --card: color-mix(in oklab, var(--foreground) 5%, var(--background));
+  --card-foreground: var(
+    --color-text-primary,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --popover: var(
+    --color-background-secondary,
+    light-dark(rgb(255 255 255), rgb(45 45 45))
+  );
+  --popover-foreground: var(
+    --color-text-primary,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --primary: var(
+    --color-text-info,
+    light-dark(rgb(51 156 255), rgb(131 195 255))
+  );
+  --primary-foreground: var(
+    --color-text-inverse,
+    light-dark(rgb(255 255 255), rgb(13 13 13))
+  );
+  --secondary: var(
+    --color-background-secondary,
+    light-dark(rgb(255 255 255 / 96%), rgb(54 54 54 / 96%))
+  );
+  --secondary-foreground: var(
+    --color-text-primary,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --muted: color-mix(in srgb, var(--foreground) 10%, transparent);
+  --muted-foreground: var(
+    --color-text-secondary,
+    light-dark(rgb(26 28 31 / 49.4%), rgb(255 255 255 / 49.8%))
+  );
+  --accent: var(
+    --color-background-info,
+    light-dark(rgb(229 242 255), rgb(13 39 63))
+  );
+  --accent-foreground: var(
+    --color-text-info,
+    light-dark(rgb(51 156 255), rgb(131 195 255))
+  );
+  --destructive: var(
+    --color-text-warning,
+    light-dark(rgb(226 85 7), rgb(255 133 73))
+  );
+  --border: var(
+    --color-border-secondary,
+    light-dark(rgb(26 28 31 / 8%), rgb(255 255 255 / 8.2%))
+  );
+  --input: var(
+    --color-border-primary,
+    light-dark(
+      rgb(26 28 31 / 11.8%),
+      color-mix(in oklab, rgb(0 0 0) 10%, transparent)
+    )
+  );
+  --ring: var(
+    --color-ring-primary,
+    light-dark(rgb(51 156 255), rgb(131 195 255 / 76%))
+  );
+  --font-size-base: var(--font-text-md-size, 14px);
+  --red: light-dark(rgb(186 38 35), rgb(250 66 62));
+  --green: light-dark(rgb(0 162 64), rgb(64 201 119));
+  --viz-series-1: var(--primary);
+  --viz-series-2: light-dark(rgb(243 136 59), rgb(245 154 86));
+  --viz-series-3: light-dark(rgb(93 201 119), rgb(116 213 139));
+  --viz-series-4: light-dark(rgb(235 119 177), rgb(240 143 192));
+  --viz-series-5: light-dark(rgb(155 121 236), rgb(170 145 239));
+  --viz-series-6: light-dark(rgb(58 185 177), rgb(90 203 194));
+
+  /* Internal implementation variables; not part of the agent contract. */
+  --font-sans: -apple-system, system-ui, &quot;Segoe UI&quot;, sans-serif;
+  --font-mono:
+    ui-monospace, SFMono-Regular, &quot;SF Mono&quot;, Menlo, Consolas, &quot;Liberation Mono&quot;,
+    monospace;
+  --font-size-normal: max(11px, var(--font-size-base));
+  --font-size-tooltip: calc(var(--font-size-base) - 1px);
+  --font-size-small: max(11px, calc(var(--font-size-base) - 2px));
+  --font-size-h1: calc(var(--font-size-normal) * 1.7142857143);
+  --font-size-h2: calc(var(--font-size-normal) * 1.4285714286);
+  --font-size-h3: calc(var(--font-size-normal) * 1.2857142857);
+  --font-weight-normal: 430;
+  --font-weight-medium: 500;
+  --line-height-normal: calc(var(--font-size-normal) * 1.5);
+  --line-height-tooltip: calc(var(--font-size-tooltip) * 1.4285714286);
+  --line-height-small: calc(var(--font-size-small) + 4px);
+  --radius: var(--border-radius-lg, 12.5px);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-2xl: calc(var(--radius) * 1.6);
+  --radius-full: 9999px;
+  --shadow-sm: 0 1px 2px -1px rgb(0 0 0 / 8%);
+  --checkmark-image: url(&quot;data:image/svg+xml,%3Csvg xmlns=&#x27;http://www.w3.org/2000/svg&#x27; viewBox=&#x27;0 0 17 17&#x27;%3E%3Cpath d=&#x27;M12.8961 3.64101C13.1297 3.41418 13.4984 3.37523 13.7779 3.56581C14.0571 3.75635 14.1554 4.11331 14.0299 4.41347L13.9615 4.53847L7.71151 13.7045C7.59411 13.8767 7.4063 13.9877 7.19881 14.0072C6.99136 14.0267 6.78564 13.9533 6.63826 13.806L2.88826 10.056L2.79842 9.9457C2.6192 9.67407 2.64927 9.30496 2.88826 9.06581C3.12738 8.82669 3.49647 8.79676 3.76815 8.97597L3.8785 9.06581L7.03084 12.2182L12.8053 3.74941L12.8961 3.64101Z&#x27;/%3E%3C/svg%3E&quot;);
+
+  /* Legacy aliases; not part of the current agent contract. */
+  --viz-bg: transparent;
+  --viz-panel: var(--card);
+  --viz-border: var(--border);
+  --viz-text: var(--foreground);
+  --viz-muted: var(--muted-foreground);
+  --viz-accent: var(--primary);
+  --viz-accent-text: var(--primary-foreground);
+  --viz-accent-bg: var(--accent);
+  --viz-font-size: var(--font-size-base);
+  --viz-warning: var(--destructive);
+}
+
+:root[data-theme=&quot;light&quot;] {
+  color-scheme: light;
+}
+
+:root[data-theme=&quot;dark&quot;] {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html &gt; body {
+  /* Preserve MCP aliases for older inline renderers without creating :root cycles. */
+  --color-background-primary: var(
+    --background,
+    light-dark(rgb(255 255 255), rgb(24 24 24))
+  );
+  --color-text-primary: var(
+    --foreground,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --color-border-secondary: var(
+    --border,
+    light-dark(rgb(26 28 31 / 8%), rgb(255 255 255 / 8.2%))
+  );
+
+  margin: 0;
+  padding: 5px;
+  color: var(--foreground);
+  background: transparent !important;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-normal);
+  font-weight: var(--font-weight-normal);
+  line-height: var(--line-height-normal);
+}
+
+a {
+  color: color-mix(in srgb, var(--viz-accent) 80%, var(--viz-text) 20%);
+  cursor: pointer;
+  font-weight: var(--font-weight-medium, 500);
+  text-decoration: none;
+  text-underline-offset: 2px;
+}
+
+a:is(:hover, :focus-visible) {
+  text-decoration-line: underline;
+  text-decoration-style: dashed;
+  text-decoration-thickness: 0.5px;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p {
+  margin-block: 0;
+}
+
+h1 {
+  font-size: var(--font-size-h1);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+h2 {
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+h3,
+h4,
+h5,
+h6 {
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.3;
+}
+
+b,
+strong,
+th {
+  font-weight: var(--font-weight-medium);
+}
+
+code:not(pre code) {
+  display: inline;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  corner-shape: superellipse(1.5);
+  background: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  overflow-wrap: anywhere;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  word-break: break-word;
+}
+
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  color: var(--foreground);
+  font: inherit;
+  text-align: start;
+}
+
+.table :is(th, td) {
+  padding-block: 10px;
+  padding-inline: 0 24px;
+  overflow-wrap: anywhere;
+  border-bottom: 1px solid var(--border);
+  text-align: start;
+  vertical-align: top;
+}
+
+.table-responsive &gt; .table :is(th, td) {
+  overflow-wrap: break-word;
+}
+
+.table :is(th, td):last-child {
+  padding-inline-end: 0;
+}
+
+.table :is(caption, thead th) {
+  font-weight: 600;
+}
+
+.table thead th {
+  padding-block: 8px;
+  border-bottom-color: color-mix(in srgb, var(--foreground) 16%, transparent);
+}
+
+.table tbody tr:last-child :is(th, td) {
+  border-bottom: 0;
+}
+
+.table.table-sm :is(th, td) {
+  padding-block: 6px;
+}
+
+.table.table-sm :is(th, td):not(:last-child) {
+  padding-inline-end: 16px;
+}
+
+.table :is(.text-end, [align=&quot;right&quot;]) {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+.table :is(.text-center, [align=&quot;center&quot;]) {
+  text-align: center;
+}
+
+.table .text-nowrap {
+  white-space: nowrap;
+}
+
+#widget {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  padding: 0;
+  background: transparent !important;
+}
+
+.card {
+  min-width: 0;
+  padding: 12px;
+  overflow: hidden;
+  overflow-wrap: break-word;
+  border-radius: var(--radius-2xl);
+  corner-shape: superellipse(1.5);
+  color: var(--card-foreground);
+  background: var(--card);
+}
+
+#widget &gt; :not(.card) {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.tooltip {
+  position: fixed;
+  z-index: 50;
+  top: 0;
+  left: 0;
+  width: max-content;
+  max-width: min(
+    20rem,
+    var(--tooltip-available-width, calc(100vw - 10px)),
+    calc(100vw - 10px)
+  );
+  max-height: min(
+    var(--tooltip-available-height, calc(100vh - 10px)),
+    calc(100vh - 10px)
+  );
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  corner-shape: superellipse(1.5);
+  color: var(--popover-foreground);
+  background: var(--popover);
+  box-shadow: none;
+  font-size: var(--font-size-tooltip);
+  line-height: var(--line-height-tooltip);
+  overflow-wrap: break-word;
+  white-space: normal;
+  pointer-events: none;
+  user-select: none;
+}
+
+.viz-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(max(180px, 24%), 1fr));
+  gap: 10px;
+}
+
+.viz-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.viz-stat-value {
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+.viz-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.viz-badge {
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  color: var(--accent-foreground);
+  background: var(--accent);
+  font-weight: var(--font-weight-medium);
+}
+
+small,
+.text-small,
+.viz-badge {
+  font-size: var(--font-size-small);
+  line-height: var(--line-height-small);
+}
+
+.text-muted {
+  color: var(--muted-foreground);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.viz-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.viz-controls &gt; .form-label {
+  display: grid;
+  min-width: min(100%, 260px);
+  flex: 1 1 280px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 2px 12px;
+  margin-bottom: 0;
+}
+
+.viz-controls &gt; .form-label &gt; :is(.form-control, .form-range, .form-select) {
+  grid-column: 1 / -1;
+}
+
+.btn,
+.form-check-input,
+.form-control,
+.form-range,
+.form-select {
+  font: inherit;
+}
+
+.btn {
+  appearance: button;
+  display: inline-flex;
+  inline-size: fit-content;
+  max-inline-size: 100%;
+  min-height: 28px;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin: 0;
+  padding: 0 8px;
+  -webkit-app-region: no-drag;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  corner-shape: superellipse(1.5);
+  color: var(--secondary-foreground);
+  background: var(--secondary);
+  cursor: var(--cursor-interaction, pointer);
+  text-align: center;
+  text-decoration: none;
+  white-space: nowrap;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+.btn:is(.btn-block, .viz-tile) {
+  inline-size: 100%;
+}
+
+.btn.viz-tile {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+a.btn {
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.btn:not(:disabled):hover {
+  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.btn-primary {
+  border-color: transparent;
+  color: var(--primary-foreground);
+  background: var(--foreground);
+  background-clip: padding-box;
+}
+
+.btn-primary .text-muted {
+  color: color-mix(in srgb, var(--primary-foreground) 50%, transparent);
+}
+
+.btn-primary:not(:disabled):hover {
+  background: color-mix(in srgb, var(--foreground) 80%, transparent);
+  background-clip: padding-box;
+}
+
+.btn-ghost {
+  border-color: transparent;
+  color: var(--muted-foreground);
+  background: transparent;
+}
+
+.btn-ghost:not(:disabled):hover {
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+[data-lucide] {
+  stroke-width: 1.6;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--foreground);
+}
+
+.form-control {
+  display: block;
+  width: 100%;
+  min-height: 28px;
+  padding: 0 8px;
+  outline: none;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  corner-shape: superellipse(1.5);
+  color: var(--foreground);
+  background: var(--secondary);
+}
+
+.form-control::placeholder {
+  color: var(--muted-foreground);
+}
+
+.form-control[type=&quot;file&quot;] {
+  padding: 0;
+  overflow: hidden;
+  cursor: var(--cursor-interaction, pointer);
+}
+
+.form-control[type=&quot;file&quot;]::file-selector-button {
+  min-height: 26px;
+  margin-right: 8px;
+  padding: 0 8px;
+  border: 0;
+  border-right: 1px solid var(--input);
+  color: var(--secondary-foreground);
+  background: var(--secondary);
+  cursor: inherit;
+  font: inherit;
+}
+
+.form-control[type=&quot;file&quot;]:not(:disabled):hover::file-selector-button {
+  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.form-control-color[type=&quot;color&quot;] {
+  width: 40px;
+  height: 28px;
+  padding: 3px;
+  cursor: var(--cursor-interaction, pointer);
+}
+
+.form-control-color[type=&quot;color&quot;]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.form-control-color[type=&quot;color&quot;]::-webkit-color-swatch {
+  border: 0;
+  border-radius: calc(var(--radius-lg) - 4px);
+  corner-shape: superellipse(1.5);
+}
+
+textarea.form-control {
+  height: auto;
+  min-height: 72px;
+  padding: 8px 10px;
+  resize: vertical;
+}
+
+.form-control:focus-visible {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-control:disabled,
+.form-select:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.form-select {
+  appearance: none;
+  display: block;
+  width: 100%;
+  min-height: 28px;
+  margin: 0;
+  padding: 0 32px 0 8px;
+  outline: none;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  corner-shape: superellipse(1.5);
+  color: var(--foreground);
+  background-color: var(--secondary);
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted-foreground) 50%),
+    linear-gradient(135deg, var(--muted-foreground) 50%, transparent 50%);
+  background-position:
+    calc(100% - 14px) 50%,
+    calc(100% - 10px) 50%;
+  background-repeat: no-repeat;
+  background-size: 4px 4px;
+  cursor: var(--cursor-interaction, default);
+}
+
+.form-select:not(:disabled):hover {
+  background-color: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.form-select:focus-visible {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-check {
+  display: flex;
+  min-height: 20px;
+  align-items: center;
+  gap: 6px;
+}
+
+.form-check-input {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  margin: 0;
+  border: 1px solid var(--input);
+  color: var(--primary-foreground);
+  background-color: transparent;
+  cursor: var(--cursor-interaction, default);
+  transition:
+    background-color 150ms,
+    border-color 150ms,
+    box-shadow 150ms;
+}
+
+.form-check:not(.form-switch) .form-check-input[type=&quot;checkbox&quot;] {
+  border-color: var(--input);
+  border-radius: var(--radius-sm);
+  corner-shape: superellipse(1.5);
+  background-color: var(--secondary);
+  box-shadow: var(--shadow-sm);
+}
+
+.form-check:not(.form-switch)
+  .form-check-input:not(:disabled):not(:checked):hover {
+  background-color: var(--card);
+}
+
+.form-check:not(.form-switch) .form-check-input[type=&quot;checkbox&quot;]:checked {
+  border-color: var(--primary);
+  background-color: var(--primary);
+}
+
+.form-check:not(.form-switch)
+  .form-check-input[type=&quot;checkbox&quot;]:checked::before {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--primary-foreground);
+  content: &quot;&quot;;
+  mask: var(--checkmark-image) center / 12px 12px no-repeat;
+}
+
+.form-check-input[type=&quot;radio&quot;] {
+  width: 14px;
+  height: 14px;
+  border-radius: var(--radius-full);
+}
+
+.form-check-input[type=&quot;radio&quot;]:checked {
+  border: 2px solid var(--primary);
+  background:
+    radial-gradient(circle, var(--primary-foreground) 0 2.5px, transparent 3px),
+    var(--primary);
+}
+
+.form-check:not(.form-switch) .form-check-input:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.form-check:not(.form-switch) .form-check-input:disabled {
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.form-check:not(.form-switch) .form-check-input:disabled + .form-check-label {
+  cursor: not-allowed;
+}
+
+.form-switch .form-check-input:disabled,
+.form-switch .form-check-input:disabled + .form-check-label {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.form-check-label {
+  color: var(--foreground);
+  cursor: var(--cursor-interaction, default);
+}
+
+.form-switch .form-check-input {
+  position: relative;
+  width: 32px;
+  height: 20px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--muted);
+  box-shadow: none;
+  transition: background-color 200ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+.form-switch .form-check-input::before {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 16px;
+  height: 16px;
+  box-sizing: border-box;
+  border: 1px solid light-dark(var(--primary-foreground), var(--foreground));
+  border-radius: var(--radius-full);
+  background: light-dark(var(--primary-foreground), var(--foreground));
+  box-shadow: var(--shadow-sm);
+  content: &quot;&quot;;
+  transform: translate(2px, -50%);
+  transition: transform 200ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+.form-switch .form-check-input:checked {
+  background: var(--primary);
+}
+
+.form-switch .form-check-input:checked::before {
+  transform: translate(14px, -50%);
+}
+
+.form-switch .form-check-input:focus-visible {
+  box-shadow: 0 0 0 2px var(--ring);
+}
+
+.form-range {
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: 28px;
+  flex: 1;
+  margin: 0;
+  padding: 0;
+  outline: none;
+  border: 0;
+  accent-color: var(--primary);
+  background: linear-gradient(
+      color-mix(in srgb, var(--foreground) 7%, transparent),
+      color-mix(in srgb, var(--foreground) 7%, transparent)
+    )
+    center / 100% 2px no-repeat;
+}
+
+.form-range::-webkit-slider-runnable-track {
+  height: 28px;
+  background: transparent;
+}
+
+.form-range::-webkit-slider-thumb {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  margin-top: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: light-dark(var(--primary-foreground), var(--foreground));
+}
+
+.form-range:focus-visible::-webkit-slider-thumb {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-range::-moz-range-track {
+  height: 28px;
+  background: transparent;
+}
+
+.form-range::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: light-dark(var(--primary-foreground), var(--foreground));
+}
+
+.form-range:focus-visible::-moz-range-thumb {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-range:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.btn:not(.btn-primary, .viz-tile):is(
+    [aria-pressed=&quot;true&quot;],
+    [aria-selected=&quot;true&quot;],
+    .is-selected
+  ) {
+  border-color: var(--primary);
+  color: var(--primary-foreground);
+  background: var(--primary);
+}
+
+.btn.viz-tile:is([aria-pressed=&quot;true&quot;], [aria-selected=&quot;true&quot;], .is-selected) {
+  border-color: var(--primary);
+  box-shadow: inset 0 0 0 1px var(--primary);
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+#widget &gt; svg {
+  width: 100%;
+}
+
+/* Model-authored chart rules can otherwise stretch icons after these styles load. */
+svg.lucide {
+  display: block;
+  width: 16px !important;
+  height: 16px !important;
+  flex: none;
+  margin: 0 !important;
+  stroke-width: 1.6;
+}
+
+.text-warning,
+.text-destructive {
+  color: var(--destructive);
+}
+
+html&gt;body{padding:0}&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;section id=&quot;bare-traen-admin&quot; aria-label=&quot;Forslag til administrationsdelen i Bare Træn&quot;&gt;
+  &lt;style&gt;
+    #bare-traen-admin {
+      color-scheme: light dark;
+      --ba-ink: light-dark(#183249, #edf7fc);
+      --ba-muted: light-dark(#687b89, #b8c9d4);
+      --ba-page: light-dark(#f3f1eb, #0d1c27);
+      --ba-surface: light-dark(#fffefa, #172a38);
+      --ba-surface-2: light-dark(#edf8f6, #183b3c);
+      --ba-warm: light-dark(#fff1d1, #483419);
+      --ba-border: light-dark(#d8e1e5, #385062);
+      --ba-primary: light-dark(#0e9e97, #4bd0c9);
+      --ba-primary-deep: light-dark(#08746f, #8be9e4);
+      --ba-primary-text: light-dark(#ffffff, #082526);
+      --ba-coral: light-dark(#f66b5e, #ff9188);
+      --ba-green: light-dark(#2a8d5b, #65d096);
+      --ba-yellow: light-dark(#ffd166, #efc65d);
+      --ba-red-soft: light-dark(#fff0ed, #492725);
+      --ba-shadow: light-dark(rgba(24, 50, 73, 0.13), rgba(0, 0, 0, 0.35));
+      width: 100%;
+      color: var(--ba-ink);
+      font-family: &quot;Avenir Next&quot;, ui-rounded, system-ui, sans-serif;
+    }
+
+    #bare-traen-admin * { box-sizing: border-box; }
+
+    #bare-traen-admin .ba-board {
+      display: grid;
+      gap: 30px;
+      width: 100%;
+    }
+
+    #bare-traen-admin .ba-example {
+      display: grid;
+      gap: 10px;
+      margin: 0;
+      min-width: 0;
+    }
+
+    #bare-traen-admin .ba-window {
+      overflow: hidden;
+      border: 1px solid var(--ba-border);
+      border-radius: 22px;
+      background: var(--ba-surface);
+      box-shadow: 0 15px 34px var(--ba-shadow);
+    }
+
+    #bare-traen-admin .ba-topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      min-height: 54px;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--ba-border);
+      background: var(--ba-surface);
+    }
+
+    #bare-traen-admin .ba-brand {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      color: var(--ba-ink);
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    #bare-traen-admin .ba-mark {
+      display: grid;
+      place-items: center;
+      width: 30px;
+      height: 30px;
+      border-radius: 10px;
+      background: var(--ba-primary);
+      color: var(--ba-primary-text);
+      font-size: 16px;
+    }
+
+    #bare-traen-admin .ba-role {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--ba-muted);
+      font-size: 11px;
+    }
+
+    #bare-traen-admin .ba-avatar {
+      display: grid;
+      place-items: center;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: var(--ba-warm);
+      color: var(--ba-ink);
+      font-size: 14px;
+    }
+
+    #bare-traen-admin .ba-shell {
+      display: grid;
+      grid-template-columns: 142px minmax(0, 1fr);
+      min-height: 430px;
+      background: var(--ba-page);
+    }
+
+    #bare-traen-admin .ba-sidebar {
+      padding: 14px 10px;
+      border-right: 1px solid var(--ba-border);
+      background: var(--ba-surface);
+    }
+
+    #bare-traen-admin .ba-nav-label {
+      margin: 4px 8px 8px;
+      color: var(--ba-muted);
+      font-size: 9px;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    #bare-traen-admin .ba-nav-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 10px;
+      border-radius: 10px;
+      color: var(--ba-muted);
+      font-size: 11px;
+    }
+
+    #bare-traen-admin .ba-nav-item.ba-active {
+      background: var(--ba-surface-2);
+      color: var(--ba-primary-deep);
+      font-weight: 500;
+    }
+
+    #bare-traen-admin .ba-main {
+      min-width: 0;
+      padding: 18px;
+    }
+
+    #bare-traen-admin .ba-toolbar {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+
+    #bare-traen-admin .ba-eyebrow {
+      margin: 0 0 4px;
+      color: var(--ba-muted);
+      font-size: 10px;
+      font-weight: 500;
+    }
+
+    #bare-traen-admin .ba-title {
+      margin: 0;
+      color: var(--ba-ink);
+      font-size: 21px;
+      line-height: 1.15;
+      font-weight: 500;
+    }
+
+    #bare-traen-admin .ba-copy {
+      margin: 5px 0 0;
+      color: var(--ba-muted);
+      font-size: 11px;
+      line-height: 1.4;
+    }
+
+    #bare-traen-admin .ba-button-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+    }
+
+    #bare-traen-admin .ba-primary,
+    #bare-traen-admin .ba-secondary,
+    #bare-traen-admin .ba-ghost {
+      min-height: 34px;
+      padding: 8px 12px;
+      border-radius: 10px;
+      font: inherit;
+      font-size: 10px;
+      font-weight: 500;
+    }
+
+    #bare-traen-admin .ba-primary {
+      border: 1px solid var(--ba-primary);
+      background: var(--ba-primary);
+      color: var(--ba-primary-text);
+    }
+
+    #bare-traen-admin .ba-secondary {
+      border: 1px solid var(--ba-border);
+      background: var(--ba-surface);
+      color: var(--ba-ink);
+    }
+
+    #bare-traen-admin .ba-ghost {
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--ba-primary-deep);
+    }
+
+    #bare-traen-admin .ba-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 7px;
+      border-radius: 99px;
+      background: var(--ba-warm);
+      color: var(--ba-ink);
+      font-size: 9px;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    #bare-traen-admin .ba-status.ba-live {
+      background: var(--ba-surface-2);
+      color: var(--ba-green);
+    }
+
+    #bare-traen-admin .ba-status.ba-review {
+      background: var(--ba-red-soft);
+      color: var(--ba-coral);
+    }
+
+    #bare-traen-admin .ba-summary {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    #bare-traen-admin .ba-summary-item {
+      padding: 10px;
+      border: 1px solid var(--ba-border);
+      border-radius: 12px;
+      background: var(--ba-surface);
+    }
+
+    #bare-traen-admin .ba-summary-item strong {
+      display: block;
+      color: var(--ba-ink);
+      font-size: 18px;
+      font-weight: 500;
+    }
+
+    #bare-traen-admin .ba-summary-item span {
+      color: var(--ba-muted);
+      font-size: 9px;
+    }
+
+    #bare-traen-admin .ba-list {
+      overflow: hidden;
+      border: 1px solid var(--ba-border);
+      border-radius: 14px;
+      background: var(--ba-surface);
+    }
+
+    #bare-traen-admin .ba-list-head,
+    #bare-traen-admin .ba-list-row {
+      display: grid;
+      grid-template-columns: minmax(145px, 1.6fr) minmax(90px, 0.8fr) minmax(80px, 0.7fr) auto;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 12px;
+    }
+
+    #bare-traen-admin .ba-list-head {
+      border-bottom: 1px solid var(--ba-border);
+      color: var(--ba-muted);
+      font-size: 9px;
+      font-weight: 500;
+    }
+
+    #bare-traen-admin .ba-list-row {
+      min-height: 58px;
+      border-bottom: 1px solid var(--ba-border);
+      color: var(--ba-muted);
+      font-size: 10px;
+    }
+
+    #bare-traen-admin .ba-list-row:last-child { border-bottom: 0; }
+
+    #bare-traen-admin .ba-subject-name {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      color: var(--ba-ink);
+      font-weight: 500;
+    }
+
+    #bare-traen-admin .ba-subject-icon {
+      display: grid;
+      place-items: center;
+      width: 34px;
+      height: 34px;
+      flex: 0 0 34px;
+      border-radius: 11px;
+      background: var(--ba-warm);
+      font-size: 17px;
+    }
+
+    #bare-traen-admin .ba-workspace {
+      display: grid;
+      grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+      gap: 12px;
+      min-height: 330px;
+    }
+
+    #bare-traen-admin .ba-panel {
+      min-width: 0;
+      padding: 12px;
+      border: 1px solid var(--ba-border);
+      border-radius: 14px;
+      background: var(--ba-surface);
+    }
+
+    #bare-traen-admin .ba-panel-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 10px;
+      color: var(--ba-ink);
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    #bare-traen-admin .ba-ai-dot {
+      display: inline-grid;
+      place-items: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 8px;
+      background: var(--ba-primary);
+      color: var(--ba-primary-text);
+      font-size: 12px;
+    }
+
+    #bare-traen-admin .ba-chat {
+      display: grid;
+      gap: 9px;
+    }
+
+    #bare-traen-admin .ba-message {
+      max-width: 92%;
+      padding: 9px 10px;
+      border-radius: 12px;
+      color: var(--ba-ink);
+      font-size: 10px;
+      line-height: 1.4;
+    }
+
+    #bare-traen-admin .ba-message.ba-user {
+      justify-self: end;
+      border-bottom-right-radius: 4px;
+      background: var(--ba-warm);
+    }
+
+    #bare-traen-admin .ba-message.ba-ai {
+      justify-self: start;
+      border-bottom-left-radius: 4px;
+      background: var(--ba-surface-2);
+    }
+
+    #bare-traen-admin .ba-chat-input {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 7px;
+      margin-top: 10px;
+    }
+
+    #bare-traen-admin .ba-input,
+    #bare-traen-admin .ba-select,
+    #bare-traen-admin .ba-textarea {
+      width: 100%;
+      border: 1px solid var(--ba-border);
+      border-radius: 9px;
+      background: var(--ba-page);
+      color: var(--ba-ink);
+      font: inherit;
+      font-size: 10px;
+    }
+
+    #bare-traen-admin .ba-input,
+    #bare-traen-admin .ba-select { min-height: 34px; padding: 7px 9px; }
+    #bare-traen-admin .ba-textarea { min-height: 62px; padding: 8px 9px; resize: none; }
+
+    #bare-traen-admin .ba-draft-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding-bottom: 9px;
+      border-bottom: 1px solid var(--ba-border);
+    }
+
+    #bare-traen-admin .ba-draft-head strong {
+      color: var(--ba-ink);
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    #bare-traen-admin .ba-outline {
+      display: grid;
+      gap: 7px;
+      margin-top: 10px;
+    }
+
+    #bare-traen-admin .ba-outline-row {
+      display: grid;
+      grid-template-columns: 26px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 8px;
+      padding: 8px;
+      border: 1px solid var(--ba-border);
+      border-radius: 10px;
+      background: var(--ba-page);
+    }
+
+    #bare-traen-admin .ba-number {
+      display: grid;
+      place-items: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 8px;
+      background: var(--ba-warm);
+      color: var(--ba-ink);
+      font-size: 9px;
+      font-weight: 500;
+    }
+
+    #bare-traen-admin .ba-outline-row strong {
+      display: block;
+      color: var(--ba-ink);
+      font-size: 10px;
+      font-weight: 500;
+    }
+
+    #bare-traen-admin .ba-outline-row small {
+      display: block;
+      margin-top: 2px;
+      color: var(--ba-muted);
+      font-size: 8px;
+    }
+
+    #bare-traen-admin .ba-review-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(220px, 0.9fr);
+      gap: 12px;
+    }
+
+    #bare-traen-admin .ba-step-list {
+      display: grid;
+      gap: 7px;
+    }
+
+    #bare-traen-admin .ba-step {
+      display: grid;
+      grid-template-columns: 22px 28px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 7px;
+      padding: 8px;
+      border: 1px solid var(--ba-border);
+      border-radius: 11px;
+      background: var(--ba-surface);
+    }
+
+    #bare-traen-admin .ba-step.ba-selected {
+      border: 2px solid var(--ba-primary);
+      background: var(--ba-surface-2);
+    }
+
+    #bare-traen-admin .ba-handle {
+      color: var(--ba-muted);
+      font-size: 11px;
+      letter-spacing: -2px;
+    }
+
+    #bare-traen-admin .ba-step strong {
+      display: block;
+      color: var(--ba-ink);
+      font-size: 10px;
+      font-weight: 500;
+    }
+
+    #bare-traen-admin .ba-step small {
+      display: block;
+      margin-top: 2px;
+      color: var(--ba-muted);
+      font-size: 8px;
+    }
+
+    #bare-traen-admin .ba-change {
+      margin-top: 10px;
+      padding: 10px;
+      border: 1px solid var(--ba-border);
+      border-radius: 11px;
+      background: var(--ba-page);
+    }
+
+    #bare-traen-admin .ba-change-line {
+      display: grid;
+      grid-template-columns: 42px 1fr;
+      gap: 8px;
+      padding: 4px 0;
+      color: var(--ba-muted);
+      font-size: 9px;
+    }
+
+    #bare-traen-admin .ba-change-line strong {
+      color: var(--ba-ink);
+      font-weight: 500;
+    }
+
+    #bare-traen-admin .ba-form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 9px;
+    }
+
+    #bare-traen-admin .ba-field {
+      display: grid;
+      gap: 5px;
+      min-width: 0;
+    }
+
+    #bare-traen-admin .ba-field.ba-wide { grid-column: 1 / -1; }
+
+    #bare-traen-admin .ba-label {
+      color: var(--ba-muted);
+      font-size: 9px;
+      font-weight: 500;
+    }
+
+    #bare-traen-admin .ba-video-box {
+      display: grid;
+      place-items: center;
+      min-height: 105px;
+      border: 1px dashed var(--ba-border);
+      border-radius: 11px;
+      background: var(--ba-page);
+      color: var(--ba-muted);
+      font-size: 10px;
+      text-align: center;
+    }
+
+    #bare-traen-admin .ba-video-process {
+      display: grid;
+      gap: 8px;
+    }
+
+    #bare-traen-admin .ba-video-steps {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr auto 1fr;
+      align-items: center;
+      gap: 5px;
+      color: var(--ba-muted);
+      font-size: 8px;
+      text-align: center;
+    }
+
+    #bare-traen-admin .ba-video-step {
+      display: grid;
+      place-items: center;
+      min-height: 44px;
+      padding: 6px;
+      border: 1px solid var(--ba-border);
+      border-radius: 10px;
+      background: var(--ba-page);
+    }
+
+    #bare-traen-admin .ba-video-step strong {
+      display: block;
+      color: var(--ba-ink);
+      font-size: 8px;
+      font-weight: 500;
+    }
+
+    #bare-traen-admin .ba-cartoon-preview {
+      display: grid;
+      grid-template-columns: 58px 1fr;
+      align-items: center;
+      gap: 9px;
+      min-height: 82px;
+      padding: 10px;
+      border-radius: 11px;
+      background: var(--ba-surface-2);
+      color: var(--ba-ink);
+      font-size: 9px;
+      line-height: 1.4;
+    }
+
+    #bare-traen-admin .ba-cartoon-person {
+      display: grid;
+      place-items: center;
+      width: 58px;
+      height: 58px;
+      border-radius: 16px;
+      background: var(--ba-warm);
+      font-size: 30px;
+    }
+
+    #bare-traen-admin .ba-cartoon-preview strong {
+      display: block;
+      margin-bottom: 2px;
+      font-weight: 500;
+    }
+
+    #bare-traen-admin .ba-goal-video {
+      display: grid;
+      place-items: center;
+      min-height: 138px;
+      margin: 9px 0;
+      border-radius: 14px;
+      background: var(--ba-surface-2);
+      color: var(--ba-ink);
+      text-align: center;
+    }
+
+    #bare-traen-admin .ba-goal-video-visual {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 42px;
+      letter-spacing: 4px;
+    }
+
+    #bare-traen-admin .ba-goal-video small {
+      display: block;
+      color: var(--ba-muted);
+      font-size: 8px;
+    }
+
+    #bare-traen-admin .ba-reward-flow {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr auto 1fr;
+      align-items: stretch;
+      gap: 5px;
+      margin: 10px 0;
+    }
+
+    #bare-traen-admin .ba-reward-flow &gt; span {
+      align-self: center;
+      color: var(--ba-muted);
+      font-size: 12px;
+      text-align: center;
+    }
+
+    #bare-traen-admin .ba-reward-flow-item {
+      display: grid;
+      place-items: center;
+      min-height: 72px;
+      padding: 7px;
+      border: 1px solid var(--ba-border);
+      border-radius: 11px;
+      background: var(--ba-page);
+      color: var(--ba-muted);
+      font-size: 8px;
+      text-align: center;
+    }
+
+    #bare-traen-admin .ba-reward-flow-item strong {
+      display: block;
+      margin-top: 3px;
+      color: var(--ba-ink);
+      font-size: 8px;
+      font-weight: 500;
+    }
+
+    #bare-traen-admin .ba-suggestion {
+      margin-top: 10px;
+      padding: 10px;
+      border: 1px solid var(--ba-primary);
+      border-radius: 11px;
+      background: var(--ba-surface-2);
+      color: var(--ba-ink);
+      font-size: 9px;
+      line-height: 1.4;
+    }
+
+    #bare-traen-admin .ba-reward-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 9px;
+    }
+
+    #bare-traen-admin .ba-reward {
+      position: relative;
+      min-height: 120px;
+      padding: 12px;
+      border: 1px solid var(--ba-border);
+      border-radius: 13px;
+      background: var(--ba-surface);
+      text-align: center;
+    }
+
+    #bare-traen-admin .ba-reward.ba-ai-new {
+      border: 2px dashed var(--ba-primary);
+      background: var(--ba-surface-2);
+    }
+
+    #bare-traen-admin .ba-reward-icon {
+      display: grid;
+      place-items: center;
+      width: 48px;
+      height: 48px;
+      margin: 0 auto 7px;
+      border-radius: 15px;
+      background: var(--ba-warm);
+      font-size: 28px;
+    }
+
+    #bare-traen-admin .ba-reward strong {
+      display: block;
+      color: var(--ba-ink);
+      font-size: 10px;
+      font-weight: 500;
+    }
+
+    #bare-traen-admin .ba-reward small {
+      color: var(--ba-muted);
+      font-size: 8px;
+    }
+
+    #bare-traen-admin .ba-publish-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 210px;
+      gap: 14px;
+    }
+
+    #bare-traen-admin .ba-checklist {
+      overflow: hidden;
+      border: 1px solid var(--ba-border);
+      border-radius: 13px;
+      background: var(--ba-surface);
+    }
+
+    #bare-traen-admin .ba-check {
+      display: grid;
+      grid-template-columns: 24px 1fr auto;
+      align-items: center;
+      gap: 8px;
+      min-height: 47px;
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--ba-border);
+      color: var(--ba-ink);
+      font-size: 10px;
+    }
+
+    #bare-traen-admin .ba-check:last-child { border-bottom: 0; }
+
+    #bare-traen-admin .ba-checkmark {
+      display: grid;
+      place-items: center;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--ba-green);
+      color: var(--ba-primary-text);
+      font-size: 10px;
+    }
+
+    #bare-traen-admin .ba-phone-preview {
+      padding: 10px;
+      border: 1px solid var(--ba-border);
+      border-radius: 24px;
+      background: var(--ba-surface);
+      box-shadow: 0 10px 20px var(--ba-shadow);
+    }
+
+    #bare-traen-admin .ba-phone-screen {
+      min-height: 290px;
+      padding: 13px;
+      border-radius: 17px;
+      background: var(--ba-page);
+    }
+
+    #bare-traen-admin .ba-preview-hero {
+      display: grid;
+      place-items: center;
+      min-height: 90px;
+      margin: 10px 0;
+      border-radius: 14px;
+      background: var(--ba-surface-2);
+      font-size: 40px;
+    }
+
+    #bare-traen-admin .ba-caption {
+      color: var(--ba-ink);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    #bare-traen-admin .ba-caption strong {
+      display: block;
+      margin-bottom: 3px;
+      color: var(--ba-ink);
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    #bare-traen-admin .ba-caption span { color: var(--ba-muted); }
+
+    @media (max-width: 620px) {
+      #bare-traen-admin .ba-shell { grid-template-columns: 1fr; }
+      #bare-traen-admin .ba-sidebar {
+        display: flex;
+        gap: 4px;
+        overflow: hidden;
+        border-right: 0;
+        border-bottom: 1px solid var(--ba-border);
+      }
+      #bare-traen-admin .ba-nav-label { display: none; }
+      #bare-traen-admin .ba-nav-item { padding: 8px; }
+      #bare-traen-admin .ba-main { padding: 13px; }
+      #bare-traen-admin .ba-workspace,
+      #bare-traen-admin .ba-review-layout,
+      #bare-traen-admin .ba-publish-layout { grid-template-columns: 1fr; }
+      #bare-traen-admin .ba-list-head { display: none; }
+      #bare-traen-admin .ba-list-row { grid-template-columns: 1fr auto; }
+      #bare-traen-admin .ba-list-row &gt; :nth-child(2),
+      #bare-traen-admin .ba-list-row &gt; :nth-child(3) { display: none; }
+      #bare-traen-admin .ba-reward-grid { grid-template-columns: 1fr 1fr; }
+    }
+
+    @media (max-width: 420px) {
+      #bare-traen-admin .ba-toolbar { align-items: stretch; flex-direction: column; }
+      #bare-traen-admin .ba-summary,
+      #bare-traen-admin .ba-form-grid,
+      #bare-traen-admin .ba-reward-grid { grid-template-columns: 1fr; }
+      #bare-traen-admin .ba-field.ba-wide { grid-column: auto; }
+      #bare-traen-admin .ba-role span { display: none; }
+    }
+  &lt;/style&gt;
+
+  &lt;div class=&quot;ba-board&quot;&gt;
+    &lt;figure class=&quot;ba-example&quot;&gt;
+      &lt;div class=&quot;ba-window&quot; aria-label=&quot;Administrationens oversigt over emner&quot;&gt;
+        &lt;div class=&quot;ba-topbar&quot;&gt;
+          &lt;div class=&quot;ba-brand&quot;&gt;&lt;span class=&quot;ba-mark&quot;&gt;★&lt;/span&gt; Bare Træn · Administration&lt;/div&gt;
+          &lt;div class=&quot;ba-role&quot;&gt;&lt;span&gt;Indholdsansvarlig&lt;/span&gt;&lt;span class=&quot;ba-avatar&quot;&gt;N&lt;/span&gt;&lt;/div&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;ba-shell&quot;&gt;
+          &lt;aside class=&quot;ba-sidebar&quot;&gt;
+            &lt;p class=&quot;ba-nav-label&quot;&gt;Indhold&lt;/p&gt;
+            &lt;div class=&quot;ba-nav-item ba-active&quot;&gt;▦ Emner&lt;/div&gt;
+            &lt;div class=&quot;ba-nav-item&quot;&gt;✓ Gennemgang&lt;/div&gt;
+            &lt;div class=&quot;ba-nav-item&quot;&gt;♙ Garderober&lt;/div&gt;
+            &lt;div class=&quot;ba-nav-item&quot;&gt;⚙ Indstillinger&lt;/div&gt;
+          &lt;/aside&gt;
+          &lt;main class=&quot;ba-main&quot;&gt;
+            &lt;div class=&quot;ba-toolbar&quot;&gt;
+              &lt;div&gt;
+                &lt;p class=&quot;ba-eyebrow&quot;&gt;INDHOLDSBIBLIOTEK&lt;/p&gt;
+                &lt;h3 class=&quot;ba-title&quot;&gt;Emner&lt;/h3&gt;
+                &lt;p class=&quot;ba-copy&quot;&gt;Opret og vedligehold træningsmål, øvelser og belønninger.&lt;/p&gt;
+              &lt;/div&gt;
+              &lt;button class=&quot;ba-primary&quot; type=&quot;button&quot;&gt;＋ Nyt emne med AI&lt;/button&gt;
+            &lt;/div&gt;
+            &lt;div class=&quot;ba-summary&quot;&gt;
+              &lt;div class=&quot;ba-summary-item&quot;&gt;&lt;strong&gt;3&lt;/strong&gt;&lt;span&gt;emner i alt&lt;/span&gt;&lt;/div&gt;
+              &lt;div class=&quot;ba-summary-item&quot;&gt;&lt;strong&gt;8&lt;/strong&gt;&lt;span&gt;udgivne mål&lt;/span&gt;&lt;/div&gt;
+              &lt;div class=&quot;ba-summary-item&quot;&gt;&lt;strong&gt;2&lt;/strong&gt;&lt;span&gt;skal gennemgås&lt;/span&gt;&lt;/div&gt;
+            &lt;/div&gt;
+            &lt;div class=&quot;ba-list&quot;&gt;
+              &lt;div class=&quot;ba-list-head&quot;&gt;&lt;span&gt;Emne&lt;/span&gt;&lt;span&gt;Træningsmål&lt;/span&gt;&lt;span&gt;Status&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;/div&gt;
+              &lt;div class=&quot;ba-list-row&quot;&gt;
+                &lt;span class=&quot;ba-subject-name&quot;&gt;&lt;span class=&quot;ba-subject-icon&quot;&gt;⚽&lt;/span&gt;Fodbold&lt;/span&gt;
+                &lt;span&gt;4 mål · 24 øvelser&lt;/span&gt;&lt;span class=&quot;ba-status ba-live&quot;&gt;● Udgivet&lt;/span&gt;&lt;button class=&quot;ba-ghost&quot; type=&quot;button&quot;&gt;Åbn ›&lt;/button&gt;
+              &lt;/div&gt;
+              &lt;div class=&quot;ba-list-row&quot;&gt;
+                &lt;span class=&quot;ba-subject-name&quot;&gt;&lt;span class=&quot;ba-subject-icon&quot;&gt;🤸&lt;/span&gt;Gymnastik&lt;/span&gt;
+                &lt;span&gt;3 mål · 18 øvelser&lt;/span&gt;&lt;span class=&quot;ba-status ba-review&quot;&gt;● Gennemgå&lt;/span&gt;&lt;button class=&quot;ba-ghost&quot; type=&quot;button&quot;&gt;Åbn ›&lt;/button&gt;
+              &lt;/div&gt;
+              &lt;div class=&quot;ba-list-row&quot;&gt;
+                &lt;span class=&quot;ba-subject-name&quot;&gt;&lt;span class=&quot;ba-subject-icon&quot;&gt;🎨&lt;/span&gt;Lær at male&lt;/span&gt;
+                &lt;span&gt;1 mål · 6 øvelser&lt;/span&gt;&lt;span class=&quot;ba-status&quot;&gt;● Kladde&lt;/span&gt;&lt;button class=&quot;ba-ghost&quot; type=&quot;button&quot;&gt;Åbn ›&lt;/button&gt;
+              &lt;/div&gt;
+            &lt;/div&gt;
+          &lt;/main&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+      &lt;figcaption class=&quot;ba-caption&quot;&gt;&lt;strong&gt;1. Få overblik over indholdet&lt;/strong&gt;&lt;span&gt;Den indholdsansvarlige ser emner, antal træningsmål og hvilke forslag der stadig mangler menneskelig gennemgang.&lt;/span&gt;&lt;/figcaption&gt;
+    &lt;/figure&gt;
+
+    &lt;figure class=&quot;ba-example&quot;&gt;
+      &lt;div class=&quot;ba-window&quot; aria-label=&quot;Opret et emne ved hjælp af en AI-samtale&quot;&gt;
+        &lt;div class=&quot;ba-topbar&quot;&gt;
+          &lt;div class=&quot;ba-brand&quot;&gt;&lt;span class=&quot;ba-mark&quot;&gt;★&lt;/span&gt; Bare Træn · Administration&lt;/div&gt;
+          &lt;span class=&quot;ba-status&quot;&gt;Kladde gemt&lt;/span&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;ba-main&quot; style=&quot;background: var(--ba-page)&quot;&gt;
+          &lt;div class=&quot;ba-toolbar&quot;&gt;
+            &lt;div&gt;&lt;p class=&quot;ba-eyebrow&quot;&gt;NYT EMNE&lt;/p&gt;&lt;h3 class=&quot;ba-title&quot;&gt;Skab et forløb sammen med AI&lt;/h3&gt;&lt;/div&gt;
+            &lt;button class=&quot;ba-secondary&quot; type=&quot;button&quot;&gt;Luk kladden&lt;/button&gt;
+          &lt;/div&gt;
+          &lt;div class=&quot;ba-workspace&quot;&gt;
+            &lt;section class=&quot;ba-panel&quot; aria-label=&quot;Samtale med AI-assistenten&quot;&gt;
+              &lt;div class=&quot;ba-panel-title&quot;&gt;&lt;span&gt;&lt;span class=&quot;ba-ai-dot&quot;&gt;✦&lt;/span&gt; AI-assistent&lt;/span&gt;&lt;span class=&quot;ba-status ba-live&quot;&gt;Klar&lt;/span&gt;&lt;/div&gt;
+              &lt;div class=&quot;ba-chat&quot;&gt;
+                &lt;div class=&quot;ba-message ba-user&quot;&gt;Lav et emne til børn på 8–11 år, der gerne vil lære gymnastik. Start med et mål om at stå på hænder.&lt;/div&gt;
+                &lt;div class=&quot;ba-message ba-ai&quot;&gt;Jeg foreslår et træningsmål med 7 deløvelser. De sidste tre bør have en voksen som hjælper. Skal jeg også foreslå mål, træningstid og sikkerhedstekster?&lt;/div&gt;
+                &lt;div class=&quot;ba-message ba-user&quot;&gt;Ja. Hvert træningspas må gerne tage cirka 10 minutter.&lt;/div&gt;
+              &lt;/div&gt;
+              &lt;div class=&quot;ba-chat-input&quot;&gt;&lt;input class=&quot;ba-input&quot; value=&quot;Bed AI om at ændre eller uddybe …&quot; aria-label=&quot;Besked til AI&quot;&gt;&lt;button class=&quot;ba-primary&quot; type=&quot;button&quot;&gt;Send&lt;/button&gt;&lt;/div&gt;
+            &lt;/section&gt;
+            &lt;section class=&quot;ba-panel&quot; aria-label=&quot;Struktureret kladde foreslået af AI&quot;&gt;
+              &lt;div class=&quot;ba-draft-head&quot;&gt;&lt;div&gt;&lt;p class=&quot;ba-eyebrow&quot;&gt;AI-FORSLAG&lt;/p&gt;&lt;strong&gt;Gymnastik · Stå på hænder&lt;/strong&gt;&lt;/div&gt;&lt;span class=&quot;ba-status ba-review&quot;&gt;Skal gennemgås&lt;/span&gt;&lt;/div&gt;
+              &lt;div class=&quot;ba-outline&quot;&gt;
+                &lt;div class=&quot;ba-outline-row&quot;&gt;&lt;span class=&quot;ba-number&quot;&gt;1&lt;/span&gt;&lt;span&gt;&lt;strong&gt;Varm håndled og skuldre op&lt;/strong&gt;&lt;small&gt;2 minutter · sikkerhedstekst klar&lt;/small&gt;&lt;/span&gt;&lt;button class=&quot;ba-ghost&quot; type=&quot;button&quot;&gt;Ret&lt;/button&gt;&lt;/div&gt;
+                &lt;div class=&quot;ba-outline-row&quot;&gt;&lt;span class=&quot;ba-number&quot;&gt;2&lt;/span&gt;&lt;span&gt;&lt;strong&gt;Bjørnestand med fødderne i gulvet&lt;/strong&gt;&lt;small&gt;Mål: hold i 10 sekunder&lt;/small&gt;&lt;/span&gt;&lt;button class=&quot;ba-ghost&quot; type=&quot;button&quot;&gt;Ret&lt;/button&gt;&lt;/div&gt;
+                &lt;div class=&quot;ba-outline-row&quot;&gt;&lt;span class=&quot;ba-number&quot;&gt;3&lt;/span&gt;&lt;span&gt;&lt;strong&gt;Gå fødderne op ad en væg&lt;/strong&gt;&lt;small&gt;Voksen anbefales&lt;/small&gt;&lt;/span&gt;&lt;button class=&quot;ba-ghost&quot; type=&quot;button&quot;&gt;Ret&lt;/button&gt;&lt;/div&gt;
+                &lt;div class=&quot;ba-outline-row&quot;&gt;&lt;span class=&quot;ba-number&quot;&gt;＋4&lt;/span&gt;&lt;span&gt;&lt;strong&gt;Fire yderligere deløvelser&lt;/strong&gt;&lt;small&gt;Åbn for at gennemgå alle forslag&lt;/small&gt;&lt;/span&gt;&lt;button class=&quot;ba-ghost&quot; type=&quot;button&quot;&gt;Se&lt;/button&gt;&lt;/div&gt;
+              &lt;/div&gt;
+              &lt;div class=&quot;ba-button-row&quot; style=&quot;margin-top: 10px&quot;&gt;&lt;button class=&quot;ba-primary&quot; type=&quot;button&quot;&gt;Brug forslaget som kladde&lt;/button&gt;&lt;button class=&quot;ba-secondary&quot; type=&quot;button&quot;&gt;Bed om et nyt forslag&lt;/button&gt;&lt;/div&gt;
+            &lt;/section&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+      &lt;figcaption class=&quot;ba-caption&quot;&gt;&lt;strong&gt;2. Tal med AI og få et struktureret forslag&lt;/strong&gt;&lt;span&gt;Samtalen hjælper med idéerne, mens et rigtigt emne, træningsmål og deløvelser opbygges ved siden af. Intet bliver udgivet automatisk.&lt;/span&gt;&lt;/figcaption&gt;
+    &lt;/figure&gt;
+
+    &lt;figure class=&quot;ba-example&quot;&gt;
+      &lt;div class=&quot;ba-window&quot; aria-label=&quot;Gennemgå og ret et AI-foreslået træningsmål&quot;&gt;
+        &lt;div class=&quot;ba-topbar&quot;&gt;
+          &lt;div class=&quot;ba-brand&quot;&gt;&lt;span class=&quot;ba-mark&quot;&gt;★&lt;/span&gt; Fodbold › Lær at jonglere&lt;/div&gt;
+          &lt;div class=&quot;ba-button-row&quot;&gt;&lt;button class=&quot;ba-secondary&quot; type=&quot;button&quot;&gt;Forhåndsvis&lt;/button&gt;&lt;button class=&quot;ba-primary&quot; type=&quot;button&quot;&gt;Gem ændringer&lt;/button&gt;&lt;/div&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;ba-main&quot; style=&quot;background: var(--ba-page)&quot;&gt;
+          &lt;div class=&quot;ba-toolbar&quot;&gt;
+            &lt;div&gt;&lt;p class=&quot;ba-eyebrow&quot;&gt;GENNEMGÅ AI-FORSLAG&lt;/p&gt;&lt;h3 class=&quot;ba-title&quot;&gt;Deløvelser og rækkefølge&lt;/h3&gt;&lt;p class=&quot;ba-copy&quot;&gt;Flyt, ret, tilføj eller fjern trin, før børn kan se dem.&lt;/p&gt;&lt;/div&gt;
+            &lt;span class=&quot;ba-status ba-review&quot;&gt;2 forslag mangler svar&lt;/span&gt;
+          &lt;/div&gt;
+          &lt;div class=&quot;ba-review-layout&quot;&gt;
+            &lt;section class=&quot;ba-panel&quot;&gt;
+              &lt;div class=&quot;ba-panel-title&quot;&gt;&lt;span&gt;7 deløvelser&lt;/span&gt;&lt;button class=&quot;ba-secondary&quot; type=&quot;button&quot;&gt;＋ Tilføj deløvelse&lt;/button&gt;&lt;/div&gt;
+              &lt;div class=&quot;ba-step-list&quot;&gt;
+                &lt;div class=&quot;ba-step&quot;&gt;&lt;span class=&quot;ba-handle&quot;&gt;⠿&lt;/span&gt;&lt;span class=&quot;ba-number&quot;&gt;1&lt;/span&gt;&lt;span&gt;&lt;strong&gt;Slip, spark og grib&lt;/strong&gt;&lt;small&gt;Mål: 5 gode gentagelser&lt;/small&gt;&lt;/span&gt;&lt;button class=&quot;ba-ghost&quot; type=&quot;button&quot;&gt;Ret&lt;/button&gt;&lt;/div&gt;
+                &lt;div class=&quot;ba-step&quot;&gt;&lt;span class=&quot;ba-handle&quot;&gt;⠿&lt;/span&gt;&lt;span class=&quot;ba-number&quot;&gt;2&lt;/span&gt;&lt;span&gt;&lt;strong&gt;Skift mellem fødderne&lt;/strong&gt;&lt;small&gt;Mål: 5 med hver fod&lt;/small&gt;&lt;/span&gt;&lt;button class=&quot;ba-ghost&quot; type=&quot;button&quot;&gt;Ret&lt;/button&gt;&lt;/div&gt;
+                &lt;div class=&quot;ba-step ba-selected&quot;&gt;&lt;span class=&quot;ba-handle&quot;&gt;⠿&lt;/span&gt;&lt;span class=&quot;ba-number&quot;&gt;3&lt;/span&gt;&lt;span&gt;&lt;strong&gt;To spark og grib&lt;/strong&gt;&lt;small&gt;AI foreslår en ændring&lt;/small&gt;&lt;/span&gt;&lt;button class=&quot;ba-ghost&quot; type=&quot;button&quot;&gt;Ret&lt;/button&gt;&lt;/div&gt;
+                &lt;div class=&quot;ba-step&quot;&gt;&lt;span class=&quot;ba-handle&quot;&gt;⠿&lt;/span&gt;&lt;span class=&quot;ba-number&quot;&gt;4&lt;/span&gt;&lt;span&gt;&lt;strong&gt;Tre jongleringer&lt;/strong&gt;&lt;small&gt;Mål: 3 i træk&lt;/small&gt;&lt;/span&gt;&lt;button class=&quot;ba-ghost&quot; type=&quot;button&quot;&gt;Ret&lt;/button&gt;&lt;/div&gt;
+                &lt;div class=&quot;ba-step&quot;&gt;&lt;span class=&quot;ba-handle&quot;&gt;⠿&lt;/span&gt;&lt;span class=&quot;ba-number&quot;&gt;＋3&lt;/span&gt;&lt;span&gt;&lt;strong&gt;Tre afsluttende deløvelser&lt;/strong&gt;&lt;small&gt;Fem, otte og ti jongleringer&lt;/small&gt;&lt;/span&gt;&lt;button class=&quot;ba-ghost&quot; type=&quot;button&quot;&gt;Vis&lt;/button&gt;&lt;/div&gt;
+              &lt;/div&gt;
+            &lt;/section&gt;
+            &lt;aside class=&quot;ba-panel&quot;&gt;
+              &lt;div class=&quot;ba-panel-title&quot;&gt;&lt;span&gt;&lt;span class=&quot;ba-ai-dot&quot;&gt;✦&lt;/span&gt; AI-forslag til trin 3&lt;/span&gt;&lt;/div&gt;
+              &lt;p class=&quot;ba-copy&quot;&gt;Målet virker højt i forhold til det foregående trin. Jeg foreslår en blødere overgang.&lt;/p&gt;
+              &lt;div class=&quot;ba-change&quot;&gt;
+                &lt;div class=&quot;ba-change-line&quot;&gt;&lt;span&gt;Før&lt;/span&gt;&lt;strong&gt;10 vellykkede gentagelser&lt;/strong&gt;&lt;/div&gt;
+                &lt;div class=&quot;ba-change-line&quot;&gt;&lt;span&gt;Forslag&lt;/span&gt;&lt;strong&gt;5 vellykkede gentagelser&lt;/strong&gt;&lt;/div&gt;
+                &lt;div class=&quot;ba-change-line&quot;&gt;&lt;span&gt;Hvorfor&lt;/span&gt;&lt;strong&gt;Mindre spring i sværhedsgrad&lt;/strong&gt;&lt;/div&gt;
+              &lt;/div&gt;
+              &lt;div class=&quot;ba-button-row&quot; style=&quot;margin-top: 10px&quot;&gt;&lt;button class=&quot;ba-primary&quot; type=&quot;button&quot;&gt;Brug ændringen&lt;/button&gt;&lt;button class=&quot;ba-secondary&quot; type=&quot;button&quot;&gt;Behold min tekst&lt;/button&gt;&lt;/div&gt;
+              &lt;div class=&quot;ba-suggestion&quot;&gt;&lt;strong&gt;Spørg AI:&lt;/strong&gt; “Gør trin 3 lettere”, “foreslå en anden øvelse” eller “forklar hvorfor dette trin ligger her”.&lt;/div&gt;
+            &lt;/aside&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+      &lt;figcaption class=&quot;ba-caption&quot;&gt;&lt;strong&gt;3. Gennemgå og korrigér forslagene&lt;/strong&gt;&lt;span&gt;AI’en kan foreslå ændringer, men den indholdsansvarlige bestemmer rækkefølge, mål og formulering og kan afvise hvert forslag.&lt;/span&gt;&lt;/figcaption&gt;
+    &lt;/figure&gt;
+
+    &lt;figure class=&quot;ba-example&quot;&gt;
+      &lt;div class=&quot;ba-window&quot; aria-label=&quot;Opsætning af målvideo og personlig videobelønning&quot;&gt;
+        &lt;div class=&quot;ba-topbar&quot;&gt;
+          &lt;div class=&quot;ba-brand&quot;&gt;&lt;span class=&quot;ba-mark&quot;&gt;★&lt;/span&gt; Fodbold › Lær at jonglere › Målvideo&lt;/div&gt;
+          &lt;div class=&quot;ba-button-row&quot;&gt;&lt;button class=&quot;ba-secondary&quot; type=&quot;button&quot;&gt;Udskift video&lt;/button&gt;&lt;button class=&quot;ba-primary&quot; type=&quot;button&quot;&gt;Godkend målvideo&lt;/button&gt;&lt;/div&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;ba-main&quot; style=&quot;background: var(--ba-page)&quot;&gt;
+          &lt;div class=&quot;ba-toolbar&quot;&gt;
+            &lt;div&gt;&lt;p class=&quot;ba-eyebrow&quot;&gt;HELE TRÆNINGSMÅLET&lt;/p&gt;&lt;h3 class=&quot;ba-title&quot;&gt;Sådan ser det færdige resultat ud&lt;/h3&gt;&lt;p class=&quot;ba-copy&quot;&gt;Målvideoen viser barnet, hvad “Lær at jonglere” ender med.&lt;/p&gt;&lt;/div&gt;
+            &lt;span class=&quot;ba-status ba-live&quot;&gt;Anonymiseret&lt;/span&gt;
+          &lt;/div&gt;
+          &lt;div class=&quot;ba-review-layout&quot;&gt;
+            &lt;section class=&quot;ba-panel&quot;&gt;
+              &lt;div class=&quot;ba-panel-title&quot;&gt;&lt;span&gt;Generel tegnefilmsvideo&lt;/span&gt;&lt;span class=&quot;ba-status&quot;&gt;00:18&lt;/span&gt;&lt;/div&gt;
+              &lt;div class=&quot;ba-goal-video&quot;&gt;&lt;span&gt;&lt;span class=&quot;ba-goal-video-visual&quot;&gt;⚽ 🧒 ⚽&lt;/span&gt;&lt;strong&gt;10 sikre jongleringer i træk&lt;/strong&gt;&lt;small&gt;Bevægelserne følger den uploadede målvideo&lt;/small&gt;&lt;/span&gt;&lt;/div&gt;
+              &lt;div class=&quot;ba-video-steps&quot; aria-label=&quot;Målvideoen omdannes i tre trin&quot;&gt;
+                &lt;span class=&quot;ba-video-step&quot;&gt;🔒&lt;strong&gt;Original uploadet&lt;/strong&gt;&lt;/span&gt;&lt;span&gt;›&lt;/span&gt;
+                &lt;span class=&quot;ba-video-step&quot;&gt;✦&lt;strong&gt;Person fjernet&lt;/strong&gt;&lt;/span&gt;&lt;span&gt;›&lt;/span&gt;
+                &lt;span class=&quot;ba-video-step&quot;&gt;✓&lt;strong&gt;Tegnefilm godkendt&lt;/strong&gt;&lt;/span&gt;
+              &lt;/div&gt;
+              &lt;div class=&quot;ba-button-row&quot; style=&quot;margin-top: 10px&quot;&gt;&lt;button class=&quot;ba-primary&quot; type=&quot;button&quot;&gt;▶ Se hele målvideoen&lt;/button&gt;&lt;/div&gt;
+            &lt;/section&gt;
+            &lt;aside class=&quot;ba-panel&quot;&gt;
+              &lt;div class=&quot;ba-panel-title&quot;&gt;&lt;span&gt;Afslutningsbelønning&lt;/span&gt;&lt;span class=&quot;ba-status ba-live&quot;&gt;Slået til&lt;/span&gt;&lt;/div&gt;
+              &lt;p class=&quot;ba-copy&quot;&gt;Når barnet har klaret hele træningsmålet, bruges målvideoens bevægelser til en ny video med barnets egen fodboldavatar.&lt;/p&gt;
+              &lt;div class=&quot;ba-reward-flow&quot; aria-label=&quot;Fra målvideo til personlig videobelønning&quot;&gt;
+                &lt;div class=&quot;ba-reward-flow-item&quot;&gt;🎞️&lt;strong&gt;Målvideoens bevægelser&lt;/strong&gt;&lt;/div&gt;&lt;span&gt;＋&lt;/span&gt;
+                &lt;div class=&quot;ba-reward-flow-item&quot;&gt;🧒&lt;strong&gt;Barnets emneavatar&lt;/strong&gt;&lt;/div&gt;&lt;span&gt;→&lt;/span&gt;
+                &lt;div class=&quot;ba-reward-flow-item&quot;&gt;✨&lt;strong&gt;Personlig belønningsvideo&lt;/strong&gt;&lt;/div&gt;
+              &lt;/div&gt;
+              &lt;div class=&quot;ba-suggestion&quot;&gt;&lt;strong&gt;Belønningen låses op:&lt;/strong&gt; Når alle 7 deløvelser i “Lær at jonglere” er gennemført.&lt;/div&gt;
+              &lt;div class=&quot;ba-button-row&quot; style=&quot;margin-top: 10px&quot;&gt;&lt;button class=&quot;ba-secondary&quot; type=&quot;button&quot;&gt;Forhåndsvis eksempel&lt;/button&gt;&lt;button class=&quot;ba-primary&quot; type=&quot;button&quot;&gt;Gem belønning&lt;/button&gt;&lt;/div&gt;
+            &lt;/aside&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+      &lt;figcaption class=&quot;ba-caption&quot;&gt;&lt;strong&gt;4. Opret målvideoen og afslutningsbelønningen&lt;/strong&gt;&lt;span&gt;Målvideoen hører til hele træningsmålet, ikke et enkelt trin. Den viser slutresultatet og leverer bevægelserne til barnets personlige avatarvideo.&lt;/span&gt;&lt;/figcaption&gt;
+    &lt;/figure&gt;
+
+    &lt;figure class=&quot;ba-example&quot;&gt;
+      &lt;div class=&quot;ba-window&quot; aria-label=&quot;Redigering af en enkelt deløvelse&quot;&gt;
+        &lt;div class=&quot;ba-topbar&quot;&gt;
+          &lt;div class=&quot;ba-brand&quot;&gt;&lt;span class=&quot;ba-mark&quot;&gt;★&lt;/span&gt; Redigér deløvelse&lt;/div&gt;
+          &lt;div class=&quot;ba-button-row&quot;&gt;&lt;button class=&quot;ba-secondary&quot; type=&quot;button&quot;&gt;Annuller&lt;/button&gt;&lt;button class=&quot;ba-primary&quot; type=&quot;button&quot;&gt;Gem deløvelse&lt;/button&gt;&lt;/div&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;ba-main&quot; style=&quot;background: var(--ba-page)&quot;&gt;
+          &lt;div class=&quot;ba-toolbar&quot;&gt;&lt;div&gt;&lt;p class=&quot;ba-eyebrow&quot;&gt;FODBOLD › LÆR AT JONGLERE › TRIN 1&lt;/p&gt;&lt;h3 class=&quot;ba-title&quot;&gt;Slip, spark og grib&lt;/h3&gt;&lt;/div&gt;&lt;span class=&quot;ba-status ba-review&quot;&gt;AI-oprettet&lt;/span&gt;&lt;/div&gt;
+          &lt;div class=&quot;ba-review-layout&quot;&gt;
+            &lt;section class=&quot;ba-panel&quot;&gt;
+              &lt;div class=&quot;ba-form-grid&quot;&gt;
+                &lt;label class=&quot;ba-field ba-wide&quot;&gt;&lt;span class=&quot;ba-label&quot;&gt;Navn på deløvelsen&lt;/span&gt;&lt;input class=&quot;ba-input&quot; value=&quot;Slip, spark og grib&quot;&gt;&lt;/label&gt;
+                &lt;label class=&quot;ba-field ba-wide&quot;&gt;&lt;span class=&quot;ba-label&quot;&gt;Forklaring til barnet&lt;/span&gt;&lt;textarea class=&quot;ba-textarea&quot;&gt;Slip bolden fra hænderne, spark den én gang med vristen, og grib den igen.&lt;/textarea&gt;&lt;/label&gt;
+                &lt;label class=&quot;ba-field&quot;&gt;&lt;span class=&quot;ba-label&quot;&gt;Det måler vi&lt;/span&gt;&lt;select class=&quot;ba-select&quot;&gt;&lt;option&gt;Antal gentagelser&lt;/option&gt;&lt;/select&gt;&lt;/label&gt;
+                &lt;label class=&quot;ba-field&quot;&gt;&lt;span class=&quot;ba-label&quot;&gt;Mål før næste trin&lt;/span&gt;&lt;input class=&quot;ba-input&quot; value=&quot;5 gentagelser&quot;&gt;&lt;/label&gt;
+                &lt;label class=&quot;ba-field&quot;&gt;&lt;span class=&quot;ba-label&quot;&gt;Anbefalet træningstid&lt;/span&gt;&lt;input class=&quot;ba-input&quot; value=&quot;10 minutter&quot;&gt;&lt;/label&gt;
+                &lt;label class=&quot;ba-field&quot;&gt;&lt;span class=&quot;ba-label&quot;&gt;Udstyr&lt;/span&gt;&lt;input class=&quot;ba-input&quot; value=&quot;1 fodbold&quot;&gt;&lt;/label&gt;
+                &lt;label class=&quot;ba-field ba-wide&quot;&gt;&lt;span class=&quot;ba-label&quot;&gt;Sikkerhed og hjælp&lt;/span&gt;&lt;textarea class=&quot;ba-textarea&quot;&gt;Find et sted med god plads og uden ting, der kan gå i stykker.&lt;/textarea&gt;&lt;/label&gt;
+              &lt;/div&gt;
+            &lt;/section&gt;
+            &lt;aside class=&quot;ba-panel&quot;&gt;
+              &lt;div class=&quot;ba-panel-title&quot;&gt;&lt;span&gt;Anonym demonstrationsvideo&lt;/span&gt;&lt;span class=&quot;ba-status ba-live&quot;&gt;Klar&lt;/span&gt;&lt;/div&gt;
+              &lt;div class=&quot;ba-video-process&quot;&gt;
+                &lt;div class=&quot;ba-video-steps&quot; aria-label=&quot;Videoen omdannes i tre trin&quot;&gt;
+                  &lt;span class=&quot;ba-video-step&quot;&gt;🔒&lt;strong&gt;Original modtaget&lt;/strong&gt;&lt;/span&gt;&lt;span&gt;›&lt;/span&gt;
+                  &lt;span class=&quot;ba-video-step&quot;&gt;✦&lt;strong&gt;Identitet fjernet&lt;/strong&gt;&lt;/span&gt;&lt;span&gt;›&lt;/span&gt;
+                  &lt;span class=&quot;ba-video-step&quot;&gt;✓&lt;strong&gt;Tegnefilm klar&lt;/strong&gt;&lt;/span&gt;
+                &lt;/div&gt;
+                &lt;div class=&quot;ba-cartoon-preview&quot;&gt;
+                  &lt;span class=&quot;ba-cartoon-person&quot;&gt;⚽&lt;/span&gt;
+                  &lt;span&gt;&lt;strong&gt;Tegnefilmsvideoen er klar&lt;/strong&gt;Bevægelser, tempo og øvelsens udførelse følger originalen, men barnet kan ikke genkendes.&lt;/span&gt;
+                &lt;/div&gt;
+                &lt;div class=&quot;ba-button-row&quot;&gt;&lt;button class=&quot;ba-primary&quot; type=&quot;button&quot;&gt;▶ Se tegnefilmsvideo&lt;/button&gt;&lt;button class=&quot;ba-secondary&quot; type=&quot;button&quot;&gt;Udskift original&lt;/button&gt;&lt;/div&gt;
+              &lt;/div&gt;
+              &lt;div class=&quot;ba-suggestion&quot;&gt;&lt;strong&gt;Privatliv:&lt;/strong&gt; Kun den anonyme tegnefilmsvideo kan vises i børneappen. Originalvideoen bruges alene til omdannelsen.&lt;/div&gt;
+              &lt;div class=&quot;ba-suggestion&quot;&gt;&lt;strong&gt;✦ AI-forslag:&lt;/strong&gt; Forklar også, at barnet gerne må lade bolden ramme jorden mellem forsøgene i starten.&lt;/div&gt;
+              &lt;div class=&quot;ba-button-row&quot; style=&quot;margin-top: 9px&quot;&gt;&lt;button class=&quot;ba-primary&quot; type=&quot;button&quot;&gt;Indsæt i forklaringen&lt;/button&gt;&lt;button class=&quot;ba-ghost&quot; type=&quot;button&quot;&gt;Ignorér&lt;/button&gt;&lt;/div&gt;
+            &lt;/aside&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+      &lt;figcaption class=&quot;ba-caption&quot;&gt;&lt;strong&gt;5. Redigér den enkelte deløvelse&lt;/strong&gt;&lt;span&gt;Hver deløvelse kan også have sin egen korte demonstrationsvideo. Den omdannes til en tro tegnefilmsudgave, hvor personen ikke kan genkendes.&lt;/span&gt;&lt;/figcaption&gt;
+    &lt;/figure&gt;
+
+    &lt;figure class=&quot;ba-example&quot;&gt;
+      &lt;div class=&quot;ba-window&quot; aria-label=&quot;Administration af emnets garderobe og belønninger&quot;&gt;
+        &lt;div class=&quot;ba-topbar&quot;&gt;
+          &lt;div class=&quot;ba-brand&quot;&gt;&lt;span class=&quot;ba-mark&quot;&gt;★&lt;/span&gt; Fodbold › Garderobe&lt;/div&gt;
+          &lt;div class=&quot;ba-button-row&quot;&gt;&lt;button class=&quot;ba-secondary&quot; type=&quot;button&quot;&gt;Foreslå flere med AI&lt;/button&gt;&lt;button class=&quot;ba-primary&quot; type=&quot;button&quot;&gt;Gem garderoben&lt;/button&gt;&lt;/div&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;ba-main&quot; style=&quot;background: var(--ba-page)&quot;&gt;
+          &lt;div class=&quot;ba-toolbar&quot;&gt;&lt;div&gt;&lt;p class=&quot;ba-eyebrow&quot;&gt;EMNEGARDEROBE&lt;/p&gt;&lt;h3 class=&quot;ba-title&quot;&gt;Belønninger til Fodbold&lt;/h3&gt;&lt;p class=&quot;ba-copy&quot;&gt;Godkend, ret eller fjern de ting, AI’en har foreslået.&lt;/p&gt;&lt;/div&gt;&lt;span class=&quot;ba-status&quot;&gt;12 ting i alt&lt;/span&gt;&lt;/div&gt;
+          &lt;div class=&quot;ba-reward-grid&quot;&gt;
+            &lt;div class=&quot;ba-reward&quot;&gt;&lt;span class=&quot;ba-reward-icon&quot;&gt;👟&lt;/span&gt;&lt;strong&gt;Turkise støvler&lt;/strong&gt;&lt;small&gt;Almindelig · 80 point&lt;/small&gt;&lt;div class=&quot;ba-button-row&quot; style=&quot;justify-content: center; margin-top: 7px&quot;&gt;&lt;button class=&quot;ba-ghost&quot; type=&quot;button&quot;&gt;Ret&lt;/button&gt;&lt;/div&gt;&lt;/div&gt;
+            &lt;div class=&quot;ba-reward&quot;&gt;&lt;span class=&quot;ba-reward-icon&quot;&gt;🔥&lt;/span&gt;&lt;strong&gt;Flammestøvler&lt;/strong&gt;&lt;small&gt;Sjælden · 300 point&lt;/small&gt;&lt;div class=&quot;ba-button-row&quot; style=&quot;justify-content: center; margin-top: 7px&quot;&gt;&lt;button class=&quot;ba-ghost&quot; type=&quot;button&quot;&gt;Ret&lt;/button&gt;&lt;/div&gt;&lt;/div&gt;
+            &lt;div class=&quot;ba-reward&quot;&gt;&lt;span class=&quot;ba-reward-icon&quot;&gt;🎽&lt;/span&gt;&lt;strong&gt;Kaptajntrøje&lt;/strong&gt;&lt;small&gt;Særlig · gennemfør et mål&lt;/small&gt;&lt;div class=&quot;ba-button-row&quot; style=&quot;justify-content: center; margin-top: 7px&quot;&gt;&lt;button class=&quot;ba-ghost&quot; type=&quot;button&quot;&gt;Ret&lt;/button&gt;&lt;/div&gt;&lt;/div&gt;
+            &lt;div class=&quot;ba-reward ba-ai-new&quot;&gt;&lt;span class=&quot;ba-reward-icon&quot;&gt;🌈&lt;/span&gt;&lt;strong&gt;Regnbuebold&lt;/strong&gt;&lt;small&gt;Nyt AI-forslag · sjælden&lt;/small&gt;&lt;div class=&quot;ba-button-row&quot; style=&quot;justify-content: center; margin-top: 7px&quot;&gt;&lt;button class=&quot;ba-primary&quot; type=&quot;button&quot;&gt;Godkend&lt;/button&gt;&lt;button class=&quot;ba-ghost&quot; type=&quot;button&quot;&gt;Afvis&lt;/button&gt;&lt;/div&gt;&lt;/div&gt;
+            &lt;div class=&quot;ba-reward ba-ai-new&quot;&gt;&lt;span class=&quot;ba-reward-icon&quot;&gt;🧢&lt;/span&gt;&lt;strong&gt;Trænerkasket&lt;/strong&gt;&lt;small&gt;Nyt AI-forslag · almindelig&lt;/small&gt;&lt;div class=&quot;ba-button-row&quot; style=&quot;justify-content: center; margin-top: 7px&quot;&gt;&lt;button class=&quot;ba-primary&quot; type=&quot;button&quot;&gt;Godkend&lt;/button&gt;&lt;button class=&quot;ba-ghost&quot; type=&quot;button&quot;&gt;Afvis&lt;/button&gt;&lt;/div&gt;&lt;/div&gt;
+            &lt;div class=&quot;ba-reward&quot;&gt;&lt;span class=&quot;ba-reward-icon&quot;&gt;＋&lt;/span&gt;&lt;strong&gt;Tilføj selv&lt;/strong&gt;&lt;small&gt;Opret tøj eller en effekt&lt;/small&gt;&lt;div class=&quot;ba-button-row&quot; style=&quot;justify-content: center; margin-top: 7px&quot;&gt;&lt;button class=&quot;ba-secondary&quot; type=&quot;button&quot;&gt;Opret&lt;/button&gt;&lt;/div&gt;&lt;/div&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+      &lt;figcaption class=&quot;ba-caption&quot;&gt;&lt;strong&gt;6. Gennemgå garderoben&lt;/strong&gt;&lt;span&gt;AI’en foreslår emnespecifikke ting og sjældenheder. Den indholdsansvarlige godkender, retter pris og navn eller afviser forslaget.&lt;/span&gt;&lt;/figcaption&gt;
+    &lt;/figure&gt;
+
+    &lt;figure class=&quot;ba-example&quot;&gt;
+      &lt;div class=&quot;ba-window&quot; aria-label=&quot;Sidste kontrol før et emne publiceres&quot;&gt;
+        &lt;div class=&quot;ba-topbar&quot;&gt;
+          &lt;div class=&quot;ba-brand&quot;&gt;&lt;span class=&quot;ba-mark&quot;&gt;★&lt;/span&gt; Fodbold › Udgivelse&lt;/div&gt;
+          &lt;span class=&quot;ba-status ba-live&quot;&gt;Klar til udgivelse&lt;/span&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;ba-main&quot; style=&quot;background: var(--ba-page)&quot;&gt;
+          &lt;div class=&quot;ba-toolbar&quot;&gt;&lt;div&gt;&lt;p class=&quot;ba-eyebrow&quot;&gt;SIDSTE KONTROL&lt;/p&gt;&lt;h3 class=&quot;ba-title&quot;&gt;Gennemgå Fodbold&lt;/h3&gt;&lt;p class=&quot;ba-copy&quot;&gt;Se det vigtigste samlet og prøv barnets visning, før emnet udgives.&lt;/p&gt;&lt;/div&gt;&lt;/div&gt;
+          &lt;div class=&quot;ba-publish-layout&quot;&gt;
+            &lt;section&gt;
+              &lt;div class=&quot;ba-checklist&quot;&gt;
+                &lt;div class=&quot;ba-check&quot;&gt;&lt;span class=&quot;ba-checkmark&quot;&gt;✓&lt;/span&gt;&lt;span&gt;4 træningsmål er gennemgået&lt;/span&gt;&lt;button class=&quot;ba-ghost&quot; type=&quot;button&quot;&gt;Se&lt;/button&gt;&lt;/div&gt;
+                &lt;div class=&quot;ba-check&quot;&gt;&lt;span class=&quot;ba-checkmark&quot;&gt;✓&lt;/span&gt;&lt;span&gt;24 deløvelser har mål og rækkefølge&lt;/span&gt;&lt;button class=&quot;ba-ghost&quot; type=&quot;button&quot;&gt;Se&lt;/button&gt;&lt;/div&gt;
+                &lt;div class=&quot;ba-check&quot;&gt;&lt;span class=&quot;ba-checkmark&quot;&gt;✓&lt;/span&gt;&lt;span&gt;Sikkerhedstekster er godkendt&lt;/span&gt;&lt;button class=&quot;ba-ghost&quot; type=&quot;button&quot;&gt;Se&lt;/button&gt;&lt;/div&gt;
+                &lt;div class=&quot;ba-check&quot;&gt;&lt;span class=&quot;ba-checkmark&quot;&gt;✓&lt;/span&gt;&lt;span&gt;4 målvideoer er anonymiseret og koblet til belønninger&lt;/span&gt;&lt;button class=&quot;ba-ghost&quot; type=&quot;button&quot;&gt;Se&lt;/button&gt;&lt;/div&gt;
+                &lt;div class=&quot;ba-check&quot;&gt;&lt;span class=&quot;ba-checkmark&quot;&gt;✓&lt;/span&gt;&lt;span&gt;Deløvelsesvideoer er anonymiseret og godkendt&lt;/span&gt;&lt;button class=&quot;ba-ghost&quot; type=&quot;button&quot;&gt;Se&lt;/button&gt;&lt;/div&gt;
+                &lt;div class=&quot;ba-check&quot;&gt;&lt;span class=&quot;ba-checkmark&quot;&gt;✓&lt;/span&gt;&lt;span&gt;12 garderobeting er godkendt&lt;/span&gt;&lt;button class=&quot;ba-ghost&quot; type=&quot;button&quot;&gt;Se&lt;/button&gt;&lt;/div&gt;
+              &lt;/div&gt;
+              &lt;div class=&quot;ba-suggestion&quot;&gt;&lt;strong&gt;Ansvar før udgivelse:&lt;/strong&gt; AI har hjulpet med udkastet, men den indholdsansvarlige bekræfter, at progression og sikkerhed er passende for målgruppen.&lt;/div&gt;
+              &lt;div class=&quot;ba-button-row&quot; style=&quot;margin-top: 12px&quot;&gt;&lt;button class=&quot;ba-secondary&quot; type=&quot;button&quot;&gt;Gem som kladde&lt;/button&gt;&lt;button class=&quot;ba-primary&quot; type=&quot;button&quot;&gt;Publicér emnet&lt;/button&gt;&lt;/div&gt;
+            &lt;/section&gt;
+            &lt;aside class=&quot;ba-phone-preview&quot; aria-label=&quot;Forhåndsvisning af Fodbold i børneappen&quot;&gt;
+              &lt;div class=&quot;ba-phone-screen&quot;&gt;
+                &lt;p class=&quot;ba-eyebrow&quot;&gt;SÅDAN SER BARNET DET&lt;/p&gt;
+                &lt;h3 class=&quot;ba-title&quot; style=&quot;font-size: 17px&quot;&gt;Fodbold ⚽&lt;/h3&gt;
+                &lt;div class=&quot;ba-preview-hero&quot;&gt;⚽&lt;/div&gt;
+                &lt;div class=&quot;ba-outline-row&quot;&gt;&lt;span class=&quot;ba-number&quot;&gt;1&lt;/span&gt;&lt;span&gt;&lt;strong&gt;Lær at jonglere&lt;/strong&gt;&lt;small&gt;6 trin · nybegynder&lt;/small&gt;&lt;/span&gt;&lt;span&gt;›&lt;/span&gt;&lt;/div&gt;
+                &lt;div class=&quot;ba-outline-row&quot; style=&quot;margin-top: 7px&quot;&gt;&lt;span class=&quot;ba-number&quot;&gt;2&lt;/span&gt;&lt;span&gt;&lt;strong&gt;Dribl forbi en modstander&lt;/strong&gt;&lt;small&gt;5 trin&lt;/small&gt;&lt;/span&gt;&lt;span&gt;›&lt;/span&gt;&lt;/div&gt;
+              &lt;/div&gt;
+            &lt;/aside&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+      &lt;figcaption class=&quot;ba-caption&quot;&gt;&lt;strong&gt;7. Kontrollér og publicér&lt;/strong&gt;&lt;span&gt;Udgivelse kræver en samlet kontrol. Den indholdsansvarlige kan forhåndsvise barnets oplevelse og har det sidste ansvar for indholdet.&lt;/span&gt;&lt;/figcaption&gt;
+    &lt;/figure&gt;
+  &lt;/div&gt;
+&lt;/section&gt;
+
+&lt;script src=&quot;https://unpkg.com/@floating-ui/core@1.7.3/dist/floating-ui.core.umd.min.js&quot;&gt;&lt;/script&gt;
+&lt;script src=&quot;https://unpkg.com/@floating-ui/dom@1.7.4/dist/floating-ui.dom.umd.min.js&quot;&gt;&lt;/script&gt;
+&lt;script&gt;
+(() =&gt; {
+  if (window.FloatingUIDOM == null) {
+    return;
+  }
+  const { autoUpdate, computePosition, flip, offset, shift, size } =
+    window.FloatingUIDOM;
+  const tooltipPlacements = new Set([&quot;top&quot;, &quot;right&quot;, &quot;bottom&quot;, &quot;left&quot;]);
+  const tooltipId = `codex-visualization-tooltip-${
+    window.crypto?.randomUUID?.() ?? Date.now().toString(36)
+  }`;
+  const tooltipGap = 5;
+  const hoverDelay = 700;
+  const skipDelay = 300;
+  let activeTrigger = null;
+  let pendingTrigger = null;
+  let tooltip = null;
+  let openTimeout = null;
+  let autoUpdateCleanup = null;
+  let positionRequest = 0;
+  let skipDelayUntil = 0;
+
+  const getTrigger = (target) =&gt;
+    target?.nodeType === Node.ELEMENT_NODE
+      ? target.closest(&quot;[data-tooltip]&quot;)
+      : null;
+  const containsTarget = (trigger, target) =&gt;
+    target?.nodeType != null &amp;&amp; trigger.contains(target);
+  const getContent = (trigger) =&gt;
+    trigger.getAttribute(&quot;data-tooltip&quot;)?.trim() ?? &quot;&quot;;
+  const getPlacement = (trigger) =&gt; {
+    const placement = trigger.getAttribute(&quot;data-tooltip-placement&quot;);
+    return tooltipPlacements.has(placement) ? placement : &quot;top&quot;;
+  };
+  const getTooltip = () =&gt; {
+    if (tooltip == null) {
+      tooltip = document.createElement(&quot;div&quot;);
+      tooltip.id = tooltipId;
+      tooltip.className = &quot;tooltip&quot;;
+      tooltip.setAttribute(&quot;role&quot;, &quot;tooltip&quot;);
+    }
+    return tooltip;
+  };
+  const setDescribedBy = (trigger, described) =&gt; {
+    const ids = new Set(
+      (trigger.getAttribute(&quot;aria-describedby&quot;) ?? &quot;&quot;)
+        .split(/\s+/)
+        .filter(Boolean),
+    );
+    if (described) {
+      ids.add(tooltipId);
+    } else {
+      ids.delete(tooltipId);
+    }
+    if (ids.size === 0) {
+      trigger.removeAttribute(&quot;aria-describedby&quot;);
+    } else {
+      trigger.setAttribute(&quot;aria-describedby&quot;, [...ids].join(&quot; &quot;));
+    }
+  };
+  const clearOpenTimeout = () =&gt; {
+    if (openTimeout != null) {
+      window.clearTimeout(openTimeout);
+      openTimeout = null;
+    }
+    pendingTrigger = null;
+  };
+  const closeTooltip = (activateSkipDelay = true) =&gt; {
+    clearOpenTimeout();
+    positionRequest += 1;
+    autoUpdateCleanup?.();
+    autoUpdateCleanup = null;
+    if (activeTrigger == null) {
+      return;
+    }
+    setDescribedBy(activeTrigger, false);
+    activeTrigger = null;
+    tooltip?.remove();
+    if (activateSkipDelay) {
+      skipDelayUntil = Date.now() + skipDelay;
+    }
+  };
+  const updatePosition = (trigger, floating) =&gt; {
+    const request = ++positionRequest;
+    void computePosition(trigger, floating, {
+      middleware: [
+        offset(tooltipGap),
+        flip({ padding: tooltipGap }),
+        shift({ padding: tooltipGap }),
+        size({
+          padding: tooltipGap,
+          apply({ availableHeight, availableWidth, elements }) {
+            elements.floating.style.setProperty(
+              &quot;--tooltip-available-width&quot;,
+              `${Math.max(0, availableWidth)}px`,
+            );
+            elements.floating.style.setProperty(
+              &quot;--tooltip-available-height&quot;,
+              `${Math.max(0, availableHeight)}px`,
+            );
+          },
+        }),
+      ],
+      placement: getPlacement(trigger),
+      strategy: &quot;fixed&quot;,
+    })
+      .then(({ x, y }) =&gt; {
+        if (activeTrigger !== trigger || request !== positionRequest) {
+          return;
+        }
+        const scale = window.devicePixelRatio || 1;
+        floating.style.transform = `translate(${Math.round(x * scale) / scale}px, ${Math.round(y * scale) / scale}px)`;
+        floating.style.visibility = &quot;visible&quot;;
+      })
+      .catch(() =&gt; {
+        if (activeTrigger === trigger &amp;&amp; request === positionRequest) {
+          closeTooltip(false);
+        }
+      });
+  };
+  const openTooltip = (trigger) =&gt; {
+    const content = getContent(trigger);
+    if (!trigger.isConnected || content.length === 0) {
+      return;
+    }
+    clearOpenTimeout();
+    if (activeTrigger === trigger) {
+      return;
+    }
+    closeTooltip();
+    const floating = getTooltip();
+    floating.textContent = content;
+    floating.style.visibility = &quot;hidden&quot;;
+    floating.style.transform = &quot;translate(0, 0)&quot;;
+    document.body.appendChild(floating);
+    activeTrigger = trigger;
+    setDescribedBy(trigger, true);
+    autoUpdateCleanup = autoUpdate(trigger, floating, () =&gt; {
+      updatePosition(trigger, floating);
+    });
+  };
+  const requestOpen = (trigger, immediate = false) =&gt; {
+    if (
+      getContent(trigger).length === 0 ||
+      activeTrigger === trigger ||
+      pendingTrigger === trigger
+    ) {
+      return;
+    }
+    clearOpenTimeout();
+    pendingTrigger = trigger;
+    const delay =
+      immediate || activeTrigger != null || Date.now() &lt; skipDelayUntil
+        ? 0
+        : hoverDelay;
+    if (delay === 0) {
+      openTooltip(trigger);
+      return;
+    }
+    openTimeout = window.setTimeout(() =&gt; {
+      openTimeout = null;
+      pendingTrigger = null;
+      openTooltip(trigger);
+    }, delay);
+  };
+  const handlePointerOpen = (event) =&gt; {
+    if (event.pointerType === &quot;touch&quot;) {
+      return;
+    }
+    const trigger = getTrigger(event.target);
+    if (trigger == null || containsTarget(trigger, event.relatedTarget)) {
+      return;
+    }
+    requestOpen(trigger);
+  };
+  const handleLeave = (event) =&gt; {
+    const trigger = getTrigger(event.target);
+    if (trigger == null || containsTarget(trigger, event.relatedTarget)) {
+      return;
+    }
+    if (activeTrigger === trigger || pendingTrigger === trigger) {
+      closeTooltip();
+    }
+  };
+  const handleFocusIn = (event) =&gt; {
+    const trigger = getTrigger(event.target);
+    if (trigger?.matches(&quot;:focus-visible&quot;)) {
+      requestOpen(trigger, true);
+    }
+  };
+  const handleKeyDown = (event) =&gt; {
+    if (event.key === &quot;Escape&quot;) {
+      closeTooltip();
+    }
+  };
+  const handleContextMenu = (event) =&gt; {
+    const trigger = getTrigger(event.target);
+    if (activeTrigger === trigger || pendingTrigger === trigger) {
+      closeTooltip();
+    }
+  };
+  const destroy = () =&gt; {
+    closeTooltip(false);
+    document.removeEventListener(&quot;pointerover&quot;, handlePointerOpen);
+    document.removeEventListener(&quot;pointerout&quot;, handleLeave);
+    document.removeEventListener(&quot;focusin&quot;, handleFocusIn);
+    document.removeEventListener(&quot;focusout&quot;, handleLeave);
+    document.removeEventListener(&quot;keydown&quot;, handleKeyDown);
+    document.removeEventListener(&quot;contextmenu&quot;, handleContextMenu);
+    tooltip = null;
+  };
+
+  document.addEventListener(&quot;pointerover&quot;, handlePointerOpen);
+  document.addEventListener(&quot;pointerout&quot;, handleLeave);
+  document.addEventListener(&quot;focusin&quot;, handleFocusIn);
+  document.addEventListener(&quot;focusout&quot;, handleLeave);
+  document.addEventListener(&quot;keydown&quot;, handleKeyDown);
+  document.addEventListener(&quot;contextmenu&quot;, handleContextMenu);
+  window.addEventListener(&quot;pagehide&quot;, destroy, { once: true });
+})();
+&lt;/script&gt;
+&lt;script id=&quot;codex-visualization-lucide&quot; async src=&quot;https://unpkg.com/lucide@1.17.0/dist/umd/lucide.js&quot;&gt;&lt;/script&gt;
+&lt;script&gt;
+(() =&gt; {
+  const initialize = () =&gt; {
+    globalThis.lucide?.createIcons({ attrs: { width: 16, height: 16 } });
+  };
+  if (globalThis.lucide != null) {
+    initialize();
+    return;
+  }
+  document
+    .getElementById(&quot;codex-visualization-lucide&quot;)
+    ?.addEventListener(&quot;load&quot;, initialize, { once: true });
+})();
+&lt;/script&gt;
+
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe>
+</body>
+</html>
