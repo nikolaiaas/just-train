@@ -1,5 +1,5 @@
 import { colors } from "@bare-traen/design";
-import { Stack, useRouter, useSegments } from "expo-router";
+import { Stack, usePathname, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 
@@ -12,14 +12,10 @@ import {
 
 function ProtectedStack() {
   const router = useRouter();
-  const segments = useSegments();
+  const pathname = usePathname();
   const { authStatus, retryAuth, session } = useAuth();
-  const firstSegment = segments[0];
-  const isLoginRoute = firstSegment === "login" && segments.length === 1;
-  const isCallbackRoute =
-    firstSegment === "auth" &&
-    segments[1] === "callback" &&
-    segments.length === 2;
+  const isLoginRoute = pathname === "/login";
+  const isCallbackRoute = pathname === "/auth/callback";
   const isPublicRoute = isLoginRoute || isCallbackRoute;
 
   useEffect(() => {
