@@ -6,6 +6,7 @@ import {
 } from "@supabase/supabase-js";
 
 export * from "./auth.ts";
+export * from "./parent.ts";
 
 export type BareTraenClient = SupabaseClient<Database>;
 

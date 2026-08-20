@@ -50,6 +50,10 @@ confirmation through the real UI.
 ## Authentication and authorization assumptions
 
 - One `profiles` row is created automatically for each Supabase Auth user.
+- A verified adult completes first-family setup through the retry-safe
+  `complete_parent_onboarding` RPC. It updates only the caller's display name,
+  returns an existing membership when one is already present, or creates one
+  family and owner membership atomically. It never creates a child profile.
 - In the first vertical slice, children are parent-owned records, not Auth
   users. Direct child login is deliberately deferred.
 - Family membership is the boundary for children, selected goals, sessions,

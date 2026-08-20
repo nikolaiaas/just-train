@@ -648,7 +648,17 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
-      [_ in never]: never;
+      complete_parent_onboarding: {
+        Args: { p_display_name: string; p_family_name: string };
+        Returns: {
+          created: boolean;
+          display_name: string;
+          family_id: string;
+          family_name: string;
+          profile_id: string;
+          role: Database["public"]["Enums"]["family_member_role"];
+        }[];
+      };
     };
     Enums: {
       attempt_outcome: "completed" | "partial" | "skipped";
