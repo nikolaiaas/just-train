@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(17);
+select plan(18);
 
 select has_function(
   'public',
@@ -165,6 +165,32 @@ select throws_ok(
   '22023',
   'Family name must contain between 1 and 80 characters.',
   'control characters in family names are rejected before any write'
+);
+
+reset role;
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"10000000-0000-4000-8000-000000000001","role":"authenticated"}',
+  true
+);
+set local role authenticated;
+select results_eq(
+  $$
+    select family_id, family_name, role::text, created
+    from public.complete_parent_onboarding(
+      'Demo Forælder',
+      'Må ikke oprette en ny familie'
+    )
+  $$,
+  $$
+    values (
+      '20000000-0000-4000-8000-000000000001'::uuid,
+      'Demo Familien'::text,
+      'owner'::text,
+      false
+    )
+  $$,
+  'an existing parent receives only their own oldest family'
 );
 
 reset role;
