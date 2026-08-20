@@ -158,9 +158,11 @@ Exit condition: pilot screens can be assembled from reviewed components rather t
 - [ ] Add media assets and processing-job metadata without implementing generation yet.
 - [ ] Add AI draft/suggestion, review decision, publication, and audit-log structures.
 - [x] Configure six-digit passwordless email locally, remove fixture passwords, and protect magic links behind an explicit scanner-safe confirmation page.
+- [x] Implement administrator email/OTP sign-in with server-side session handling and an `is_admin` route guard.
+- [ ] Add CAPTCHA or server-side throttling before exposing passwordless login publicly.
 - [ ] Implement parent email/OTP authentication.
 - [ ] Add a nullable link for future direct child authentication.
-- [ ] Add administrator roles in protected metadata and server-side route guards.
+- [x] Add administrator roles in protected metadata and server-side route guards.
 - [ ] Write RLS policies for parent, child, content administrator, and worker access.
 - [ ] Write automated positive and negative RLS tests for every personal-data table and private bucket.
 - [ ] Ensure content administrators cannot browse child data.
@@ -199,7 +201,7 @@ Exit condition: a child cannot lose or duplicate a completed attempt because of 
 
 ## 9. Build the functional administration vertical slice
 
-- [ ] Implement administrator sign-in and authorization guard.
+- [x] Implement administrator sign-in and authorization guard.
 - [ ] Implement the topic/goal library with draft, review, and published statuses.
 - [ ] Implement editing and reordering the seeded goal's exercises.
 - [ ] Validate name, explanation, measurement type, target, training time, equipment, and safety text.

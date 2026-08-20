@@ -81,7 +81,7 @@ pnpm supabase:status
 pnpm supabase:reset
 ```
 
-Studio is normally available at [http://localhost:54323](http://localhost:54323). Starting local Supabase does not silently redirect either app: this Mac's ignored `.env.local` files normally point to the hosted development project so Safari and iPhone use the same disposable backend. When a task explicitly needs an app connected to the local stack, temporarily use only the local public URL and publishable key reported by `pnpm supabase:status`, then restore the hosted public values before real-device work. Never use the service-role key in an app.
+Studio is normally available at [http://localhost:54323](http://localhost:54323). Starting local Supabase does not silently redirect either app. The administration login on localhost has a hidden **Udviklingsmiljø** selector for Local Supabase or Hosted Development, with separate sessions and no Production option. The mobile app still uses the backend configured in its ignored `.env.local`; a physical iPhone should normally stay on Hosted Development. Never use the service-role key in an app.
 
 The local Supabase stack is development-only and must not be exposed to the public internet. A physical iPhone should normally use the hosted development project rather than the Mac's local database.
 

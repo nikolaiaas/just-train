@@ -1,3 +1,8 @@
+import {
+  isSameExternalOrigin,
+  resolveExternalRequestLocation,
+} from "../../../lib/auth/request-location.ts";
+
 const LOCAL_SUPABASE_ORIGINS = [
   "http://127.0.0.1:54321",
   "http://localhost:54321",
@@ -9,6 +14,7 @@ const MAX_FORM_BODY_LENGTH = 12_000;
 export type ConfirmationUrlOptions = {
   configuredSupabaseUrl: string | undefined;
   allowLocalSupabase: boolean;
+  isVercel?: boolean;
 };
 
 const responseSecurityHeaders = {
@@ -125,33 +131,24 @@ export function validateConfirmationUrl(
   }
 }
 
-export function isSameOriginPost(request: Request): boolean {
+export function isSameOriginPost(request: Request, isVercel = false): boolean {
   if (request.method !== "POST") {
     return false;
   }
 
-  const origin = request.headers.get("origin");
   const fetchSite = request.headers.get("sec-fetch-site");
+  const externalLocation = resolveExternalRequestLocation({
+    requestUrl: request.url,
+    hostHeader: request.headers.get("host"),
+    forwardedProtocol: request.headers.get("x-forwarded-proto"),
+    isVercel,
+  });
 
-  if (!origin || (fetchSite && fetchSite !== "same-origin")) {
+  if (!externalLocation || (fetchSite && fetchSite !== "same-origin")) {
     return false;
   }
 
-  try {
-    const requestUrl = new URL(request.url);
-    const originUrl = new URL(origin);
-
-    return (
-      !originUrl.username &&
-      !originUrl.password &&
-      originUrl.pathname === "/" &&
-      !originUrl.search &&
-      !originUrl.hash &&
-      originUrl.origin === requestUrl.origin
-    );
-  } catch {
-    return false;
-  }
+  return isSameExternalOrigin(request.headers.get("origin"), externalLocation);
 }
 
 function textResponse(message: string, status: number): Response {
@@ -168,7 +165,7 @@ export async function handleConfirmationPost(
   request: Request,
   options: ConfirmationUrlOptions,
 ): Promise<Response> {
-  if (!isSameOriginPost(request)) {
+  if (!isSameOriginPost(request, options.isVercel)) {
     return textResponse("Anmodningen kunne ikke godkendes.", 403);
   }
 

@@ -1,6 +1,6 @@
 {
   "version": 3,
-  "updatedAt": "2026-08-20T20:56:33.741Z",
+  "updatedAt": "2026-08-20T21:43:38.513Z",
   "items": [
     {
       "id": "auth-environment-slice",
@@ -124,15 +124,15 @@
       "updatedAt": "2026-08-20T19:56:04.078Z"
     },
     {
-      "id": "91ad33af-c452-4780-bf37-5020ac9ad4d4",
-      "title": "Forbind administrationens login",
-      "details": "Byg email-, kode- og magic-link-flow og beskyt administrationen med en serverkontrolleret is_admin-rolle.",
+      "id": "d97167f0-083f-4801-88ca-e4a83006a4b7",
+      "title": "Beskyt offentligt login mod misbrug",
+      "details": "Tilføj CAPTCHA eller server-side throttling til email- og kodehandlinger, før den stabile admin- og forældrelogin-side åbnes offentligt; bevar samme generiske svar for kendte og ukendte adresser.",
       "implementationNotes": "",
       "evidence": [],
-      "status": "doing",
-      "priority": 0,
-      "createdAt": "2026-08-20T19:52:36.384Z",
-      "updatedAt": "2026-08-20T20:56:33.741Z"
+      "status": "todo",
+      "priority": 7,
+      "createdAt": "2026-08-20T21:43:38.513Z",
+      "updatedAt": "2026-08-20T21:43:38.513Z"
     },
     {
       "id": "dev-console",
@@ -200,6 +200,38 @@
       "priority": 3,
       "createdAt": "2026-08-20T19:56:04.012Z",
       "updatedAt": "2026-08-20T20:56:27.049Z"
+    },
+    {
+      "id": "91ad33af-c452-4780-bf37-5020ac9ad4d4",
+      "title": "Forbind administrationens login",
+      "details": "Byg email-, kode- og magic-link-flow og beskyt administrationen med en serverkontrolleret is_admin-rolle.",
+      "implementationNotes": "Administrationens /login bruger nu email-OTP eller magic-link uden passwords, server-side Supabase-sessioner og en databasekontrolleret is_admin-vagt. Local og Hosted Development har adskilte sessioner, og miljøvælgeren findes kun på localhost uden en Production-mulighed. Lokal browsertest bekræftede admin-login, session efter genindlæsning, logout og at en syntetisk forælder afvises uden adgang til indhold. 27 fokuserede admin-tests og hele repository-suiten består. Magic-linkets scanner-sikre mellemtrin, callback-validering og engangsbrug er dækket af route- og Supabase-integrationstests. Hosted SMTP og en rigtig hosted admin-konto er fortsat særskilte opgaver.",
+      "evidence": [
+        {
+          "kind": "image",
+          "label": "Tom login-side",
+          "path": "91ad33af-c452-4780-bf37-5020ac9ad4d4/2026-08-20-login-desktop.png"
+        },
+        {
+          "kind": "image",
+          "label": "Local og Hosted Development",
+          "path": "91ad33af-c452-4780-bf37-5020ac9ad4d4/2026-08-20-login-local-selector.png"
+        },
+        {
+          "kind": "image",
+          "label": "Tomt kodefelt efter loginmail",
+          "path": "91ad33af-c452-4780-bf37-5020ac9ad4d4/2026-08-20-login-otp-empty.png"
+        },
+        {
+          "kind": "image",
+          "label": "Godkendt syntetisk administrator",
+          "path": "91ad33af-c452-4780-bf37-5020ac9ad4d4/2026-08-20-admin-authorized.png"
+        }
+      ],
+      "status": "done",
+      "priority": 4,
+      "createdAt": "2026-08-20T19:52:36.384Z",
+      "updatedAt": "2026-08-20T21:43:21.726Z"
     }
   ]
 }

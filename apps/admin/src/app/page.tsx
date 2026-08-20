@@ -1,5 +1,14 @@
+import { redirect } from "next/navigation";
+
+import type { AdminProfile } from "@/lib/auth/access";
+import { getAdminAccess } from "@/lib/auth/dal";
+
 import { ContentOverview, type Topic } from "./content-overview";
+import { logoutAdmin } from "./login/actions";
 import styles from "./page.module.css";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 const topics: Topic[] = [
   {
@@ -102,7 +111,31 @@ function AppMark() {
   );
 }
 
-export default function Home() {
+function AccessDenied() {
+  return (
+    <main className={styles.accessViewport}>
+      <section className={styles.accessCard} aria-labelledby="denied-title">
+        <AppMark />
+        <p className={styles.accessEyebrow}>Adgang begrænset</p>
+        <h1 id="denied-title">Denne konto er ikke administrator</h1>
+        <p>
+          Du er logget ind, men kontoen har ikke adgang til Bare Træns
+          administration. Prøv en anden godkendt mailadresse.
+        </p>
+        <form action={logoutAdmin}>
+          <button className={styles.accessButton} type="submit">
+            Log ud og prøv en anden konto
+          </button>
+        </form>
+      </section>
+    </main>
+  );
+}
+
+function AdminDashboard({ profile }: { profile: AdminProfile }) {
+  const initial =
+    profile.displayName.trim().charAt(0).toLocaleUpperCase("da-DK") || "A";
+
   return (
     <main className={styles.viewport}>
       <section
@@ -117,15 +150,26 @@ export default function Home() {
             <span className={styles.brandSection}>Administration</span>
           </div>
 
-          <div
-            className={styles.profile}
-            aria-label="Logget ind som Nikolai, indholdsansvarlig"
-          >
-            <span className={styles.role}>Indholdsansvarlig</span>
-            <span className={styles.avatar} aria-hidden="true">
-              N
-            </span>
-          </div>
+          <details className={styles.profileMenu}>
+            <summary
+              className={styles.profile}
+              aria-label={
+                "Kontomenu for " + profile.displayName + ", indholdsansvarlig"
+              }
+            >
+              <span className={styles.role}>Indholdsansvarlig</span>
+              <span className={styles.avatar} aria-hidden="true">
+                {initial}
+              </span>
+            </summary>
+            <div className={styles.profilePopover}>
+              <strong>{profile.displayName}</strong>
+              <span>Administrator</span>
+              <form action={logoutAdmin}>
+                <button type="submit">Log ud</button>
+              </form>
+            </div>
+          </details>
         </header>
 
         <div className={styles.shellBody}>
@@ -176,4 +220,22 @@ export default function Home() {
       </section>
     </main>
   );
+}
+
+export default async function Home() {
+  const access = await getAdminAccess();
+
+  if (access.kind === "unauthenticated") {
+    redirect("/login");
+  }
+
+  if (access.kind === "unavailable") {
+    redirect("/login?reason=configuration");
+  }
+
+  if (access.kind === "denied") {
+    return <AccessDenied />;
+  }
+
+  return <AdminDashboard profile={access.profile} />;
 }

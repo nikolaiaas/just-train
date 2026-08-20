@@ -85,6 +85,62 @@
   font-size: 13px;
 }
 
+.profileMenu {
+  position: relative;
+}
+
+.profileMenu > summary {
+  list-style: none;
+  cursor: pointer;
+}
+
+.profileMenu > summary::-webkit-details-marker {
+  display: none;
+}
+
+.profilePopover {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + 10px);
+  right: 0;
+  display: grid;
+  width: 210px;
+  gap: 4px;
+  padding: 14px;
+  border: 1px solid #d8e1e5;
+  border-radius: 13px;
+  background: #fffefa;
+  color: #5d7080;
+  font-size: 12px;
+  box-shadow: 0 15px 38px rgba(24, 50, 73, 0.16);
+}
+
+.profilePopover strong {
+  color: #183249;
+  font-size: 13px;
+}
+
+.profilePopover form {
+  margin-top: 9px;
+}
+
+.profilePopover button {
+  width: 100%;
+  min-height: 36px;
+  border: 1px solid #c9d5da;
+  border-radius: 9px;
+  background: #fff;
+  color: #29485a;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.profilePopover button:hover {
+  border-color: #9eb1ba;
+  background: #f5f7f6;
+  cursor: pointer;
+}
+
 .role {
   white-space: nowrap;
 }
@@ -214,6 +270,69 @@
   border-radius: 50%;
   background: #2a8d5b;
   box-shadow: 0 0 0 4px #e8f5ef;
+}
+
+.accessViewport {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 28px;
+  background:
+    radial-gradient(
+      circle at 12% 14%,
+      rgba(255, 255, 255, 0.95),
+      transparent 28rem
+    ),
+    #efeee8;
+}
+
+.accessCard {
+  width: min(100%, 500px);
+  padding: 38px;
+  border: 1px solid #d8e1e5;
+  border-radius: 24px;
+  background: #fffefa;
+  box-shadow: 0 24px 70px rgba(24, 50, 73, 0.13);
+}
+
+.accessEyebrow {
+  margin: 28px 0 8px;
+  color: #a4483f;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.accessCard h1 {
+  margin: 0;
+  color: #183249;
+  font-size: clamp(28px, 5vw, 38px);
+  font-weight: 630;
+  letter-spacing: -0.035em;
+  line-height: 1.12;
+}
+
+.accessCard > p:not(.accessEyebrow) {
+  margin: 13px 0 24px;
+  color: #5d7080;
+  line-height: 1.6;
+}
+
+.accessButton {
+  min-height: 44px;
+  padding: 10px 15px;
+  border: 1px solid #08746f;
+  border-radius: 11px;
+  background: #08746f;
+  color: #fff;
+  font-weight: 650;
+}
+
+.accessButton:hover {
+  border-color: #065f5b;
+  background: #065f5b;
+  cursor: pointer;
 }
 
 .content {

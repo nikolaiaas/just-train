@@ -72,6 +72,7 @@ test("requires an exact same-origin browser POST", () => {
     {
       method: "POST",
       headers: {
+        host: "localhost:11000",
         origin: "http://localhost:11000",
         "sec-fetch-site": "same-origin",
       },
@@ -81,7 +82,10 @@ test("requires an exact same-origin browser POST", () => {
     "http://localhost:11000/auth/continue/confirm",
     {
       method: "POST",
-      headers: { origin: "https://evil.test" },
+      headers: {
+        host: "localhost:11000",
+        origin: "https://evil.test",
+      },
     },
   );
 
@@ -91,10 +95,24 @@ test("requires an exact same-origin browser POST", () => {
     isSameOriginPost(
       new Request("http://localhost:11000/auth/continue/confirm", {
         method: "POST",
+        headers: { host: "localhost:11000" },
       }),
     ),
     false,
   );
+});
+
+test("uses the external 127 Host and Origin when Next canonicalizes the URL", () => {
+  const request = new Request("http://localhost:11000/auth/continue/confirm", {
+    method: "POST",
+    headers: {
+      host: "127.0.0.1:11000",
+      origin: "http://127.0.0.1:11000",
+      "sec-fetch-site": "same-origin",
+    },
+  });
+
+  assert.equal(isSameOriginPost(request), true);
 });
 
 test("POST revalidates the URL and redirects with 303 only when valid", async () => {
@@ -104,6 +122,7 @@ test("POST revalidates the URL and redirects with 303 only when valid", async ()
       method: "POST",
       headers: {
         "content-type": "application/x-www-form-urlencoded",
+        host: "admin.example.test",
         origin: "https://admin.example.test",
         "sec-fetch-site": "same-origin",
       },
@@ -129,6 +148,7 @@ test("POST revalidates the URL and redirects with 303 only when valid", async ()
       method: "POST",
       headers: {
         "content-type": "application/x-www-form-urlencoded",
+        host: "admin.example.test",
         origin: "https://admin.example.test",
       },
       body: new URLSearchParams({
@@ -153,6 +173,7 @@ test("POST rejects an oversized body even without Content-Length", async () => {
       method: "POST",
       headers: {
         "content-type": "application/x-www-form-urlencoded",
+        host: "admin.example.test",
         origin: "https://admin.example.test",
       },
       body: `confirmation_url=${"x".repeat(12_001)}`,
@@ -175,7 +196,10 @@ test("POST rejects multipart forms", async () => {
     "https://admin.example.test/auth/continue/confirm",
     {
       method: "POST",
-      headers: { origin: "https://admin.example.test" },
+      headers: {
+        host: "admin.example.test",
+        origin: "https://admin.example.test",
+      },
       body: multipart,
     },
   );

@@ -2,15 +2,18 @@
   "name": "@bare-traen/admin",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev --port 11000",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --test src/app/auth/continue/confirmation-url.test.mjs",
+    "test": "node --experimental-strip-types --test",
     "typecheck": "next typegen && tsc --noEmit"
   },
   "dependencies": {
+    "@bare-traen/api-client": "workspace:*",
+    "@supabase/ssr": "0.12.4",
     "next": "16.3.1",
     "react": "19.2.8",
     "react-dom": "19.2.8"
