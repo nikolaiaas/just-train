@@ -10,17 +10,13 @@ Install from the repository root, then use the existing workspace scripts:
 
 ```bash
 pnpm install
-pnpm dev:mobile
-pnpm --filter @bare-traen/mobile web
+pnpm dev:web
+pnpm dev:iphone
 ```
 
-`pnpm dev:mobile` starts Metro. Because `expo-dev-client` is installed, use this explicit command when the target is Expo Go on a physical iPhone:
+`pnpm dev:web` starts the administration app and this mobile app in a browser. `pnpm dev:iphone` starts Metro for an installed **Bare Træn Dev** development client.
 
-```bash
-pnpm --filter @bare-traen/mobile exec expo start --go --lan
-```
-
-Keep the Mac and iPhone on the same local network, install Expo Go, and scan the displayed QR code. Expo Go does not require Xcode or an Apple Developer membership. Metro must remain running.
+The App Store version of Expo Go is currently incompatible with this Expo SDK 57 project. Use the Safari preview or an EAS development build; do not downgrade the SDK to make Expo Go work. Keep the Mac and iPhone on the same local network while using the development client, and keep Metro running.
 
 Copy `.env.example` to the ignored `.env.local` for local development. On a physical iPhone, use the hosted `bare-traen-development` project's public URL and publishable key. Do not use `http://127.0.0.1:54321`, because loopback on the phone does not reach the Mac.
 
@@ -53,7 +49,7 @@ pnpm dlx eas-cli@latest build --platform ios --profile preview
 Run only the build profile needed. EAS returns a direct install link; the `preview` app runs without Metro. For a development build, start Metro from the repository root after installation:
 
 ```bash
-pnpm --filter @bare-traen/mobile exec expo start --dev-client --lan
+pnpm dev:iphone
 ```
 
 Stable ad-hoc installation requires a paid Apple Developer membership and a provisioning profile containing every test device. Registering a new phone requires a new build or re-signing an existing build. EAS builds in the cloud, so full Xcode is not required for this path.

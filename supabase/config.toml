@@ -43,12 +43,14 @@ file_size_limit = "10MiB"
 
 [auth]
 enabled = true
-site_url = "http://127.0.0.1:3000"
+site_url = "http://127.0.0.1:11000"
 additional_redirect_urls = [
-  "http://localhost:3000",
-  "http://127.0.0.1:8081",
-  "http://localhost:8081",
-  "exp://127.0.0.1:8081",
+  "http://localhost:11000",
+  "http://127.0.0.1:11001",
+  "http://localhost:11001",
+  "exp://127.0.0.1:11001",
+  "baretraen-dev://auth/callback",
+  "baretraen-preview://auth/callback",
   "baretraen://auth/callback",
 ]
 jwt_expiry = 3600

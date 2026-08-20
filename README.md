@@ -24,14 +24,13 @@ Supabase hosts the backend, not the visual app previews. OpenRouter is reserved 
 - [mise](https://mise.jdx.dev/) or Node.js 22.13+
 - pnpm 10.33.1 through Corepack
 - Docker Desktop (or another Docker-compatible runtime) for local Supabase
-- Xcode 26.4+ for the iOS Simulator or a local iPhone build
+- Optional: Xcode 26.4+ for the iOS Simulator or a local USB iPhone build
 
-Full Xcode is not currently installed on this Mac; the command-line tools alone cannot run the iOS Simulator or install an iPhone build.
+Full Xcode is not currently installed on this Mac. That blocks the simulator and local USB builds, but it does not block the recommended EAS cloud build for a registered iPhone.
 
 ## Install
 
 ```bash
-mise trust
 mise install
 mise exec -- corepack enable
 mise exec -- pnpm install
@@ -41,39 +40,24 @@ If mise is activated in your shell, the shorter `pnpm` commands below use the pi
 
 ## Local previews
 
-Start the two fixture-backed interfaces together:
+Start the administration app and mobile Safari preview together:
 
 ```bash
-pnpm dev
+pnpm dev:web
 ```
 
-Or start them separately:
+Or start the general Metro development server and administration separately:
 
 ```bash
 pnpm dev:admin
 pnpm dev:mobile
 ```
 
-- Administration opens at [http://localhost:3000](http://localhost:3000).
+- Administration opens at [http://localhost:11000](http://localhost:11000).
+- The mobile Safari preview normally opens at [http://localhost:11001](http://localhost:11001).
 - The hosted fixture preview is available at [just-train-admin.vercel.app](https://just-train-admin.vercel.app). Vercel protects pull-request deployments with team login, while the app also sends no-index metadata and headers.
-- Expo prints shortcuts for web, iOS Simulator, and Android.
-- Expo Go is enough for the current JavaScript-only preview. Use the EAS `development` build when the app begins to depend on custom native capabilities.
 
-### Expo Go on an iPhone over LAN
-
-Expo Go is the quickest route to a real iPhone and does not require Xcode or an Apple Developer membership:
-
-1. Install Expo Go on the iPhone and connect the Mac and phone to the same local network.
-2. Put the hosted development project's public Supabase URL and publishable key in the ignored `apps/mobile/.env.local`. Do not use the example's `127.0.0.1` URL on a physical phone: that address would point back to the phone itself.
-3. Start Metro explicitly in Expo Go/LAN mode from the repository root:
-
-   ```bash
-   pnpm --filter @bare-traen/mobile exec expo start --go --lan
-   ```
-
-4. Scan the QR code with Expo Go. Keep Metro running while using the app.
-
-The current screens still use fixtures, but the hosted `bare-traen-development` Supabase project is the intended backend for physical-device development. `.env.local` is ignored and is never uploaded to EAS.
+The App Store version of Expo Go is currently incompatible with this Expo SDK 57 project. Use the Safari preview first, then install **Bare Træn Dev** through the EAS `development` profile for real-device work. Do not downgrade the project to make Expo Go work.
 
 ### Local Supabase
 
@@ -85,7 +69,7 @@ pnpm supabase:status
 pnpm supabase:reset
 ```
 
-Studio is normally available at [http://localhost:54323](http://localhost:54323). Copy each app's `.env.example` to `.env.local` and use the public URL and publishable key printed by `pnpm supabase:status`. Never use the service-role key in an app.
+Studio is normally available at [http://localhost:54323](http://localhost:54323). Starting local Supabase does not silently redirect either app: this Mac's ignored `.env.local` files normally point to the hosted development project so Safari and iPhone use the same disposable backend. When a task explicitly needs an app connected to the local stack, temporarily use only the local public URL and publishable key reported by `pnpm supabase:status`, then restore the hosted public values before real-device work. Never use the service-role key in an app.
 
 The local Supabase stack is development-only and must not be exposed to the public internet. A physical iPhone should normally use the hosted development project rather than the Mac's local database.
 
@@ -102,7 +86,7 @@ pnpm dlx eas-cli@latest project:info
 
 The `development` and `preview` profiles in `apps/mobile/eas.json` both use EAS internal distribution:
 
-- `development` builds **Bare Træn Dev** with `expo-dev-client`. Install it once, then run Metro with `pnpm --filter @bare-traen/mobile exec expo start --dev-client --lan` from the repository root while developing.
+- `development` builds **Bare Træn Dev** with `expo-dev-client`. Install it once, then run Metro on Bare Træn's reserved port with `pnpm dev:iphone` from the repository root while developing.
 - `preview` builds **Bare Træn Preview** as a production-like, standalone app. It opens without Metro and is the better build to send to a small test group.
 
 For either EAS profile, register every iPhone before creating the build, then build from `apps/mobile`:
@@ -145,4 +129,4 @@ pnpm build
 pnpm format:check
 ```
 
-See [TASKS.md](./TASKS.md) for the phased backlog and [docs/architecture.md](./docs/architecture.md) for the environment and security decisions.
+For an approachable walkthrough, see [local development](./docs/local-development.md) and [desktop-agent prompts](./docs/desktop-agents.md). See [TASKS.md](./TASKS.md) for the phased backlog and [docs/architecture.md](./docs/architecture.md) for the environment and security decisions.

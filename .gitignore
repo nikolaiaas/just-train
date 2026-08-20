@@ -15,5 +15,7 @@ coverage/
 .expo/
 web-build/
 
+.claude/worktrees/
+
 supabase/.branches/
 supabase/.temp/

@@ -1,0 +1,33 @@
+{
+  "version": "0.0.1",
+  "autoVerify": true,
+  "configurations": [
+    {
+      "name": "admin",
+      "runtimeExecutable": "mise",
+      "runtimeArgs": ["exec", "--", "pnpm", "dev:admin"],
+      "port": 11000,
+      "autoPort": false
+    },
+    {
+      "name": "mobile-web",
+      "runtimeExecutable": "mise",
+      "runtimeArgs": [
+        "exec",
+        "--",
+        "pnpm",
+        "--filter",
+        "@bare-traen/mobile",
+        "exec",
+        "expo",
+        "start",
+        "--web",
+        "--lan",
+        "--port",
+        "11001"
+      ],
+      "port": 11001,
+      "autoPort": false
+    }
+  ]
+}

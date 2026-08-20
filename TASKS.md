@@ -20,14 +20,14 @@ The administration slice is:
 
 ## Preview environments
 
-| Environment                 | Frontend                                                     | Backend                                                              | Purpose                                                  |
-| --------------------------- | ------------------------------------------------------------ | -------------------------------------------------------------------- | -------------------------------------------------------- |
-| Local Mac                   | Next.js dev server plus Expo web/iOS simulator               | Local Supabase in Docker                                             | Normal development and automated tests                   |
-| Physical iPhone development | Expo Go initially, then a local Xcode/Expo development build | Hosted non-production Supabase                                       | Camera, permissions, timers, and real-device testing     |
-| Pull request web preview    | Vercel preview URL                                           | Shared development Supabase initially; Supabase preview branch later | Review administration changes                            |
-| Pull request mobile preview | Installed development build plus EAS Update                  | Shared development Supabase initially; Supabase preview branch later | Review JavaScript and asset changes by QR/link           |
-| Stakeholder iPhone preview  | EAS internal-distribution build                              | Hosted non-production Supabase                                       | Production-like testing without public App Store release |
-| Production                  | App Store build and production admin deployment              | Separate production Supabase                                         | Deferred until after the pilot                           |
+| Environment                 | Frontend                                        | Backend                                                              | Purpose                                                  |
+| --------------------------- | ----------------------------------------------- | -------------------------------------------------------------------- | -------------------------------------------------------- |
+| Local Mac                   | Next.js dev server plus Expo web/iOS simulator  | Local Supabase in Docker                                             | Normal development and automated tests                   |
+| Physical iPhone development | EAS development build with Expo dev client      | Hosted non-production Supabase                                       | Camera, permissions, timers, and real-device testing     |
+| Pull request web preview    | Vercel preview URL                              | Shared development Supabase initially; Supabase preview branch later | Review administration changes                            |
+| Pull request mobile preview | Installed development build plus EAS Update     | Shared development Supabase initially; Supabase preview branch later | Review JavaScript and asset changes by QR/link           |
+| Stakeholder iPhone preview  | EAS internal-distribution build                 | Hosted non-production Supabase                                       | Production-like testing without public App Store release |
+| Production                  | App Store build and production admin deployment | Separate production Supabase                                         | Deferred until after the pilot                           |
 
 Supabase provides the backend, not frontend preview hosting. Supabase Preview Branches can create an isolated database, Auth, Storage, Realtime, and Edge Functions environment per pull request. They currently require a Pro plan. Vercel should host administration previews, and Expo/EAS should distribute mobile previews.
 
@@ -36,16 +36,16 @@ For the initial phase, use:
 1. Local Supabase for browser and simulator development.
 2. One hosted `development` Supabase project for physical phones and shared previews.
 3. Vercel preview deployments for the administration app.
-4. One local Expo development build on the owner's iPhone, followed by EAS internal distribution when stable sharing is needed.
+4. One EAS development build on the owner's iPhone, followed by an EAS preview build when stable sharing is needed.
 5. Supabase per-PR branches only when the project needs parallel schema previews.
 
 Never copy production child data into local, development, or preview environments. Seed them with synthetic families and children only.
 
 The recommended iPhone progression is:
 
-1. Use Expo Go for the earliest screen/navigation work.
-2. Install a full development build directly from Xcode for daily work on the owner's phone. A free Apple Account can do this, but the Personal Team profile expires after seven days.
-3. When stable sharing or additional testers are needed, use a paid Apple Developer membership and EAS internal/ad hoc distribution. This provides a private install link with no App Store review, but every allowed phone must be registered.
+1. Use the Expo web build in Safari for the earliest screen and navigation work.
+2. Use the paid Apple Developer membership and an EAS development build for daily work on the owner's phone. This keeps Expo SDK 57 and does not require Xcode on this Mac.
+3. Use an EAS preview build for stable sharing with additional registered phones. It provides an unlisted install link with no App Store review; restrict link access and do not forward it.
 4. Move to TestFlight for a broader pilot. TestFlight does not publish the app publicly, although external testing can require Apple's beta review.
 
 ## 0. Settle the pilot rules
@@ -86,6 +86,7 @@ Exit condition: a clean clone can install dependencies and start both empty appl
 - [x] Prove that a database reset rebuilds the complete schema and seed from files.
 - [x] Generate shared TypeScript database types from the local schema.
 - [x] Add `pnpm dev:admin`, `pnpm dev:mobile`, and a documented combined development command.
+- [x] Add beginner-friendly `pnpm dev:web` and `pnpm dev:iphone` commands.
 - [x] Add a development-only screen gallery for reviewing reusable components and fixture states.
 - [x] Verify local previews in desktop and narrow browser viewports.
 - [ ] Verify the mobile preview in the iOS Simulator after full Xcode is installed.
@@ -103,6 +104,7 @@ Exit condition: local development does not depend on hand-created dashboard stat
 - [x] Protect preview deployments from public indexing with robots metadata and response headers.
 - [x] Require Vercel team login for pull-request previews; keep the public production URL fixture-only until application authentication exists.
 - [x] Configure Vercel and EAS preview environment variables for the hosted development backend.
+- [ ] Before authentication is connected, allow the 11000/11001 local URLs and all three app callback schemes in hosted Supabase Auth without changing its hosted site URL.
 - [x] Add CI that resets the database, runs migrations, generates/checks types, and executes RLS tests before preview deployment.
 - [x] Document the optional Supabase Pro upgrade path for per-pull-request preview branches.
 - [ ] If Supabase branching is enabled, connect each Vercel preview to its matching Supabase branch and synthetic seed.
@@ -113,22 +115,22 @@ Exit condition: a pull request gets a safe administration preview without touchi
 ## 4. Put the app on an iPhone early
 
 - [x] Create the Expo/EAS project and development, preview, and production build profiles.
-- [ ] Use Expo Go for the first JavaScript-only screen work. (The web preview works; physical-phone check remains.)
-- [ ] Install Xcode and connect the owner's iPhone with Developer Mode enabled.
-- [ ] Build and install locally with `npx expo run:ios --device` using an Apple Account.
+- [x] Use the Expo web build for the first JavaScript-only screen work.
+- [ ] Optionally install Xcode later for the iOS Simulator and local USB builds.
 - [x] Document the free Personal Team limitation: provisioning expires after seven days and the app must then be rebuilt/reinstalled.
-- [ ] Decide when to enroll in the paid Apple Developer Program for stable distribution and additional testers.
-- [ ] When enrolling, confirm the Apple Developer Program account that will own long-lived signing credentials.
+- [x] Confirm that a paid Apple Developer Program membership is available for stable distribution and additional testers.
+- [ ] Confirm the Apple Developer Program account that will own long-lived signing credentials.
 - [ ] When enabling EAS distribution, register the owner's iPhone for ad hoc provisioning.
-- [ ] Build an Expo development client and install it locally; once paid distribution is enabled, also install it from the EAS link/QR code.
+- [ ] Build an Expo development client through EAS and install it from the unlisted link/QR code.
 - [ ] Point the phone build at the hosted development Supabase project.
 - [ ] Confirm live local development through Metro on the same network or a tunnel.
 - [ ] Create a production-like EAS internal-distribution preview build that runs without Metro.
+- [ ] Disable unauthenticated EAS internal-build access, or otherwise document and enforce who may receive unlisted build URLs.
 - [x] Configure a `preview` EAS Update channel so JavaScript, styling, and asset changes usually do not require a new binary.
 - [x] Document that native-library, permission, and native-configuration changes require a new build.
 - [ ] Keep TestFlight as the later route for a larger tester group; it is beta distribution, not a public App Store launch.
 
-Exit condition: the owner can run Bare Træn on the iPhone without App Store publication. With paid distribution enabled, the same build can be installed from a private link and receive compatible preview updates.
+Exit condition: the owner can run Bare Træn on the iPhone without App Store publication. With paid distribution enabled, the same build can be installed from a restricted or carefully shared unlisted link and receive compatible preview updates.
 
 ## 5. Build the shared design foundation
 

@@ -16,7 +16,7 @@ pnpm install
 pnpm dev:admin
 ```
 
-Åbn derefter [http://localhost:3000](http://localhost:3000).
+Åbn derefter [http://localhost:11000](http://localhost:11000).
 
 ## Kontroller
 
