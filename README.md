@@ -11,7 +11,7 @@ The app currently uses synthetic fixture data while the Supabase schema and priv
 ## Technology
 
 - Expo 57, React Native, Expo Router, and TypeScript for iPhone and Android.
-- Next.js 16 App Router, React, Tailwind CSS, and TypeScript for administration.
+- Next.js 16 App Router, React, CSS Modules, and TypeScript for administration.
 - Supabase PostgreSQL, Auth, Storage, and Row-Level Security for the backend.
 - pnpm workspaces for shared domain code and design tokens.
 - Vercel for web previews and Expo/EAS for private iPhone previews.
@@ -69,6 +69,11 @@ pnpm supabase:reset
 Studio is normally available at [http://localhost:54323](http://localhost:54323). Copy each app's `.env.example` to `.env.local` and use the public URL and publishable key printed by `pnpm supabase:status`. Never use the service-role key in an app.
 
 The local Supabase stack is development-only and must not be exposed to the public internet. A physical iPhone should normally use the hosted development project rather than the Mac's local database.
+
+The shared `bare-traen-development` project runs in Supabase's Stockholm region.
+Its schema is deployed exclusively from `supabase/migrations`; the credential-bearing
+local fixture seed is deliberately blocked from hosted environments. Put the hosted
+project's public URL and publishable key in each app's ignored `.env.local` file.
 
 ## iPhone without an App Store release
 

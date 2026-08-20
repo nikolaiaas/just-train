@@ -21,8 +21,8 @@
     "supabase:status": "supabase status",
     "supabase:reset": "supabase db reset",
     "supabase:test": "supabase test db",
-    "supabase:lint": "supabase db lint --local --level warning",
-    "supabase:types": "supabase gen types typescript --local > packages/domain/src/database.generated.ts"
+    "supabase:lint": "supabase db lint --local --schema public,private --level warning --fail-on error",
+    "supabase:types": "supabase gen types typescript --local > packages/domain/src/database.generated.ts && prettier --write packages/domain/src/database.generated.ts"
   },
   "devDependencies": {
     "concurrently": "^9.2.1",

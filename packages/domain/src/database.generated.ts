@@ -210,6 +210,7 @@ export type Database = {
       exercise_attempts: {
         Row: {
           attempt_number: number;
+          child_profile_id: string;
           created_at: string;
           duration_ms: number | null;
           exercise_id: string;
@@ -225,6 +226,7 @@ export type Database = {
         };
         Insert: {
           attempt_number: number;
+          child_profile_id?: string;
           created_at?: string;
           duration_ms?: number | null;
           exercise_id: string;
@@ -240,6 +242,7 @@ export type Database = {
         };
         Update: {
           attempt_number?: number;
+          child_profile_id?: string;
           created_at?: string;
           duration_ms?: number | null;
           exercise_id?: string;
@@ -254,6 +257,13 @@ export type Database = {
           updated_at?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: "exercise_attempts_child_profile_id_fkey";
+            columns: ["child_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "child_profiles";
+            referencedColumns: ["id"];
+          },
           {
             foreignKeyName: "exercise_attempts_exercise_id_fkey";
             columns: ["exercise_id"];

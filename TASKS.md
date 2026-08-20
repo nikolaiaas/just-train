@@ -72,36 +72,38 @@ Exit condition: the pilot can be described without inventing progression, reward
 - [x] Add environment validation and `.env.example` files without secrets.
 - [x] Give development, preview, and production apps different bundle identifiers and visible names so they can coexist on a phone.
 - [x] Add a root README with setup requirements and exact start commands.
-- [ ] Keep the existing HTML and PNG files in a `references` area as design inputs rather than application source.
+- [x] Keep the existing HTML and PNG files in a `references` area as design inputs rather than application source.
 
 Exit condition: a clean clone can install dependencies and start both empty applications using documented commands.
 
 ## 2. Make local development reproducible
 
-- [ ] Add the Supabase CLI as a pinned development dependency.
-- [ ] Initialize the committed `supabase/` directory.
-- [ ] Run the local Supabase stack through Docker or another Docker-compatible runtime.
-- [ ] Add root commands for starting, stopping, resetting, and checking the local backend.
-- [ ] Add deterministic `seed.sql` data containing one synthetic family, two children, one topic, one goal, and its exercises.
-- [ ] Prove that a database reset rebuilds the complete schema and seed from files.
-- [ ] Generate shared TypeScript database types from the local schema.
-- [ ] Add `pnpm dev:admin`, `pnpm dev:mobile`, and a documented combined development command.
+- [x] Add the Supabase CLI as a pinned development dependency.
+- [x] Initialize the committed `supabase/` directory.
+- [x] Run the local Supabase stack through Docker or another Docker-compatible runtime.
+- [x] Add root commands for starting, stopping, resetting, and checking the local backend.
+- [x] Add deterministic `seed.sql` data containing one synthetic family, two children, one topic, one goal, and its exercises.
+- [x] Prove that a database reset rebuilds the complete schema and seed from files.
+- [x] Generate shared TypeScript database types from the local schema.
+- [x] Add `pnpm dev:admin`, `pnpm dev:mobile`, and a documented combined development command.
 - [x] Add a development-only screen gallery for reviewing reusable components and fixture states.
-- [ ] Verify local previews in a desktop browser, a narrow browser viewport, and the iOS Simulator.
+- [x] Verify local previews in desktop and narrow browser viewports.
+- [ ] Verify the mobile preview in the iOS Simulator after full Xcode is installed.
 
 Exit condition: local development does not depend on hand-created dashboard state or production services.
 
 ## 3. Establish shared previews
 
 - [x] Create a hosted non-production Supabase project in a specific EU region.
-- [ ] Apply migrations and synthetic seed data to the hosted development project.
+- [x] Apply the tested migration, without the credential-bearing local seed, to the hosted development project.
+- [ ] Add a separate safe bootstrap for shared synthetic hosted data without known-password accounts.
 - [ ] Configure separate local, development, preview, and production environment names.
-- [ ] Ensure only the Supabase URL and publishable key reach client applications; never expose a service-role or secret key.
+- [x] Ensure only the Supabase URL and publishable key reach client applications; never expose a service-role or secret key.
 - [ ] Connect the Next.js administration app to Vercel preview deployments.
 - [ ] Protect preview deployments from public indexing and unauthorized access.
 - [ ] Configure preview environment variables for the hosted development backend.
-- [ ] Add CI that resets the database, runs migrations, generates/checks types, and executes RLS tests before preview deployment.
-- [ ] Document the optional Supabase Pro upgrade path for per-pull-request preview branches.
+- [x] Add CI that resets the database, runs migrations, generates/checks types, and executes RLS tests before preview deployment.
+- [x] Document the optional Supabase Pro upgrade path for per-pull-request preview branches.
 - [ ] If Supabase branching is enabled, connect each Vercel preview to its matching Supabase branch and synthetic seed.
 - [ ] If mobile PR previews are automated later, publish an EAS Update after the Supabase preview branch is ready and inject only that branch's public URL/key.
 
@@ -113,7 +115,7 @@ Exit condition: a pull request gets a safe administration preview without touchi
 - [ ] Use Expo Go for the first JavaScript-only screen work. (The web preview works; physical-phone check remains.)
 - [ ] Install Xcode and connect the owner's iPhone with Developer Mode enabled.
 - [ ] Build and install locally with `npx expo run:ios --device` using an Apple Account.
-- [ ] Document the free Personal Team limitation: provisioning expires after seven days and the app must then be rebuilt/reinstalled.
+- [x] Document the free Personal Team limitation: provisioning expires after seven days and the app must then be rebuilt/reinstalled.
 - [ ] Decide when to enroll in the paid Apple Developer Program for stable distribution and additional testers.
 - [ ] When enrolling, confirm the Apple Developer Program account that will own long-lived signing credentials.
 - [ ] When enabling EAS distribution, register the owner's iPhone for ad hoc provisioning.
@@ -176,7 +178,7 @@ Exit condition: the complete pilot path works against local and hosted developme
 
 ## 8. Make training resilient
 
-- [ ] Calculate timers from timestamps or monotonic time rather than counting interval callbacks.
+- [x] Calculate timers from timestamps or monotonic time rather than counting interval callbacks.
 - [ ] Persist the active session locally before training begins.
 - [ ] Restore an interrupted session after backgrounding or terminating the app.
 - [ ] Add client-generated event IDs and idempotent server writes.
@@ -217,7 +219,7 @@ Exit condition: each risky feature has a written go/defer decision and does not 
 ## 11. Add quality and release gates
 
 - [ ] Add unit tests for progression, timer reconstruction, points, rewards, and publication rules.
-- [ ] Add database migration and RLS tests.
+- [x] Add database migration and RLS tests.
 - [ ] Add Playwright smoke tests for the administration pilot path.
 - [ ] Add a real-device mobile smoke test, automated with Maestro when the routes stabilize.
 - [ ] Add screenshot baselines for the primary child and administration states.
