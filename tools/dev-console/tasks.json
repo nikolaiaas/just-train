@@ -1,6 +1,6 @@
 {
   "version": 3,
-  "updatedAt": "2026-08-20T20:09:39.453Z",
+  "updatedAt": "2026-08-20T20:35:27.296Z",
   "items": [
     {
       "id": "auth-environment-slice",
@@ -47,26 +47,26 @@
       "updatedAt": "2026-08-20T19:48:09.561Z"
     },
     {
-      "id": "0797327d-20ba-456f-89fb-1c8f09768572",
-      "title": "Byg fælles login- og sessionsflow",
-      "details": "Udvid den delte Supabase-klient med OTP-anmodning, kodebekræftelse, web/app-callbacks, session-gendannelse og logout uden passwords.",
-      "implementationNotes": "",
-      "evidence": [],
-      "status": "todo",
-      "priority": 0,
-      "createdAt": "2026-08-20T19:56:04.012Z",
-      "updatedAt": "2026-08-20T19:56:04.037Z"
-    },
-    {
       "id": "91ad33af-c452-4780-bf37-5020ac9ad4d4",
       "title": "Forbind administrationens login",
       "details": "Byg email-, kode- og magic-link-flow og beskyt administrationen med en serverkontrolleret is_admin-rolle.",
       "implementationNotes": "",
       "evidence": [],
       "status": "todo",
-      "priority": 1,
+      "priority": 0,
       "createdAt": "2026-08-20T19:52:36.384Z",
       "updatedAt": "2026-08-20T19:56:04.042Z"
+    },
+    {
+      "id": "25d3bfc2-3592-4e67-ab7c-9de6e02ee7bc",
+      "title": "Konfigurér mailafsender til Hosted Development",
+      "details": "Vælg og tilslut en brugerdefineret SMTP-udbyder i Supabase, indsæt den danske kode- og magic-link-template, slå link-tracking fra, og test kun med en syntetisk eller voksen adresse.",
+      "implementationNotes": "",
+      "evidence": [],
+      "status": "todo",
+      "priority": 1,
+      "createdAt": "2026-08-20T20:34:52.396Z",
+      "updatedAt": "2026-08-20T20:35:20.548Z"
     },
     {
       "id": "966dd664-161c-4526-97b5-19c0ce621948",
@@ -135,15 +135,15 @@
       "updatedAt": "2026-08-20T19:56:04.078Z"
     },
     {
-      "id": "036fa55d-a924-459e-8142-acd7bede8fd4",
-      "title": "Konfigurér passwordfri Supabase-login",
-      "details": "Konfigurér sekscifret email-OTP, magisk link, templates og callbacks i Local og Hosted Development; brug kun syntetiske testkonti.",
+      "id": "0797327d-20ba-456f-89fb-1c8f09768572",
+      "title": "Byg fælles login- og sessionsflow",
+      "details": "Udvid den delte Supabase-klient med OTP-anmodning, kodebekræftelse, web/app-callbacks, session-gendannelse og logout uden passwords.",
       "implementationNotes": "",
       "evidence": [],
       "status": "doing",
       "priority": 0,
-      "createdAt": "2026-08-20T19:52:36.377Z",
-      "updatedAt": "2026-08-20T20:09:39.453Z"
+      "createdAt": "2026-08-20T19:56:04.012Z",
+      "updatedAt": "2026-08-20T20:35:27.296Z"
     },
     {
       "id": "dev-console",
@@ -172,6 +172,28 @@
       "priority": 1,
       "createdAt": "2026-08-20T19:52:36.368Z",
       "updatedAt": "2026-08-20T20:09:38.988Z"
+    },
+    {
+      "id": "036fa55d-a924-459e-8142-acd7bede8fd4",
+      "title": "Konfigurér passwordfri Supabase-login",
+      "details": "Konfigurér sekscifret email-OTP, magisk link, templates og callbacks i Local og Hosted Development; brug kun syntetiske testkonti.",
+      "implementationNotes": "Local Supabase sender nu én dansk passwordfri mail med både sekscifret kode og magic-link. Linket går først til en scanner-sikker fortsæt-side; koder og links virker én gang, og genbrug afvises. Alle fixture-passwords er fjernet. Hosted Development er sat til 6 cifre, 600 sekunder, bekræftet email, sikker password-fallback, offentlig Site URL og otte præcise callbacks. Root tests, integrationstest, 71 databasetests, lint, typecheck og build består. Supabase Free låser den danske hosted template, indtil en separat SMTP-udbyder er tilsluttet; det arbejde er flyttet til et særskilt kort.",
+      "evidence": [
+        {
+          "kind": "image",
+          "label": "Sikker fortsæt-login-side",
+          "path": "036fa55d-a924-459e-8142-acd7bede8fd4/2026-08-20-safe-login-continue.jpg"
+        },
+        {
+          "kind": "image",
+          "label": "Hosted OTP-indstillinger",
+          "path": "036fa55d-a924-459e-8142-acd7bede8fd4/2026-08-20-hosted-otp-settings.jpg"
+        }
+      ],
+      "status": "done",
+      "priority": 2,
+      "createdAt": "2026-08-20T19:52:36.377Z",
+      "updatedAt": "2026-08-20T20:34:40.190Z"
     }
   ]
 }

@@ -1,6 +1,7 @@
 -- Synthetic, deterministic fixtures for local development only.
 -- These addresses use the reserved .test domain and do not represent real people.
--- All three local users use the non-secret development password: local-demo-1234
+-- The fixture users are passwordless and sign in through a local email OTP or
+-- magic link captured by Mailpit.
 
 begin;
 
@@ -42,7 +43,6 @@ insert into auth.users (
   aud,
   role,
   email,
-  encrypted_password,
   email_confirmed_at,
   raw_app_meta_data,
   raw_user_meta_data,
@@ -60,7 +60,6 @@ values
     'authenticated',
     'authenticated',
     'parent.one@example.test',
-    extensions.crypt('local-demo-1234', extensions.gen_salt('bf')),
     '2026-01-01 08:00:00+00',
     '{"provider":"email","providers":["email"]}'::jsonb,
     '{"display_name":"Demo Forælder"}'::jsonb,
@@ -77,7 +76,6 @@ values
     'authenticated',
     'authenticated',
     'parent.two@example.test',
-    extensions.crypt('local-demo-1234', extensions.gen_salt('bf')),
     '2026-01-01 08:00:00+00',
     '{"provider":"email","providers":["email"]}'::jsonb,
     '{"display_name":"Anden Demo Forælder"}'::jsonb,
@@ -94,7 +92,6 @@ values
     'authenticated',
     'authenticated',
     'content.admin@example.test',
-    extensions.crypt('local-demo-1234', extensions.gen_salt('bf')),
     '2026-01-01 08:00:00+00',
     '{"provider":"email","providers":["email"]}'::jsonb,
     '{"display_name":"Demo Redaktør"}'::jsonb,

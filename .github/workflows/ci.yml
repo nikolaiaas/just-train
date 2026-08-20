@@ -46,8 +46,10 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
+      - run: pnpm test:supabase-config
       - run: pnpm supabase:start
       - run: pnpm supabase:reset
+      - run: pnpm test:supabase-auth
       - run: pnpm supabase:types
       - run: git diff --exit-code -- packages/domain/src/database.generated.ts
       - run: pnpm supabase:test

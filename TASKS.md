@@ -107,7 +107,8 @@ Exit condition: local development does not depend on hand-created dashboard stat
 - [x] Protect preview deployments from public indexing with robots metadata and response headers.
 - [x] Require Vercel team login for pull-request previews; keep the public production URL fixture-only until application authentication exists.
 - [x] Configure Vercel and EAS preview environment variables for the hosted development backend.
-- [ ] Before authentication is connected, allow the 11000/11001 local URLs and all three app callback schemes in hosted Supabase Auth without changing its hosted site URL.
+- [x] Set the hosted development Auth site URL to the stable administration URL and allow the exact 11000/11001 callbacks plus all three app schemes.
+- [ ] Connect a custom hosted SMTP provider, disable link tracking, and install the same Danish code-and-magic-link template used locally.
 - [x] Add CI that resets the database, runs migrations, generates/checks types, and executes RLS tests before preview deployment.
 - [x] Document the optional Supabase Pro upgrade path for per-pull-request preview branches.
 - [ ] If Supabase branching is enabled, connect each Vercel preview to its matching Supabase branch and synthetic seed.
@@ -156,6 +157,7 @@ Exit condition: pilot screens can be assembled from reviewed components rather t
 - [ ] Add an append-only point ledger, rewards, and child inventory.
 - [ ] Add media assets and processing-job metadata without implementing generation yet.
 - [ ] Add AI draft/suggestion, review decision, publication, and audit-log structures.
+- [x] Configure six-digit passwordless email locally, remove fixture passwords, and protect magic links behind an explicit scanner-safe confirmation page.
 - [ ] Implement parent email/OTP authentication.
 - [ ] Add a nullable link for future direct child authentication.
 - [ ] Add administrator roles in protected metadata and server-side route guards.

@@ -11,6 +11,7 @@ From the repository root:
 ```sh
 pnpm supabase:start
 pnpm supabase:reset
+pnpm test:supabase-auth
 pnpm exec supabase test db
 pnpm supabase:lint
 ```
@@ -22,12 +23,29 @@ its fixed fixture IDs before rebuilding them, and refuses to run unless it sees
 the Supabase CLI stack's well-known local JWT secret. This makes repeated local
 runs safe and makes an accidental linked `--include-seed` fail closed.
 
-The three local fixture users share the non-secret password
-`local-demo-1234`:
+The three local fixture users are passwordless:
 
 - `parent.one@example.test` owns the family with a completed exercise session.
 - `parent.two@example.test` owns a separate family used to verify RLS isolation.
 - `content.admin@example.test` can manage draft and published training content.
+
+Request a sign-in email from the application, then open local Mailpit at
+<http://127.0.0.1:54324>. Each Danish email contains both a six-digit one-time
+code and a magic-link button. They are two ways to use the same one-time
+credential, so request a fresh email before testing the other route. The code
+and link expire after ten minutes, and a new email can be requested after 60
+seconds. Mailpit captures local messages instead of delivering them to a real
+mailbox. The button first opens `/auth/continue`, where the user must explicitly
+continue before the underlying one-use Supabase link is opened. This prevents
+email link scanners from consuming the credential before the user sees it.
+
+Both new-account confirmations and returning-user sign-ins use
+`templates/passwordless.html`. Hosted Development must be configured with the
+same template and callback allowlist separately; local `config.toml` settings
+do not change a hosted Supabase project. The administration app implements the
+scanner-safe `/auth/continue` page. This local operational test covers returning
+passwordless users; the parent-onboarding slice will exercise new-user
+confirmation through the real UI.
 
 ## Authentication and authorization assumptions
 

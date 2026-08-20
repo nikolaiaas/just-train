@@ -45,10 +45,10 @@ file_size_limit = "10MiB"
 enabled = true
 site_url = "http://127.0.0.1:11000"
 additional_redirect_urls = [
-  "http://localhost:11000",
-  "http://127.0.0.1:11001",
-  "http://localhost:11001",
-  "exp://127.0.0.1:11001",
+  "http://127.0.0.1:11000/auth/callback",
+  "http://localhost:11000/auth/callback",
+  "http://127.0.0.1:11001/auth/callback",
+  "http://localhost:11001/auth/callback",
   "baretraen-dev://auth/callback",
   "baretraen-preview://auth/callback",
   "baretraen://auth/callback",
@@ -64,8 +64,18 @@ password_requirements = "letters_digits"
 [auth.email]
 enable_signup = true
 double_confirm_changes = true
-enable_confirmations = false
-secure_password_change = false
-max_frequency = "1s"
+enable_confirmations = true
+max_frequency = "60s"
 otp_length = 6
-otp_expiry = 3600
+otp_expiry = 600
+
+# New accounts use the confirmation template; returning accounts use the magic
+# link template. Both intentionally render the same passwordless email so every
+# sign-in offers a six-digit code and a one-use link.
+[auth.email.template.confirmation]
+subject = "Log ind i Bare Træn"
+content_path = "./supabase/templates/passwordless.html"
+
+[auth.email.template.magic_link]
+subject = "Log ind i Bare Træn"
+content_path = "./supabase/templates/passwordless.html"
