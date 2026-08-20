@@ -49,13 +49,13 @@ The menu has three pages:
 
 - **Overview** is the welcome page. It summarizes what is running and how many tasks are in each column.
 - **Services** starts and stops Supabase, administration, mobile web, and the iPhone server; opens their pages; and shows recent credential-redacted logs.
-- **Tasks** keeps the active queue in **Backlog**, **To do**, **Doing**, and **Done**. Cards are always shown in priority order. Drag a card to change its priority or move it to another column; the up/down controls provide the same operation from a keyboard. **Hide Done** removes the completed column from view without deleting anything.
+- **Tasks** keeps the active queue in **Backlog**, **To do**, **Doing**, and **Done**. Cards are always shown in priority order. Drag a card to change its priority or move it to another column; the up/down controls provide the same operation from a keyboard. **Hide Done** removes the completed column from view without deleting anything. Edit a task to add a plain-language implementation note and several proof items. Proof can be a stable HTTPS link or a small screenshot stored under `tools/dev-console/evidence/<task-id>/`.
 
 The service page can also stop a Bare Træn preview that was started from another Terminal or agent. Before showing that stop button, the console verifies that the listening process belongs to this exact checkout or worktree. If an unrelated application—including Bare Træn from another worktree—uses the same port, the console labels it as protected and refuses to stop it.
 
 The console is intentionally limited. It runs only on this Mac, cannot execute arbitrary commands, cannot connect to Production, and does not offer a database reset. The full project roadmap remains in `TASKS.md`; the smaller editable board is plain JSON saved in `tools/dev-console/tasks.json`.
 
-Task edits are real repository changes and therefore appear in Git. Keep this JSON board to a small, versioned active queue; never put passwords, API keys, real child information, or other personal data in it. `TASKS.md` remains the durable roadmap, and an overlapping item should be updated deliberately in both places when it is completed.
+Task edits and evidence screenshots are real repository changes and therefore appear in Git. Keep the JSON board and screenshot folder small and reviewable. Never put passwords, API keys, one-time codes, magic-link URLs, real email addresses, real child information, or other personal data in either place. Use only synthetic or adult test screenshots, crop them to the relevant result, and keep each image below 1 MiB when practical. `TASKS.md` remains the durable roadmap, and an overlapping item should be updated deliberately in both places when it is completed.
 
 Mobile web and the iPhone development server both use port `11001`, so only one of those modes can run at a time. The console explains this instead of moving either service to an unexpected port.
 

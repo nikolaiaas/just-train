@@ -6,11 +6,14 @@ import { describe, test } from "node:test";
 import {
   BoundedLog,
   InputError,
+  MAX_TASK_EVIDENCE_ITEMS,
   TASK_BOARD_VERSION,
+  TASK_EVIDENCE_KINDS,
   TASK_STATUSES,
   hasSequentialTaskPriorities,
   isAllowedHost,
   isSameOriginRequest,
+  resolveEvidenceImagePath,
   resolveStaticPath,
   sanitizeLogText,
   validateActionRequest,
@@ -62,8 +65,10 @@ describe("development action validation", () => {
 
 describe("task validation", () => {
   test("uses the four workflow statuses", () => {
-    assert.equal(TASK_BOARD_VERSION, 2);
+    assert.equal(TASK_BOARD_VERSION, 3);
     assert.deepEqual(TASK_STATUSES, ["backlog", "todo", "doing", "done"]);
+    assert.deepEqual(TASK_EVIDENCE_KINDS, ["image", "link"]);
+    assert.equal(MAX_TASK_EVIDENCE_ITEMS, 10);
   });
 
   test("normalizes create and update requests", () => {
@@ -77,6 +82,8 @@ describe("task validation", () => {
         task: {
           title: "Connect sign-in",
           details: "",
+          implementationNotes: "",
+          evidence: [],
           status: "todo",
         },
       },
@@ -103,13 +110,15 @@ describe("task validation", () => {
     assert.throws(
       () =>
         validateTaskBoard({
-          version: 2,
+          version: 3,
           updatedAt: "2026-08-20T12:00:00.000Z",
           items: [
             {
               id: "same-id",
               title: "One",
               details: "",
+              implementationNotes: "",
+              evidence: [],
               status: "todo",
               priority: 0,
               createdAt: "2026-08-20T12:00:00.000Z",
@@ -119,6 +128,8 @@ describe("task validation", () => {
               id: "same-id",
               title: "Two",
               details: "",
+              implementationNotes: "",
+              evidence: [],
               status: "done",
               priority: 0,
               createdAt: "2026-08-20T12:00:00.000Z",
@@ -136,13 +147,15 @@ describe("task validation", () => {
       id,
       title: id,
       details: "",
+      implementationNotes: "",
+      evidence: [],
       status,
       priority,
       createdAt: timestamp,
       updatedAt: timestamp,
     });
     const board = validateTaskBoard({
-      version: 2,
+      version: 3,
       updatedAt: timestamp,
       items: [
         task("second", "todo", 1),
@@ -163,11 +176,139 @@ describe("task validation", () => {
     assert.throws(
       () =>
         validateTaskBoard({
-          version: 2,
+          version: 3,
           updatedAt: timestamp,
           items: [task("first", "todo", 0), task("gap", "todo", 2)],
         }),
       /sequential/,
+    );
+  });
+
+  test("normalizes implementation notes and strict image/link evidence", () => {
+    assert.deepEqual(
+      validateTaskChanges({
+        implementationNotes: "  Verified in local Mailpit.  ",
+        evidence: [
+          {
+            kind: "image",
+            label: "  OTP screen  ",
+            path: "passwordless-auth/2026-08-20-otp.png",
+          },
+          {
+            kind: "link",
+            label: "  Passing checks  ",
+            url: "https://github.com/example/project/actions/runs/123#summary",
+          },
+        ],
+      }),
+      {
+        implementationNotes: "Verified in local Mailpit.",
+        evidence: [
+          {
+            kind: "image",
+            label: "OTP screen",
+            path: "passwordless-auth/2026-08-20-otp.png",
+          },
+          {
+            kind: "link",
+            label: "Passing checks",
+            url: "https://github.com/example/project/actions/runs/123#summary",
+          },
+        ],
+      },
+    );
+  });
+
+  test("rejects unsafe, malformed, duplicate, and excessive evidence", () => {
+    const image = (imagePath) => ({
+      kind: "image",
+      label: "Screenshot",
+      path: imagePath,
+    });
+    for (const imagePath of [
+      "../secret.png",
+      "/absolute/secret.png",
+      "task/../secret.png",
+      "task\\secret.png",
+      "task/%2e%2e.png",
+      "task/proof.svg",
+      "Task/proof.png",
+      "task/nested/proof.png",
+    ]) {
+      assert.throws(
+        () => validateTaskChanges({ evidence: [image(imagePath)] }),
+        InputError,
+      );
+    }
+
+    for (const url of [
+      "http://example.com/proof",
+      "javascript:alert(1)",
+      "data:text/plain,proof",
+      "https://user:password@example.com/proof",
+      "https://example.com/proof?token=secret",
+    ]) {
+      assert.throws(
+        () =>
+          validateTaskChanges({
+            evidence: [{ kind: "link", label: "Proof", url }],
+          }),
+        InputError,
+      );
+    }
+
+    assert.throws(
+      () =>
+        validateTaskChanges({
+          evidence: [image("task/proof.png"), image("task/proof.png")],
+        }),
+      /duplicate/,
+    );
+    assert.throws(
+      () =>
+        validateTaskChanges({
+          evidence: Array.from({ length: 11 }, (_, index) =>
+            image(`task/proof-${index}.png`),
+          ),
+        }),
+      /at most 10/,
+    );
+    assert.throws(
+      () =>
+        validateTaskChanges({
+          evidence: [
+            {
+              kind: "image",
+              label: "Proof",
+              path: "task/proof.png",
+              rawHtml: "<script />",
+            },
+          ],
+        }),
+      /unsupported fields/,
+    );
+    assert.throws(
+      () =>
+        validateTaskChanges({
+          implementationNotes:
+            "Stored token_hash=do-not-store-sign-in-token-value",
+        }),
+      /credential or sign-in token/,
+    );
+  });
+
+  test("resolves evidence images only inside the dedicated directory", () => {
+    const evidenceDirectory = path.join(os.tmpdir(), "bare-traen-evidence");
+    assert.equal(
+      resolveEvidenceImagePath(
+        evidenceDirectory,
+        "task-id/2026-08-20-proof.webp",
+      ),
+      path.join(evidenceDirectory, "task-id", "2026-08-20-proof.webp"),
+    );
+    assert.throws(
+      () => resolveEvidenceImagePath(evidenceDirectory, "../outside.png"),
+      InputError,
     );
   });
 

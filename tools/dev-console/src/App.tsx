@@ -21,6 +21,7 @@ import type {
   ServiceState,
   ServiceStatus,
   TaskBoard,
+  TaskEvidence,
   TaskStatus,
   TasksResponse,
 } from "./types";
@@ -181,6 +182,8 @@ interface ToastMessage {
 interface TaskDraft {
   title: string;
   details: string;
+  implementationNotes: string;
+  evidence: TaskEvidence[];
   status: TaskStatus;
 }
 
@@ -251,10 +254,68 @@ function normalizeTaskStatus(value: string): TaskStatus {
 function normalizeTasks(tasks: ConsoleTask[]): ConsoleTask[] {
   return tasks.map((task) => ({
     ...task,
+    implementationNotes:
+      typeof task.implementationNotes === "string"
+        ? task.implementationNotes
+        : "",
+    evidence: Array.isArray(task.evidence)
+      ? task.evidence.filter(isTaskEvidence)
+      : [],
     status: normalizeTaskStatus(task.status),
     priority:
       Number.isInteger(task.priority) && task.priority >= 0 ? task.priority : 0,
   }));
+}
+
+function isTaskEvidence(value: unknown): value is TaskEvidence {
+  if (!value || typeof value !== "object" || !("kind" in value)) return false;
+  if (
+    value.kind === "image" &&
+    "label" in value &&
+    typeof value.label === "string" &&
+    "path" in value &&
+    typeof value.path === "string"
+  ) {
+    return true;
+  }
+  return (
+    value.kind === "link" &&
+    "label" in value &&
+    typeof value.label === "string" &&
+    "url" in value &&
+    typeof value.url === "string"
+  );
+}
+
+function evidenceImageUrl(imagePath: string): string | null {
+  if (
+    !/^[a-z0-9][a-z0-9_-]{0,63}\/[a-z0-9][a-z0-9._-]{0,127}\.(?:jpe?g|png|webp)$/.test(
+      imagePath,
+    )
+  ) {
+    return null;
+  }
+  return `/api/evidence/${imagePath
+    .split("/")
+    .map((segment) => encodeURIComponent(segment))
+    .join("/")}`;
+}
+
+function safeEvidenceLink(value: string): string | null {
+  try {
+    const url = new URL(value);
+    if (
+      url.protocol !== "https:" ||
+      url.username ||
+      url.password ||
+      url.search
+    ) {
+      return null;
+    }
+    return url.href;
+  } catch {
+    return null;
+  }
 }
 
 function serviceStatusLabel(service: ServiceState): string {
@@ -1019,6 +1080,123 @@ function ServicesPage({
   );
 }
 
+function EvidenceImagePreview({
+  evidence,
+  compact = false,
+}: {
+  evidence: Extract<TaskEvidence, { kind: "image" }>;
+  compact?: boolean;
+}) {
+  const [missing, setMissing] = useState(false);
+  const source = evidenceImageUrl(evidence.path);
+
+  if (!source || missing) {
+    return (
+      <span
+        className={`grid place-items-center rounded-lg border border-dashed border-line-strong bg-[#f8f8f5] px-2 text-center text-muted ${
+          compact ? "h-14 text-[8px]" : "h-24 text-[10px]"
+        }`}
+        role="status"
+      >
+        Bevis mangler
+      </span>
+    );
+  }
+
+  return (
+    <a
+      aria-label={`Åbn billedbevis: ${evidence.label}`}
+      className="block overflow-hidden rounded-lg border border-line bg-white transition hover:border-line-strong"
+      href={source}
+      rel="noopener noreferrer"
+      target="_blank"
+    >
+      <img
+        alt={evidence.label}
+        className={`w-full object-cover ${compact ? "h-14" : "h-24"}`}
+        loading="lazy"
+        onError={() => setMissing(true)}
+        src={source}
+      />
+    </a>
+  );
+}
+
+function TaskImplementationSummary({ task }: { task: ConsoleTask }) {
+  const hasNotes = task.implementationNotes.length > 0;
+  const visibleEvidence = task.evidence.slice(0, 2);
+  if (!hasNotes && task.evidence.length === 0) {
+    return task.status === "done" ? (
+      <p className="mt-3 rounded-lg border border-dashed border-line px-2.5 py-2 text-[8px] leading-3.5 text-muted">
+        Implementeringsbevis er ikke tilføjet endnu.
+      </p>
+    ) : null;
+  }
+
+  return (
+    <section
+      aria-label={`Implementering og bevis for ${task.title}`}
+      className="mt-3 rounded-[11px] border border-[#d8e8e3] bg-[#f4faf7] p-2.5"
+    >
+      {hasNotes ? (
+        <div>
+          <p className="inline-flex items-center gap-1.5 text-[8px] font-extrabold tracking-[0.08em] text-[#2c6d55] uppercase">
+            <Icon className="size-3" name="check" />
+            Implementering
+          </p>
+          <p className="mt-1 line-clamp-3 text-[9px] leading-3.5 text-[#49665b]">
+            {task.implementationNotes}
+          </p>
+        </div>
+      ) : null}
+      {visibleEvidence.length > 0 ? (
+        <div className={`${hasNotes ? "mt-2.5" : ""}`}>
+          <p className="mb-1.5 text-[8px] font-extrabold tracking-[0.08em] text-[#2c6d55] uppercase">
+            {task.evidence.length}{" "}
+            {task.evidence.length === 1 ? "bevis" : "beviser"}
+          </p>
+          <div className="grid grid-cols-2 gap-1.5">
+            {visibleEvidence.map((evidence) =>
+              evidence.kind === "image" ? (
+                <EvidenceImagePreview
+                  compact
+                  evidence={evidence}
+                  key={`image:${evidence.path}`}
+                />
+              ) : safeEvidenceLink(evidence.url) ? (
+                <a
+                  className="flex h-14 min-w-0 flex-col justify-between rounded-lg border border-line bg-white p-2 text-[8px] font-bold text-brand-deep no-underline transition hover:border-line-strong"
+                  href={evidence.url}
+                  key={`link:${evidence.url}`}
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  <span className="line-clamp-2">{evidence.label}</span>
+                  <span className="inline-flex items-center gap-1 text-[7px] text-muted">
+                    <Icon className="size-2.5" name="external" /> Åbn link
+                  </span>
+                </a>
+              ) : (
+                <span
+                  className="grid h-14 place-items-center rounded-lg border border-dashed border-line-strong px-2 text-center text-[8px] text-muted"
+                  key={`invalid:${evidence.url}`}
+                >
+                  Ugyldigt link
+                </span>
+              ),
+            )}
+          </div>
+          {task.evidence.length > visibleEvidence.length ? (
+            <p className="mt-1.5 text-right text-[8px] font-bold text-muted">
+              +{task.evidence.length - visibleEvidence.length} flere
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
 function TaskCard({
   task,
   columnTasks,
@@ -1138,6 +1316,8 @@ function TaskCard({
           {task.details}
         </p>
       ) : null}
+
+      <TaskImplementationSummary task={task} />
 
       <div className="mt-3 flex items-center justify-between border-t border-line pt-2.5">
         <span className="rounded-full bg-soft px-2 py-1 text-[8px] font-extrabold text-brand-deep">
@@ -1524,9 +1704,17 @@ function TaskDialog({
       ? {
           title: state.task.title,
           details: state.task.details,
+          implementationNotes: state.task.implementationNotes,
+          evidence: state.task.evidence,
           status: normalizeTaskStatus(state.task.status),
         }
-      : { title: "", details: "", status: "backlog" },
+      : {
+          title: "",
+          details: "",
+          implementationNotes: "",
+          evidence: [],
+          status: "backlog",
+        },
   );
 
   useEffect(() => {
@@ -1546,6 +1734,20 @@ function TaskDialog({
       ...draft,
       title: draft.title.trim(),
       details: draft.details.trim(),
+      implementationNotes: draft.implementationNotes.trim(),
+      evidence: draft.evidence.map((evidence) =>
+        evidence.kind === "image"
+          ? {
+              kind: "image" as const,
+              label: evidence.label.trim(),
+              path: evidence.path.trim(),
+            }
+          : {
+              kind: "link" as const,
+              label: evidence.label.trim(),
+              url: evidence.url.trim(),
+            },
+      ),
     };
     if (!normalizedDraft.title) {
       titleRef.current?.focus();
@@ -1563,7 +1765,7 @@ function TaskDialog({
   return (
     <dialog
       aria-labelledby="task-dialog-title"
-      className="m-auto w-[min(540px,calc(100%-28px))] max-w-none overflow-hidden rounded-[22px] border border-line-strong bg-paper p-0 text-ink shadow-panel"
+      className="m-auto max-h-[calc(100vh-28px)] w-[min(720px,calc(100%-28px))] max-w-none overflow-hidden rounded-[22px] border border-line-strong bg-paper p-0 text-ink shadow-panel"
       onCancel={(event) => {
         event.preventDefault();
         if (!saving) onClose();
@@ -1573,7 +1775,10 @@ function TaskDialog({
       }}
       ref={dialogRef}
     >
-      <form onSubmit={(event) => void submit(event)}>
+      <form
+        className="flex max-h-[calc(100vh-28px)] flex-col"
+        onSubmit={(event) => void submit(event)}
+      >
         <header className="flex items-center justify-between gap-5 border-b border-line px-5 py-4">
           <div>
             <p className="mb-1 text-[9px] font-extrabold tracking-[0.13em] text-brand uppercase">
@@ -1597,62 +1802,309 @@ function TaskDialog({
           </Button>
         </header>
 
-        <div className="grid gap-4.5 p-5">
-          <label className="grid gap-1.5 text-[11px] font-[750] text-ink">
-            Titel
-            <input
-              className="min-h-11 w-full rounded-xl border border-line-strong bg-white px-3 py-2 text-[13px] font-medium disabled:opacity-60"
-              disabled={saving}
-              maxLength={160}
-              onChange={(event) =>
-                setDraft((current) => ({
-                  ...current,
-                  title: event.target.value,
-                }))
-              }
-              ref={titleRef}
-              required
-              value={draft.title}
-            />
-          </label>
-          <label className="grid gap-1.5 text-[11px] font-[750] text-ink">
-            <span>
-              Note <small className="font-medium text-muted">valgfri</small>
-            </span>
-            <textarea
-              className="min-h-28 w-full resize-y rounded-xl border border-line-strong bg-white px-3 py-2.5 text-[13px] leading-5 font-medium disabled:opacity-60"
-              disabled={saving}
-              maxLength={4000}
-              onChange={(event) =>
-                setDraft((current) => ({
-                  ...current,
-                  details: event.target.value,
-                }))
-              }
-              rows={4}
-              value={draft.details}
-            />
-          </label>
-          <label className="grid gap-1.5 text-[11px] font-[750] text-ink">
-            Status
-            <select
-              className="min-h-11 w-full rounded-xl border border-line-strong bg-white px-3 py-2 text-[13px] font-semibold disabled:opacity-60"
-              disabled={saving}
-              onChange={(event) =>
-                setDraft((current) => ({
-                  ...current,
-                  status: event.target.value as TaskStatus,
-                }))
-              }
-              value={draft.status}
-            >
-              {TASK_COLUMNS.map((column) => (
-                <option key={column.status} value={column.status}>
-                  {column.label}
-                </option>
-              ))}
-            </select>
-          </label>
+        <div className="grid gap-5 overflow-y-auto p-5">
+          <section
+            aria-labelledby="task-basics-heading"
+            className="grid gap-4.5"
+          >
+            <div>
+              <h3
+                className="text-[11px] font-extrabold tracking-[0.08em] text-brand uppercase"
+                id="task-basics-heading"
+              >
+                Opgaven
+              </h3>
+              <p className="mt-1 text-[10px] leading-4 text-muted">
+                Beskriv hvad der skal laves, og hvor opgaven hører til.
+              </p>
+            </div>
+            <label className="grid gap-1.5 text-[11px] font-[750] text-ink">
+              Titel
+              <input
+                className="min-h-11 w-full rounded-xl border border-line-strong bg-white px-3 py-2 text-[13px] font-medium disabled:opacity-60"
+                disabled={saving}
+                maxLength={160}
+                onChange={(event) =>
+                  setDraft((current) => ({
+                    ...current,
+                    title: event.target.value,
+                  }))
+                }
+                ref={titleRef}
+                required
+                value={draft.title}
+              />
+            </label>
+            <label className="grid gap-1.5 text-[11px] font-[750] text-ink">
+              <span>
+                Opgavebeskrivelse{" "}
+                <small className="font-medium text-muted">valgfri</small>
+              </span>
+              <textarea
+                className="min-h-28 w-full resize-y rounded-xl border border-line-strong bg-white px-3 py-2.5 text-[13px] leading-5 font-medium disabled:opacity-60"
+                disabled={saving}
+                maxLength={4000}
+                onChange={(event) =>
+                  setDraft((current) => ({
+                    ...current,
+                    details: event.target.value,
+                  }))
+                }
+                rows={4}
+                value={draft.details}
+              />
+            </label>
+            <label className="grid gap-1.5 text-[11px] font-[750] text-ink">
+              Status
+              <select
+                className="min-h-11 w-full rounded-xl border border-line-strong bg-white px-3 py-2 text-[13px] font-semibold disabled:opacity-60"
+                disabled={saving}
+                onChange={(event) =>
+                  setDraft((current) => ({
+                    ...current,
+                    status: event.target.value as TaskStatus,
+                  }))
+                }
+                value={draft.status}
+              >
+                {TASK_COLUMNS.map((column) => (
+                  <option key={column.status} value={column.status}>
+                    {column.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </section>
+
+          <section
+            aria-labelledby="task-implementation-heading"
+            className="grid gap-3 rounded-2xl border border-[#cfe3dc] bg-[#f5faf7] p-4"
+          >
+            <div>
+              <h3
+                className="text-[11px] font-extrabold tracking-[0.08em] text-[#2c6d55] uppercase"
+                id="task-implementation-heading"
+              >
+                Sådan blev den implementeret
+              </h3>
+              <p className="mt-1 text-[10px] leading-4 text-[#597068]">
+                Skriv kort hvad der blev ændret, og hvordan resultatet blev
+                kontrolleret. Tilføj aldrig adgangskoder, API-nøgler,
+                engangskoder eller rigtige børnedata.
+              </p>
+            </div>
+            <label className="grid gap-1.5 text-[11px] font-[750] text-ink">
+              <span>
+                Implementeringsnote{" "}
+                <small className="font-medium text-muted">valgfri</small>
+              </span>
+              <textarea
+                className="min-h-28 w-full resize-y rounded-xl border border-line-strong bg-white px-3 py-2.5 text-[13px] leading-5 font-medium disabled:opacity-60"
+                disabled={saving}
+                maxLength={4000}
+                onChange={(event) =>
+                  setDraft((current) => ({
+                    ...current,
+                    implementationNotes: event.target.value,
+                  }))
+                }
+                placeholder="Eksempel: Login-flowet bruger nu email-OTP, og fejltilstanden er testet lokalt."
+                rows={4}
+                value={draft.implementationNotes}
+              />
+            </label>
+          </section>
+
+          <section
+            aria-labelledby="task-evidence-heading"
+            className="grid gap-3 rounded-2xl border border-line bg-[#faf9f5] p-4"
+          >
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h3
+                  className="text-[11px] font-extrabold tracking-[0.08em] text-brand uppercase"
+                  id="task-evidence-heading"
+                >
+                  Bevis
+                </h3>
+                <p className="mt-1 max-w-lg text-[10px] leading-4 text-muted">
+                  Brug et HTTPS-link eller en sikker skærmbilledsti fra mappen{" "}
+                  <code>tools/dev-console/evidence</code>. Flere beviser er
+                  tilladt.
+                </p>
+              </div>
+              <Button
+                disabled={saving || draft.evidence.length >= 10}
+                icon="plus"
+                onClick={() =>
+                  setDraft((current) => ({
+                    ...current,
+                    evidence: [
+                      ...current.evidence,
+                      { kind: "link", label: "", url: "" },
+                    ],
+                  }))
+                }
+                size="small"
+              >
+                Tilføj bevis
+              </Button>
+            </div>
+
+            {draft.evidence.length ? (
+              <div className="grid gap-3">
+                {draft.evidence.map((evidence, index) => (
+                  <fieldset
+                    className="grid gap-3 rounded-xl border border-line bg-white p-3"
+                    disabled={saving}
+                    key={index}
+                  >
+                    <legend className="px-1 text-[9px] font-extrabold text-muted uppercase">
+                      Bevis {index + 1}
+                    </legend>
+                    <div className="grid gap-3 sm:grid-cols-[150px_minmax(0,1fr)_auto] sm:items-end">
+                      <label className="grid gap-1 text-[10px] font-bold text-ink">
+                        Type
+                        <select
+                          className="min-h-10 rounded-lg border border-line-strong bg-white px-2.5 py-2 text-[11px] font-semibold"
+                          onChange={(event) => {
+                            const kind = event.target.value;
+                            setDraft((current) => ({
+                              ...current,
+                              evidence: current.evidence.map(
+                                (item, itemIndex) =>
+                                  itemIndex !== index
+                                    ? item
+                                    : kind === "image"
+                                      ? {
+                                          kind: "image",
+                                          label: item.label,
+                                          path: "",
+                                        }
+                                      : {
+                                          kind: "link",
+                                          label: item.label,
+                                          url: "",
+                                        },
+                              ),
+                            }));
+                          }}
+                          value={evidence.kind}
+                        >
+                          <option value="link">HTTPS-link</option>
+                          <option value="image">Skærmbillede</option>
+                        </select>
+                      </label>
+                      <label className="grid gap-1 text-[10px] font-bold text-ink">
+                        Kort navn
+                        <input
+                          className="min-h-10 rounded-lg border border-line-strong bg-white px-2.5 py-2 text-[11px] font-medium"
+                          maxLength={120}
+                          onChange={(event) =>
+                            setDraft((current) => ({
+                              ...current,
+                              evidence: current.evidence.map(
+                                (item, itemIndex) =>
+                                  itemIndex === index
+                                    ? { ...item, label: event.target.value }
+                                    : item,
+                              ),
+                            }))
+                          }
+                          placeholder="Fx Admin-login med kode"
+                          required
+                          value={evidence.label}
+                        />
+                      </label>
+                      <Button
+                        aria-label={`Fjern bevis ${index + 1}`}
+                        icon="trash"
+                        onClick={() =>
+                          setDraft((current) => ({
+                            ...current,
+                            evidence: current.evidence.filter(
+                              (_, itemIndex) => itemIndex !== index,
+                            ),
+                          }))
+                        }
+                        size="small"
+                        variant="quiet"
+                      >
+                        Fjern
+                      </Button>
+                    </div>
+                    {evidence.kind === "image" ? (
+                      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_180px] sm:items-end">
+                        <label className="grid gap-1 text-[10px] font-bold text-ink">
+                          Sti under evidence-mappen
+                          <input
+                            autoCapitalize="none"
+                            autoCorrect="off"
+                            className="min-h-10 rounded-lg border border-line-strong bg-white px-2.5 py-2 font-mono text-[10px]"
+                            maxLength={220}
+                            onChange={(event) =>
+                              setDraft((current) => ({
+                                ...current,
+                                evidence: current.evidence.map(
+                                  (item, itemIndex) =>
+                                    itemIndex === index && item.kind === "image"
+                                      ? { ...item, path: event.target.value }
+                                      : item,
+                                ),
+                              }))
+                            }
+                            placeholder="opgave-id/2026-08-20-login.png"
+                            required
+                            spellCheck={false}
+                            value={evidence.path}
+                          />
+                        </label>
+                        {evidence.path ? (
+                          <EvidenceImagePreview
+                            evidence={evidence}
+                            key={evidence.path}
+                          />
+                        ) : (
+                          <span className="grid h-24 place-items-center rounded-lg border border-dashed border-line-strong px-2 text-center text-[9px] text-muted">
+                            Forhåndsvisning vises her
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <label className="grid gap-1 text-[10px] font-bold text-ink">
+                        HTTPS-link uden hemmelige parametre
+                        <input
+                          autoCapitalize="none"
+                          autoCorrect="off"
+                          className="min-h-10 rounded-lg border border-line-strong bg-white px-2.5 py-2 text-[11px] font-medium"
+                          maxLength={1000}
+                          onChange={(event) =>
+                            setDraft((current) => ({
+                              ...current,
+                              evidence: current.evidence.map(
+                                (item, itemIndex) =>
+                                  itemIndex === index && item.kind === "link"
+                                    ? { ...item, url: event.target.value }
+                                    : item,
+                              ),
+                            }))
+                          }
+                          placeholder="https://github.com/..."
+                          required
+                          type="url"
+                          value={evidence.url}
+                        />
+                      </label>
+                    )}
+                  </fieldset>
+                ))}
+              </div>
+            ) : (
+              <p className="rounded-xl border border-dashed border-line-strong px-3 py-4 text-center text-[10px] text-muted">
+                Intet bevis endnu. Opgaven kan stadig gemmes og flyttes.
+              </p>
+            )}
+          </section>
         </div>
 
         <footer className="flex flex-wrap items-center gap-2 border-t border-line bg-[#faf9f5] px-5 py-4">
@@ -2038,6 +2490,8 @@ export function App() {
               changes: {
                 title: draft.title,
                 details: draft.details,
+                implementationNotes: draft.implementationNotes,
+                evidence: draft.evidence,
                 status: draft.status,
               },
             }

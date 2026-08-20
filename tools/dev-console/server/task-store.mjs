@@ -35,6 +35,7 @@ export class TaskStore {
       const board = validateTaskBoard(parsed, {
         migrateLegacyStatuses: true,
         migratePriorities: true,
+        migrateEvidence: true,
       });
       if (boardOrderingSignature(parsed) !== boardOrderingSignature(board)) {
         await this.#atomicWrite(board);

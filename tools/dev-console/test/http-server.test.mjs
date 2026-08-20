@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, rm, symlink, writeFile } from "node:fs/promises";
 import net from "node:net";
 import os from "node:os";
 import path from "node:path";
@@ -61,7 +61,11 @@ test("serves local state and requires same-origin CSRF protection for actions", 
   );
   temporaryDirectories.push(directory);
   const publicDirectory = path.join(directory, "public");
+  const evidenceDirectory = path.join(directory, "evidence");
   await mkdir(publicDirectory);
+  await mkdir(path.join(evidenceDirectory, "passwordless-auth"), {
+    recursive: true,
+  });
   await writeFile(
     path.join(publicDirectory, "index.html"),
     "<!doctype html><p>Console</p>",
@@ -69,6 +73,21 @@ test("serves local state and requires same-origin CSRF protection for actions", 
   await writeFile(
     path.join(publicDirectory, "app.js"),
     "console.log('console');\n",
+  );
+  const pngSignature = Buffer.from("89504e470d0a1a0a", "hex");
+  await writeFile(
+    path.join(evidenceDirectory, "passwordless-auth", "2026-08-20-otp.png"),
+    pngSignature,
+  );
+  await writeFile(
+    path.join(evidenceDirectory, "passwordless-auth", "not-an-image.png"),
+    "not an image",
+  );
+  const outsideImage = path.join(directory, "outside.png");
+  await writeFile(outsideImage, pngSignature);
+  await symlink(
+    outsideImage,
+    path.join(evidenceDirectory, "passwordless-auth", "outside-link.png"),
   );
 
   const performed = [];
@@ -94,6 +113,7 @@ test("serves local state and requires same-origin CSRF protection for actions", 
     port,
     repositoryRoot: directory,
     publicDirectory,
+    evidenceDirectory,
     taskFile: path.join(directory, "tasks.json"),
     manager,
   });
@@ -138,8 +158,46 @@ test("serves local state and requires same-origin CSRF protection for actions", 
   assert.equal(stateResponse.status, 200);
   const state = await stateResponse.json();
   assert.equal(typeof state.csrfToken, "string");
-  assert.equal(state.tasks.version, 2);
+  assert.equal(state.tasks.version, 3);
   assert.deepEqual(state.tasks.items, []);
+
+  const evidenceResponse = await fetch(
+    `${app.consoleUrl}/api/evidence/passwordless-auth/2026-08-20-otp.png`,
+  );
+  assert.equal(evidenceResponse.status, 200);
+  assert.equal(evidenceResponse.headers.get("content-type"), "image/png");
+  assert.equal(
+    evidenceResponse.headers.get("cross-origin-resource-policy"),
+    "same-origin",
+  );
+  assert.deepEqual(
+    Buffer.from(await evidenceResponse.arrayBuffer()),
+    pngSignature,
+  );
+
+  const evidenceHead = await fetch(
+    `${app.consoleUrl}/api/evidence/passwordless-auth/2026-08-20-otp.png`,
+    { method: "HEAD" },
+  );
+  assert.equal(evidenceHead.status, 200);
+  assert.equal(await evidenceHead.text(), "");
+
+  for (const [evidencePath, expectedStatus] of [
+    ["passwordless-auth/missing.png", 404],
+    ["passwordless-auth/not-an-image.png", 415],
+    ["passwordless-auth/outside-link.png", 403],
+    ["passwordless-auth/proof.svg", 400],
+    ["passwordless-auth/%252e%252e.png", 400],
+  ]) {
+    const response = await fetch(
+      `${app.consoleUrl}/api/evidence/${evidencePath}`,
+    );
+    assert.equal(response.status, expectedStatus, evidencePath);
+  }
+  const evidenceWithQuery = await fetch(
+    `${app.consoleUrl}/api/evidence/passwordless-auth/2026-08-20-otp.png?token=nope`,
+  );
+  assert.equal(evidenceWithQuery.status, 400);
 
   const rejected = await fetch(`${app.consoleUrl}/api/actions`, {
     method: "POST",
@@ -193,6 +251,43 @@ test("serves local state and requires same-origin CSRF protection for actions", 
   assert.equal(created.tasks.items.length, 1);
   const taskId = created.tasks.items[0].id;
   assert.equal(created.tasks.items[0].priority, 0);
+  assert.equal(created.tasks.items[0].implementationNotes, "");
+  assert.deepEqual(created.tasks.items[0].evidence, []);
+
+  const documentedResponse = await fetch(`${app.consoleUrl}/api/tasks`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Origin: app.consoleUrl,
+      "X-CSRF-Token": state.csrfToken,
+    },
+    body: JSON.stringify({
+      action: "update",
+      id: taskId,
+      changes: {
+        implementationNotes: "Verified with a synthetic email.",
+        evidence: [
+          {
+            kind: "image",
+            label: "OTP screen",
+            path: "passwordless-auth/2026-08-20-otp.png",
+          },
+          {
+            kind: "link",
+            label: "Passing checks",
+            url: "https://github.com/example/project/actions/runs/123",
+          },
+        ],
+      },
+    }),
+  });
+  assert.equal(documentedResponse.status, 200);
+  const documented = await documentedResponse.json();
+  assert.equal(
+    documented.tasks.items[0].implementationNotes,
+    "Verified with a synthetic email.",
+  );
+  assert.equal(documented.tasks.items[0].evidence.length, 2);
 
   const secondCreatedResponse = await fetch(`${app.consoleUrl}/api/tasks`, {
     method: "POST",
@@ -237,6 +332,10 @@ test("serves local state and requires same-origin CSRF protection for actions", 
   assert.equal(
     moved.tasks.items.find((task) => task.id === taskId).status,
     "doing",
+  );
+  assert.equal(
+    moved.tasks.items.find((task) => task.id === taskId).evidence.length,
+    2,
   );
   assert.equal(
     moved.tasks.items.find((task) => task.id === secondTaskId).priority,

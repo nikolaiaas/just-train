@@ -28,10 +28,26 @@ export interface LogEntry {
 
 export type TaskStatus = "backlog" | "todo" | "doing" | "done";
 
+export interface TaskImageEvidence {
+  kind: "image";
+  label: string;
+  path: string;
+}
+
+export interface TaskLinkEvidence {
+  kind: "link";
+  label: string;
+  url: string;
+}
+
+export type TaskEvidence = TaskImageEvidence | TaskLinkEvidence;
+
 export interface ConsoleTask {
   id: string;
   title: string;
   details: string;
+  implementationNotes: string;
+  evidence: TaskEvidence[];
   status: TaskStatus;
   priority: number;
   createdAt: string;

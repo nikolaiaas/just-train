@@ -30,7 +30,7 @@ describe("TaskStore", () => {
   test("returns an empty board when no file exists", async () => {
     const { store } = await makeStore();
     assert.deepEqual(await store.read(), {
-      version: 2,
+      version: 3,
       updatedAt: null,
       items: [],
     });
@@ -78,7 +78,7 @@ describe("TaskStore", () => {
     assert.deepEqual(column(board, "doing"), [[firstId, 0]]);
 
     const persisted = JSON.parse(await readFile(filePath, "utf8"));
-    assert.equal(persisted.version, 2);
+    assert.equal(persisted.version, 3);
     assert.deepEqual(column(persisted, "doing"), [[firstId, 0]]);
     assert.deepEqual(
       (await readdir(directory)).filter((name) => name.endsWith(".tmp")),
@@ -117,7 +117,7 @@ describe("TaskStore", () => {
     );
   });
 
-  test("migrates version 1 statuses and file order to version 2 priorities", async () => {
+  test("migrates version 1 statuses, priorities, and evidence to version 3", async () => {
     const { filePath, store } = await makeStore();
     const timestamp = "2026-08-20T12:00:00.000Z";
     await writeFile(
@@ -172,7 +172,12 @@ describe("TaskStore", () => {
     );
 
     const migrated = await store.read();
-    assert.equal(migrated.version, 2);
+    assert.equal(migrated.version, 3);
+    assert.ok(
+      migrated.items.every(
+        (task) => task.implementationNotes === "" && task.evidence.length === 0,
+      ),
+    );
     assert.deepEqual(column(migrated, "backlog"), [["blocked-task", 0]]);
     assert.deepEqual(column(migrated, "todo"), [
       ["todo-first", 0],
@@ -193,7 +198,7 @@ describe("TaskStore", () => {
     );
   });
 
-  test("migrates missing version 2 priorities using file order per status", async () => {
+  test("migrates version 2 evidence and missing priorities using file order", async () => {
     const { filePath, store } = await makeStore();
     const timestamp = "2026-08-20T12:00:00.000Z";
     const persistedTask = (id, priority) => ({
@@ -220,12 +225,152 @@ describe("TaskStore", () => {
     );
 
     const migrated = await store.read();
+    assert.equal(migrated.version, 3);
     assert.deepEqual(column(migrated, "todo"), [
       ["file-first", 0],
       ["file-second", 1],
       ["file-third", 2],
     ]);
     assert.deepEqual(JSON.parse(await readFile(filePath, "utf8")), migrated);
+    assert.ok(
+      migrated.items.every(
+        (task) => task.implementationNotes === "" && task.evidence.length === 0,
+      ),
+    );
+  });
+
+  test("migrates a complete version 2 board without changing its order", async () => {
+    const { filePath, store } = await makeStore();
+    const timestamp = "2026-08-20T12:00:00.000Z";
+    await writeFile(
+      filePath,
+      `${JSON.stringify({
+        version: 2,
+        updatedAt: timestamp,
+        items: [
+          {
+            id: "doing-first",
+            title: "Doing first",
+            details: "Keep me first",
+            status: "doing",
+            priority: 0,
+            createdAt: timestamp,
+            updatedAt: timestamp,
+          },
+          {
+            id: "todo-first",
+            title: "Todo first",
+            details: "Keep me before todo second",
+            status: "todo",
+            priority: 0,
+            createdAt: timestamp,
+            updatedAt: timestamp,
+          },
+          {
+            id: "todo-second",
+            title: "Todo second",
+            details: "Keep me second",
+            status: "todo",
+            priority: 1,
+            createdAt: timestamp,
+            updatedAt: timestamp,
+          },
+        ],
+      })}\n`,
+      "utf8",
+    );
+
+    const migrated = await store.read();
+    assert.equal(migrated.version, 3);
+    assert.deepEqual(column(migrated, "todo"), [
+      ["todo-first", 0],
+      ["todo-second", 1],
+    ]);
+    assert.deepEqual(column(migrated, "doing"), [["doing-first", 0]]);
+    assert.deepEqual(
+      migrated.items.map(({ id, implementationNotes, evidence }) => ({
+        id,
+        implementationNotes,
+        evidence,
+      })),
+      [
+        { id: "todo-first", implementationNotes: "", evidence: [] },
+        { id: "todo-second", implementationNotes: "", evidence: [] },
+        { id: "doing-first", implementationNotes: "", evidence: [] },
+      ],
+    );
+  });
+
+  test("persists implementation notes and evidence through moves", async () => {
+    const { store } = await makeStore();
+    const created = await store.create({
+      title: "Passwordless login",
+      details: "Build it",
+      implementationNotes: "",
+      evidence: [],
+      status: "todo",
+    });
+    const taskId = created.items[0].id;
+    const evidence = [
+      {
+        kind: "image",
+        label: "OTP screen",
+        path: "passwordless-auth/2026-08-20-otp.png",
+      },
+      {
+        kind: "link",
+        label: "Passing checks",
+        url: "https://github.com/example/project/actions/runs/123",
+      },
+    ];
+
+    let board = await store.update(taskId, {
+      implementationNotes: "Implemented and verified with synthetic email.",
+      evidence,
+    });
+    assert.equal(
+      board.items[0].implementationNotes,
+      "Implemented and verified with synthetic email.",
+    );
+    assert.deepEqual(board.items[0].evidence, evidence);
+
+    board = await store.reorder(taskId, "doing", null);
+    assert.equal(board.items[0].status, "doing");
+    assert.equal(
+      board.items[0].implementationNotes,
+      "Implemented and verified with synthetic email.",
+    );
+    assert.deepEqual(board.items[0].evidence, evidence);
+  });
+
+  test("fails closed when a version 3 task omits evidence fields", async () => {
+    const { filePath, store } = await makeStore();
+    const timestamp = "2026-08-20T12:00:00.000Z";
+    await writeFile(
+      filePath,
+      `${JSON.stringify({
+        version: 3,
+        updatedAt: timestamp,
+        items: [
+          {
+            id: "missing-evidence",
+            title: "Missing evidence",
+            details: "",
+            status: "todo",
+            priority: 0,
+            createdAt: timestamp,
+            updatedAt: timestamp,
+          },
+        ],
+      })}\n`,
+      "utf8",
+    );
+
+    await assert.rejects(
+      () => store.read(),
+      (error) =>
+        error.code === "invalid_task_board" && error.statusCode === 500,
+    );
   });
 
   test("reorders within a column and appends when beforeTaskId is null", async () => {

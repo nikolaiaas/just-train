@@ -2,7 +2,7 @@
 
 import { execFile, spawn } from "node:child_process";
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
-import { stat, readFile } from "node:fs/promises";
+import { realpath, stat, readFile } from "node:fs/promises";
 import http from "node:http";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -12,6 +12,7 @@ import {
   InputError,
   isAllowedHost,
   isSameOriginRequest,
+  resolveEvidenceImagePath,
   resolveStaticPath,
   validateActionRequest,
   validateTaskReorderRequest,
@@ -30,6 +31,8 @@ const execFileAsync = promisify(execFile);
 const sourceDirectory = path.dirname(fileURLToPath(import.meta.url));
 const defaultConsoleDirectory = path.resolve(sourceDirectory, "..");
 const defaultRepositoryRoot = path.resolve(defaultConsoleDirectory, "../..");
+const EVIDENCE_ROUTE_PREFIX = "/api/evidence/";
+const MAX_EVIDENCE_IMAGE_BYTES = 2 * 1024 * 1024;
 const SHELL_ROUTES = new Set(["/", "/services", "/tasks"]);
 const CONTENT_TYPES = Object.freeze({
   ".css": "text/css; charset=utf-8",
@@ -52,6 +55,42 @@ const SECURITY_HEADERS = Object.freeze({
   "X-Content-Type-Options": "nosniff",
   "X-Frame-Options": "DENY",
 });
+
+function evidenceContentType(filePath) {
+  const extension = path.extname(filePath).toLowerCase();
+  return extension === ".png"
+    ? "image/png"
+    : extension === ".jpg" || extension === ".jpeg"
+      ? "image/jpeg"
+      : extension === ".webp"
+        ? "image/webp"
+        : null;
+}
+
+function hasExpectedImageSignature(contents, contentType) {
+  if (contentType === "image/png") {
+    return (
+      contents.length >= 8 &&
+      contents.subarray(0, 8).equals(Buffer.from("89504e470d0a1a0a", "hex"))
+    );
+  }
+  if (contentType === "image/jpeg") {
+    return (
+      contents.length >= 3 &&
+      contents[0] === 0xff &&
+      contents[1] === 0xd8 &&
+      contents[2] === 0xff
+    );
+  }
+  if (contentType === "image/webp") {
+    return (
+      contents.length >= 12 &&
+      contents.subarray(0, 4).toString("ascii") === "RIFF" &&
+      contents.subarray(8, 12).toString("ascii") === "WEBP"
+    );
+  }
+  return false;
+}
 
 function sendJson(response, statusCode, body, requestMethod = "GET") {
   const payload = `${JSON.stringify(body)}\n`;
@@ -210,6 +249,7 @@ export function createDevConsole({
   repositoryRoot = defaultRepositoryRoot,
   publicDirectory = path.join(defaultConsoleDirectory, "dist"),
   taskFile = path.join(defaultConsoleDirectory, "tasks.json"),
+  evidenceDirectory = path.join(defaultConsoleDirectory, "evidence"),
   manager = new ServiceManager({ repositoryRoot }),
   taskStore = new TaskStore(taskFile),
 } = {}) {
@@ -270,6 +310,83 @@ export function createDevConsole({
           });
         }
         sendJson(response, 200, await getState(), method);
+        return;
+      }
+
+      if (url.pathname.startsWith(EVIDENCE_ROUTE_PREFIX)) {
+        if (method !== "GET" && method !== "HEAD") {
+          throw new InputError("Method not allowed.", {
+            code: "method_not_allowed",
+            statusCode: 405,
+          });
+        }
+        if (url.search) {
+          throw new InputError("Evidence image URLs do not accept parameters.");
+        }
+        const reference = url.pathname.slice(EVIDENCE_ROUTE_PREFIX.length);
+        const evidenceRoot = await realpath(evidenceDirectory).catch(
+          (error) => {
+            if (error?.code === "ENOENT") {
+              throw new InputError("Evidence image not found.", {
+                code: "evidence_not_found",
+                statusCode: 404,
+              });
+            }
+            throw error;
+          },
+        );
+        const requestedPath = resolveEvidenceImagePath(evidenceRoot, reference);
+        const filePath = await realpath(requestedPath).catch((error) => {
+          if (error?.code === "ENOENT") {
+            throw new InputError("Evidence image not found.", {
+              code: "evidence_not_found",
+              statusCode: 404,
+            });
+          }
+          throw error;
+        });
+        if (!filePath.startsWith(`${evidenceRoot}${path.sep}`)) {
+          throw new InputError(
+            "Evidence image is outside the evidence folder.",
+            {
+              code: "invalid_evidence_path",
+              statusCode: 403,
+            },
+          );
+        }
+        const fileStats = await stat(filePath);
+        if (!fileStats.isFile()) {
+          throw new InputError("Evidence image not found.", {
+            code: "evidence_not_found",
+            statusCode: 404,
+          });
+        }
+        if (fileStats.size > MAX_EVIDENCE_IMAGE_BYTES) {
+          throw new InputError("Evidence image must be no larger than 2 MiB.", {
+            code: "evidence_too_large",
+            statusCode: 413,
+          });
+        }
+        const contentType = evidenceContentType(filePath);
+        const contents = await readFile(filePath);
+        if (
+          !contentType ||
+          contents.length > MAX_EVIDENCE_IMAGE_BYTES ||
+          !hasExpectedImageSignature(contents, contentType)
+        ) {
+          throw new InputError("Evidence file is not a supported image.", {
+            code: "invalid_evidence_file",
+            statusCode: 415,
+          });
+        }
+        response.writeHead(200, {
+          ...SECURITY_HEADERS,
+          "Content-Type": contentType,
+          "Content-Length": contents.length,
+          "Content-Disposition": `inline; filename="${path.basename(filePath)}"`,
+          "Cross-Origin-Resource-Policy": "same-origin",
+        });
+        response.end(method === "HEAD" ? undefined : contents);
         return;
       }
 

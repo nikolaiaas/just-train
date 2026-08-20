@@ -6,7 +6,9 @@ export const TASK_STATUSES = Object.freeze([
   "doing",
   "done",
 ]);
-export const TASK_BOARD_VERSION = 2;
+export const TASK_BOARD_VERSION = 3;
+export const TASK_EVIDENCE_KINDS = Object.freeze(["image", "link"]);
+export const MAX_TASK_EVIDENCE_ITEMS = 10;
 
 export const SERVICE_IDS = Object.freeze([
   "admin",
@@ -16,12 +18,17 @@ export const SERVICE_IDS = Object.freeze([
 ]);
 
 const TASK_STATUS_SET = new Set(TASK_STATUSES);
+const TASK_EVIDENCE_KIND_SET = new Set(TASK_EVIDENCE_KINDS);
 const LEGACY_TASK_STATUS_MAP = Object.freeze({
   "in-progress": "doing",
   blocked: "backlog",
 });
 const SERVICE_ID_SET = new Set(SERVICE_IDS);
 const TASK_ID_PATTERN = /^[a-z0-9][a-z0-9_-]{0,63}$/;
+const TASK_EVIDENCE_IMAGE_PATH_PATTERN =
+  /^[a-z0-9][a-z0-9_-]{0,63}\/[a-z0-9][a-z0-9._-]{0,127}\.(?:jpe?g|png|webp)$/;
+const TASK_SECRET_VALUE_PATTERN =
+  /(?:\bsb_secret_[A-Za-z0-9_-]{8,}|\bsk-or-v1-[A-Za-z0-9_-]{16,}|\beyJ[A-Za-z0-9_-]{12,}\.[A-Za-z0-9_-]{12,}(?:\.[A-Za-z0-9_-]{8,})?|\b(?:access_token|refresh_token|token_hash)\s*[:=]\s*[^\s]+)/i;
 const SENSITIVE_LABEL_PATTERN =
   /\b(?:anon(?:ymous)?(?:[_ -]?key)?|api[_ -]?key|access[_ -]?key|database[_ -]?url|db[_ -]?url|jwt(?:[_ -]?secret)?|password|publishable[_ -]?key|refresh[_ -]?token|secret(?:[_ -]?key)?|service[_ -]?role(?:[_ -]?key)?|supabase[_ -]?(?:key|token))\b/i;
 
@@ -72,8 +79,118 @@ function validateText(value, label, { maxLength, required = false } = {}) {
   if (normalized.length > maxLength) {
     throw new InputError(`${label} must be at most ${maxLength} characters.`);
   }
+  if (TASK_SECRET_VALUE_PATTERN.test(normalized)) {
+    throw new InputError(
+      `${label} appears to contain a credential or sign-in token and cannot be stored in the tracked task board.`,
+    );
+  }
 
   return normalized;
+}
+
+export function validateTaskEvidenceImagePath(value) {
+  const imagePath = validateText(value, "Evidence image path", {
+    maxLength: 220,
+    required: true,
+  });
+  if (
+    imagePath.includes("%") ||
+    imagePath.includes("\\") ||
+    !TASK_EVIDENCE_IMAGE_PATH_PATTERN.test(imagePath)
+  ) {
+    throw new InputError(
+      "Evidence image path must be task-id/lowercase-file.png, .jpg, .jpeg, or .webp.",
+    );
+  }
+  return imagePath;
+}
+
+export function resolveEvidenceImagePath(evidenceDirectory, imagePath) {
+  const validatedPath = validateTaskEvidenceImagePath(imagePath);
+  const evidenceRoot = path.resolve(evidenceDirectory);
+  const candidate = path.resolve(evidenceRoot, ...validatedPath.split("/"));
+  if (!candidate.startsWith(`${evidenceRoot}${path.sep}`)) {
+    throw new InputError("Evidence image path escapes the evidence directory.");
+  }
+  return candidate;
+}
+
+function validateTaskEvidenceLink(value) {
+  const suppliedUrl = validateText(value, "Evidence link URL", {
+    maxLength: 1_000,
+    required: true,
+  });
+  let url;
+  try {
+    url = new URL(suppliedUrl);
+  } catch {
+    throw new InputError("Evidence link URL must be a valid HTTPS URL.");
+  }
+  if (url.protocol !== "https:" || url.username || url.password || url.search) {
+    throw new InputError(
+      "Evidence links must use HTTPS and cannot contain credentials or query parameters.",
+    );
+  }
+  return url.toString();
+}
+
+export function validateTaskEvidence(value) {
+  const evidence = assertPlainObject(value, "Task evidence");
+  if (
+    typeof evidence.kind !== "string" ||
+    !TASK_EVIDENCE_KIND_SET.has(evidence.kind)
+  ) {
+    throw new InputError(
+      `Task evidence kind must be one of: ${TASK_EVIDENCE_KINDS.join(", ")}.`,
+    );
+  }
+
+  const label = validateText(evidence.label, "Evidence label", {
+    maxLength: 120,
+    required: true,
+  });
+  if (evidence.kind === "image") {
+    assertOnlyKeys(
+      evidence,
+      new Set(["kind", "label", "path"]),
+      "Task evidence",
+    );
+    return {
+      kind: "image",
+      label,
+      path: validateTaskEvidenceImagePath(evidence.path),
+    };
+  }
+
+  assertOnlyKeys(evidence, new Set(["kind", "label", "url"]), "Task evidence");
+  return {
+    kind: "link",
+    label,
+    url: validateTaskEvidenceLink(evidence.url),
+  };
+}
+
+export function validateTaskEvidenceList(value) {
+  if (!Array.isArray(value)) {
+    throw new InputError("Task evidence must be an array.");
+  }
+  if (value.length > MAX_TASK_EVIDENCE_ITEMS) {
+    throw new InputError(
+      `A task may contain at most ${MAX_TASK_EVIDENCE_ITEMS} evidence items.`,
+    );
+  }
+  const evidence = value.map(validateTaskEvidence);
+  const references = new Set();
+  for (const item of evidence) {
+    const reference = item.kind === "image" ? item.path : item.url;
+    if (references.has(reference)) {
+      throw new InputError(
+        "Task evidence cannot contain duplicate references.",
+      );
+    }
+    references.add(reference);
+  }
+  return evidence;
 }
 
 export function validateTaskId(value) {
@@ -108,6 +225,7 @@ export function validateTask(
     persisted = false,
     migrateLegacyStatus = false,
     allowMissingPriority = false,
+    allowMissingEvidence = false,
   } = {},
 ) {
   const task = assertPlainObject(value, "Task");
@@ -116,13 +234,31 @@ export function validateTask(
         "id",
         "title",
         "details",
+        "implementationNotes",
+        "evidence",
         "status",
         "priority",
         "createdAt",
         "updatedAt",
       ])
-    : new Set(["title", "details", "status"]);
+    : new Set([
+        "title",
+        "details",
+        "implementationNotes",
+        "evidence",
+        "status",
+      ]);
   assertOnlyKeys(task, allowedKeys, "Task");
+  if (
+    persisted &&
+    !allowMissingEvidence &&
+    (!Object.hasOwn(task, "implementationNotes") ||
+      !Object.hasOwn(task, "evidence"))
+  ) {
+    throw new InputError(
+      "Persisted tasks require implementationNotes and evidence fields.",
+    );
+  }
 
   const content = {
     title: validateText(task.title, "Task title", {
@@ -132,6 +268,16 @@ export function validateTask(
     details: validateText(task.details ?? "", "Task details", {
       maxLength: 4_000,
     }),
+    implementationNotes: validateText(
+      Object.hasOwn(task, "implementationNotes")
+        ? task.implementationNotes
+        : "",
+      "Task implementation notes",
+      { maxLength: 4_000 },
+    ),
+    evidence: validateTaskEvidenceList(
+      Object.hasOwn(task, "evidence") ? task.evidence : [],
+    ),
     status: migrateLegacyStatus
       ? normalizeLegacyTaskStatus(task.status ?? "todo")
       : validateTaskStatus(task.status ?? "todo"),
@@ -165,7 +311,7 @@ export function validateTaskChanges(value) {
   const changes = assertPlainObject(value, "Task changes");
   assertOnlyKeys(
     changes,
-    new Set(["title", "details", "status"]),
+    new Set(["title", "details", "implementationNotes", "evidence", "status"]),
     "Task changes",
   );
   if (Object.keys(changes).length === 0) {
@@ -184,6 +330,16 @@ export function validateTaskChanges(value) {
       maxLength: 4_000,
     });
   }
+  if (Object.hasOwn(changes, "implementationNotes")) {
+    normalized.implementationNotes = validateText(
+      changes.implementationNotes,
+      "Task implementation notes",
+      { maxLength: 4_000 },
+    );
+  }
+  if (Object.hasOwn(changes, "evidence")) {
+    normalized.evidence = validateTaskEvidenceList(changes.evidence);
+  }
   if (Object.hasOwn(changes, "status")) {
     normalized.status = validateTaskStatus(changes.status);
   }
@@ -193,7 +349,11 @@ export function validateTaskChanges(value) {
 
 export function validateTaskBoard(
   value,
-  { migrateLegacyStatuses = false, migratePriorities = false } = {},
+  {
+    migrateLegacyStatuses = false,
+    migratePriorities = false,
+    migrateEvidence = false,
+  } = {},
 ) {
   const board = assertPlainObject(value, "Task board");
   assertOnlyKeys(
@@ -203,7 +363,7 @@ export function validateTaskBoard(
   );
   const supportedVersion =
     board.version === TASK_BOARD_VERSION ||
-    (migratePriorities && board.version === 1);
+    (migrateEvidence && (board.version === 1 || board.version === 2));
   if (!supportedVersion) {
     throw new InputError(`Task board version must be ${TASK_BOARD_VERSION}.`);
   }
@@ -218,7 +378,8 @@ export function validateTaskBoard(
     validateTask(task, {
       persisted: true,
       migrateLegacyStatus: migrateLegacyStatuses,
-      allowMissingPriority: migratePriorities,
+      allowMissingPriority: migratePriorities && board.version < 3,
+      allowMissingEvidence: migrateEvidence && board.version < 3,
     }),
   );
   const ids = new Set();
@@ -295,6 +456,8 @@ export function canonicalizeTaskPriorities(
       id: task.id,
       title: task.title,
       details: task.details,
+      implementationNotes: task.implementationNotes,
+      evidence: task.evidence,
       status: task.status,
       priority,
       createdAt: task.createdAt,
