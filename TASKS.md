@@ -20,20 +20,22 @@ The administration slice is:
 
 ## Preview environments
 
-| Environment                 | Frontend                                        | Backend                                                              | Purpose                                                  |
-| --------------------------- | ----------------------------------------------- | -------------------------------------------------------------------- | -------------------------------------------------------- |
-| Local Mac                   | Next.js dev server plus Expo web/iOS simulator  | Local Supabase in Docker                                             | Normal development and automated tests                   |
-| Physical iPhone development | EAS development build with Expo dev client      | Hosted non-production Supabase                                       | Camera, permissions, timers, and real-device testing     |
-| Pull request web preview    | Vercel preview URL                              | Shared development Supabase initially; Supabase preview branch later | Review administration changes                            |
-| Pull request mobile preview | Installed development build plus EAS Update     | Shared development Supabase initially; Supabase preview branch later | Review JavaScript and asset changes by QR/link           |
-| Stakeholder iPhone preview  | EAS internal-distribution build                 | Hosted non-production Supabase                                       | Production-like testing without public App Store release |
-| Production                  | App Store build and production admin deployment | Separate production Supabase                                         | Deferred until after the pilot                           |
+| Environment                 | Frontend                                        | Backend                                                               | Purpose                                                  |
+| --------------------------- | ----------------------------------------------- | --------------------------------------------------------------------- | -------------------------------------------------------- |
+| Local Mac                   | Next.js dev server plus Expo web/iOS simulator  | Hosted Development normally; local Supabase for explicit backend work | Visual development plus local backend tests              |
+| Physical iPhone development | EAS development build with Expo dev client      | Hosted non-production Supabase                                        | Camera, permissions, timers, and real-device testing     |
+| Pull request web preview    | Vercel preview URL                              | Shared development Supabase initially; Supabase preview branch later  | Review administration changes                            |
+| Pull request mobile preview | Installed development build plus EAS Update     | Shared development Supabase initially; Supabase preview branch later  | Review JavaScript and asset changes by QR/link           |
+| Stakeholder iPhone preview  | EAS internal-distribution build                 | Hosted non-production Supabase                                        | Production-like testing without public App Store release |
+| Production                  | App Store build and production admin deployment | Separate production Supabase                                          | Deferred until after the pilot                           |
 
 Supabase provides the backend, not frontend preview hosting. Supabase Preview Branches can create an isolated database, Auth, Storage, Realtime, and Edge Functions environment per pull request. They currently require a Pro plan. Vercel should host administration previews, and Expo/EAS should distribute mobile previews.
 
+Running a frontend on localhost does not select its backend. Until the planned localhost sign-in selector is implemented, this Mac's ignored client environment normally targets hosted Development; local Supabase remains the explicit choice for migrations, tests, Studio, and full-local integration work.
+
 For the initial phase, use:
 
-1. Local Supabase for browser and simulator development.
+1. Hosted Development for ordinary browser work, with local Supabase selected explicitly for backend and full-local integration work.
 2. One hosted `development` Supabase project for physical phones and shared previews.
 3. Vercel preview deployments for the administration app.
 4. One EAS development build on the owner's iPhone, followed by an EAS preview build when stable sharing is needed.
@@ -87,6 +89,7 @@ Exit condition: a clean clone can install dependencies and start both empty appl
 - [x] Generate shared TypeScript database types from the local schema.
 - [x] Add `pnpm dev:admin`, `pnpm dev:mobile`, and a documented combined development command.
 - [x] Add beginner-friendly `pnpm dev:web` and `pnpm dev:iphone` commands.
+- [x] Add a one-click local Dev Console with an overview, verified service controls, redacted logs, and an editable four-column task board.
 - [x] Add a development-only screen gallery for reviewing reusable components and fixture states.
 - [x] Verify local previews in desktop and narrow browser viewports.
 - [ ] Verify the mobile preview in the iOS Simulator after full Xcode is installed.

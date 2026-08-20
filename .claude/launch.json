@@ -3,6 +3,13 @@
   "autoVerify": true,
   "configurations": [
     {
+      "name": "dev-console",
+      "runtimeExecutable": "mise",
+      "runtimeArgs": ["exec", "--", "pnpm", "dev:console"],
+      "port": 11009,
+      "autoPort": false
+    },
+    {
       "name": "admin",
       "runtimeExecutable": "mise",
       "runtimeArgs": ["exec", "--", "pnpm", "dev:admin"],

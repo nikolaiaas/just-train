@@ -1,0 +1,51 @@
+{
+  "version": 2,
+  "updatedAt": "2026-08-20T19:40:27.000Z",
+  "items": [
+    {
+      "id": "pilot-goal-contract",
+      "title": "Fastlæg pilotens jongleringsforløb",
+      "details": "Vælg alder, de seks øvelser, mål og regler for progression, og få fixtures og database-seed til at matche.",
+      "status": "backlog",
+      "priority": 0,
+      "createdAt": "2026-08-20T18:45:00.000Z",
+      "updatedAt": "2026-08-20T18:45:00.000Z"
+    },
+    {
+      "id": "hosted-preview-safety",
+      "title": "Luk de sidste preview-huller",
+      "details": "Tilføj sikker syntetisk hosted data, Auth callbacks og korrekt APP_VARIANT til preview-opdateringer.",
+      "status": "backlog",
+      "priority": 1,
+      "createdAt": "2026-08-20T18:45:00.000Z",
+      "updatedAt": "2026-08-20T18:45:00.000Z"
+    },
+    {
+      "id": "auth-environment-slice",
+      "title": "Forbind login og de første data",
+      "details": "Opret Supabase-klient, admin-login og en localhost-only vælger mellem Local og Hosted Development.",
+      "status": "backlog",
+      "priority": 2,
+      "createdAt": "2026-08-20T18:45:00.000Z",
+      "updatedAt": "2026-08-20T18:45:00.000Z"
+    },
+    {
+      "id": "iphone-smoke-test",
+      "title": "Bekræft udviklingsappen på iPhone",
+      "details": "Installér Bare Træn Dev, slå Developer Mode til, og bekræft forbindelse til Metro på port 11001.",
+      "status": "todo",
+      "priority": 0,
+      "createdAt": "2026-08-20T18:45:00.000Z",
+      "updatedAt": "2026-08-20T18:45:00.000Z"
+    },
+    {
+      "id": "dev-console",
+      "title": "Gør lokal udvikling klikbar",
+      "details": "Dev Console, sikre start/stop-knapper, status, logs og en lille opgavetavle.",
+      "status": "done",
+      "priority": 0,
+      "createdAt": "2026-08-20T18:45:00.000Z",
+      "updatedAt": "2026-08-20T19:40:27.000Z"
+    }
+  ]
+}

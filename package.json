@@ -7,6 +7,7 @@
     "node": ">=22.13.0"
   },
   "scripts": {
+    "dev:console": "pnpm --dir tools/dev-console build && node tools/dev-console/server/index.mjs",
     "dev": "concurrently -n admin,mobile -c blue,green \"pnpm dev:admin\" \"pnpm dev:mobile\"",
     "dev:admin": "pnpm --filter @bare-traen/admin dev",
     "dev:mobile": "pnpm --filter @bare-traen/mobile start",
@@ -16,7 +17,8 @@
     "build": "pnpm -r --if-present build",
     "typecheck": "pnpm -r --if-present typecheck",
     "lint": "pnpm -r --if-present lint",
-    "test": "pnpm -r --if-present test",
+    "test": "pnpm -r --if-present test && pnpm test:dev-console",
+    "test:dev-console": "pnpm --dir tools/dev-console build && node --test tools/dev-console/test/*.test.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "supabase:start": "supabase start",

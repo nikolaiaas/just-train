@@ -21,6 +21,7 @@ Optional convenience: in the project's local-environment settings, add actions w
 
 | Action               | Command                                                                           |
 | -------------------- | --------------------------------------------------------------------------------- |
+| Open Dev Console     | `mise exec -- pnpm dev:console`                                                   |
 | Start Safari preview | `mise exec -- pnpm dev:web`                                                       |
 | Start iPhone server  | `mise exec -- pnpm dev:iphone`                                                    |
 | Run project checks   | `mise exec -- pnpm typecheck && mise exec -- pnpm lint && mise exec -- pnpm test` |
@@ -35,7 +36,7 @@ Actions become reusable buttons in Codex's desktop interface. The agent can also
 4. Choose **Manual** while learning the flow, or **Accept edits** when you are comfortable reviewing changes.
 5. Paste one of the prompts below.
 
-Claude's project context should show `CLAUDE.md`; `/context` confirms that it loaded. The committed `.claude/launch.json` also gives Claude two preview-server choices, **admin** and **mobile-web**, in its server menu.
+Claude's project context should show `CLAUDE.md`; `/context` confirms that it loaded. The committed `.claude/launch.json` gives Claude **dev-console**, **admin**, and **mobile-web** choices in its server menu. The Dev Console is the simplest choice when the user wants to control the other local services from a page.
 
 Claude creates an isolated Git worktree for each Code session. The repository's `.worktreeinclude` copies the two ignored public Supabase client environment files into that worktree, but it does not copy dependencies. If `node_modules` is missing, Claude should run the frozen pnpm install; this reuses pnpm's local cache and does not change package versions.
 
@@ -43,12 +44,12 @@ Only one Bare Træn checkout should serve previews at a time because ports 11000
 
 If the Code tab is missing, update Claude Desktop and confirm that the signed-in account has a paid Claude plan or organization access that includes Claude Code. The regular Chat and Cowork tabs are different products and should not be used to run this local repository.
 
-## Prompt: first-time setup and Safari preview
+## Prompt: first-time setup and development console
 
 Copy everything inside this box:
 
 ```text
-Prepare and start Bare Træn for local Safari development on this Mac.
+Prepare and open the Bare Træn development console on this Mac.
 
 Work only inside "/Users/nikolaiaas/Documents/Bare Træn". Read AGENTS.md, README.md, and docs/local-development.md first. Run git status and preserve every existing change.
 
@@ -56,23 +57,23 @@ Check the pinned mise, Node, pnpm, and workspace dependencies. Install only what
 
 Check whether the ignored apps/admin/.env.local and apps/mobile/.env.local files exist without printing their contents. Do not overwrite existing files. If this is a fresh clone and either is missing, the fixture screens can still start; report that hosted development Supabase values must be supplied before connected-backend or iPhone Metro work. Only create local public values when I explicitly ask to test against local Supabase, label that choice clearly, and explain that hosted values must be restored before iPhone development. Never print, invent, expose, or commit a service-role key, database password, OPENROUTER_API_KEY, password, or two-factor code.
 
-Start the normal Safari previews with:
+Build and start the local development console with:
 
-mise exec -- pnpm dev:web
+mise exec -- pnpm dev:console
 
-Wait until both servers answer, leave the process running, and report the actual mobile and administration URLs clearly. Start local Supabase only if it is needed for the current screens; if you start it, also report the Studio URL. Do not change application source code merely to start the existing project, and do not create a commit for startup-only work.
+Wait until http://127.0.0.1:11009/api/health answers for this exact checkout, leave the process running, and give me a clickable link to the Overview page. Do not start Supabase or either preview automatically; I will choose the needed services from the page. Explain that starting services does not change the backend selected in .env.local. Do not change application source code merely to start the existing project, and do not create a commit for startup-only work.
 ```
 
-## Prompt: everyday Safari startup
+## Prompt: everyday development-console startup
 
 ```text
-Start the existing Bare Træn Safari development previews.
+Open the existing Bare Træn development console.
 
 Read the repository instructions, check git status, and preserve all current work. If node_modules is missing in this checkout or Claude worktree, run `mise exec -- pnpm install --frozen-lockfile`; do not change the lockfile or dependency versions. Do not reset any database.
 
-Before starting, check ports 11000 and 11001. If another Bare Træn session or checkout owns them, do not kill it or reuse it to verify this checkout; tell me which older session I need to stop. Do not fall back to 8081, 3000, or the occupied 9000 range.
+Before starting, check port 11009. If a console from this exact checkout already answers with the expected health identity, reuse it. If a different worktree or unknown program owns the port, do not kill or reuse it; tell me which older session I need to stop. Do not fall back to 8081, 3000, or the occupied 9000 range.
 
-When the reserved ports are free, run `mise exec -- pnpm dev:web` in a long-running local terminal. Wait until both services answer, leave them running, and give me clickable mobile and administration URLs. If startup fails, diagnose only what is needed and do not delete caches, Docker data, environment files, or user changes.
+When the console port is free, run `mise exec -- pnpm dev:console` in a long-running local terminal. Wait until its health check answers, leave it running, and give me clickable links to Overview, Services, and Tasks. Do not start any service for me unless I ask. If startup fails, diagnose only what is needed and do not delete caches, Docker data, environment files, or user changes.
 ```
 
 ## Prompt: first iPhone development build
@@ -96,7 +97,7 @@ After I confirm installation, verify silently that apps/mobile/.env.local contai
 ```text
 Stop the Bare Træn local development environment safely.
 
-Stop only the admin and Expo/Metro processes started for this repository by sending Control-C to their own terminal sessions. Do not use killall and do not stop unrelated Node processes. If this session started local Supabase, run `mise exec -- pnpm supabase:stop`; otherwise leave it alone.
+If the Dev Console is running for this exact checkout, use its Services page to stop the requested local services. It may stop a process launched elsewhere only when it reports that process as a verified Bare Træn process from this checkout; never bypass a protected/unknown result. Otherwise, stop only the admin and Expo/Metro processes started in their own terminal sessions by sending Control-C. Do not use killall and do not stop unrelated Node processes. Stop local Supabase only when requested.
 
 Do not reset a database, delete Docker volumes, prune Docker, remove caches, delete files, or alter git changes. Tell me exactly what was stopped and what remains running.
 ```

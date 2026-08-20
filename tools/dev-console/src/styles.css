@@ -1,0 +1,132 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #16324f;
+  --color-muted: #536879;
+  --color-page: #f3efe7;
+  --color-paper: #fffdf8;
+  --color-soft: #edf8f6;
+  --color-soft-warm: #fff2d7;
+  --color-line: #d8e1e5;
+  --color-line-strong: #bacbd1;
+  --color-brand: #087c78;
+  --color-brand-deep: #06635f;
+  --color-success: #2d8b5d;
+  --color-warning: #87681f;
+  --color-danger: #b8473e;
+  --font-rounded:
+    "Avenir Next", Avenir, Nunito, ui-rounded, system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --shadow-soft: 0 8px 24px rgba(22, 50, 79, 0.09);
+  --shadow-panel: 0 24px 70px rgba(22, 50, 79, 0.14);
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    min-width: 320px;
+    min-height: 100%;
+    background: var(--color-page);
+    scroll-behavior: smooth;
+  }
+
+  body {
+    min-height: 100vh;
+    margin: 0;
+    background:
+      radial-gradient(
+        circle at 4% 2%,
+        rgba(255, 255, 255, 0.94),
+        transparent 30rem
+      ),
+      radial-gradient(
+        circle at 100% 45%,
+        rgba(237, 248, 246, 0.82),
+        transparent 36rem
+      ),
+      var(--color-page);
+    color: var(--color-ink);
+    font-family: var(--font-rounded);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+
+  button,
+  a,
+  select {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button:focus-visible,
+  a:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible,
+  [tabindex]:focus-visible {
+    outline: 3px solid rgba(8, 124, 120, 0.28);
+    outline-offset: 3px;
+  }
+
+  svg {
+    display: block;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.8;
+  }
+
+  dialog::backdrop {
+    background: rgba(10, 28, 42, 0.46);
+    backdrop-filter: blur(3px);
+  }
+
+  [hidden] {
+    display: none !important;
+  }
+}
+
+@utility focus-ring {
+  @apply focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-brand/25;
+}
+
+@keyframes gentle-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes toast-in {
+  from {
+    transform: translateY(8px);
+    opacity: 0;
+  }
+}
+
+.animate-gentle-spin {
+  animation: gentle-spin 700ms linear infinite;
+}
+
+.animate-toast-in {
+  animation: toast-in 180ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

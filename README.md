@@ -14,6 +14,7 @@ The app currently uses synthetic fixture data while the Supabase schema and priv
 - Next.js 16 App Router, React, CSS Modules, and TypeScript for administration.
 - Supabase PostgreSQL, Auth, Storage, and Row-Level Security for the backend.
 - pnpm workspaces for shared domain code and design tokens.
+- React 19, Vite 8, Tailwind CSS 4, and a loopback-only Node controller for the local Dev Console.
 - Vercel for web previews and Expo/EAS for private iPhone previews.
 
 Supabase hosts the backend, not the visual app previews. OpenRouter is reserved for later server-side AI operations; its secret key must never be included in the mobile bundle or a `NEXT_PUBLIC_*` variable.
@@ -33,12 +34,22 @@ Full Xcode is not currently installed on this Mac. That blocks the simulator and
 ```bash
 mise install
 mise exec -- corepack enable
-mise exec -- pnpm install
+mise exec -- pnpm install --frozen-lockfile
 ```
 
 If mise is activated in your shell, the shorter `pnpm` commands below use the pinned Node version automatically. On a shell without mise activation, prefix them with `mise exec --`, for example `mise exec -- pnpm dev`. If you do not use mise, install the Node version listed in `.nvmrc` and then run `corepack enable`.
 
 ## Local previews
+
+The easiest everyday option on this Mac is the local development console:
+
+1. Double-click **`Start Bare Træn.command`** in Finder.
+2. Keep the Terminal window that appears open.
+3. Use the page at [http://127.0.0.1:11009](http://127.0.0.1:11009). **Overview** summarizes services and task counts, **Services** starts and stops previews and shows their logs, and **Tasks** maintains the priority-ordered active queue by drag and drop.
+
+The console listens only on this Mac and exposes a fixed set of Bare Træn actions. It can stop a preview that was started in another Terminal only after verifying that the process belongs to this checkout; it refuses to stop an unknown program that merely occupies the same port. It has no arbitrary command box, no production backend option, and no database-reset button. Its React interface is built with Vite and Tailwind, and its task board is stored in `tools/dev-console/tasks.json`; `TASKS.md` remains the complete project roadmap.
+
+For a terminal-based start, use the commands below.
 
 Start the administration app and mobile Safari preview together:
 
@@ -55,6 +66,7 @@ pnpm dev:mobile
 
 - Administration opens at [http://localhost:11000](http://localhost:11000).
 - The mobile Safari preview normally opens at [http://localhost:11001](http://localhost:11001).
+- The development console opens at [http://127.0.0.1:11009](http://127.0.0.1:11009).
 - The hosted fixture preview is available at [just-train-admin.vercel.app](https://just-train-admin.vercel.app). Vercel protects pull-request deployments with team login, while the app also sends no-index metadata and headers.
 
 The App Store version of Expo Go is currently incompatible with this Expo SDK 57 project. Use the Safari preview first, then install **Bare Træn Dev** through the EAS `development` profile for real-device work. Do not downgrade the project to make Expo Go work.

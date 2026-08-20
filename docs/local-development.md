@@ -1,6 +1,6 @@
 # Local development, in plain language
 
-This is the everyday guide for running Bare Træn on this Mac, in Safari, and on an iPhone. You do not need to understand the commands. Copy them exactly and press Return after each line.
+This is the everyday guide for running Bare Træn on this Mac, in Safari, and on an iPhone. The normal flow uses a local control page, so you do not need to remember Terminal commands.
 
 ## What runs where
 
@@ -9,6 +9,8 @@ Bare Træn has three parts:
 - **Mobile preview**: the child/parent app shown in Safari at `http://localhost:11001`.
 - **Administration**: the content interface at `http://localhost:11000`.
 - **Supabase**: the database and sign-in system. Local Supabase Studio is at `http://localhost:54323`.
+
+The **Bare Træn Dev Console** at `http://127.0.0.1:11009` starts and monitors those parts. It is a local helper rather than a deployed part of the product.
 
 The screens currently use synthetic example data, so normal visual work in Safari does not need Docker or a database reset. Start local Supabase when a task changes the database, sign-in, saving, or permissions.
 
@@ -35,7 +37,31 @@ This installs the exact Node and package versions chosen for the project. It doe
 
 The two ignored `.env.local` files are already configured on this Mac for the hosted development Supabase project. They contain environment-specific public connection values and must never be committed. On a fresh Mac or fresh clone, ask Codex or Claude to create the missing files using the first-time prompt in [desktop-agents.md](./desktop-agents.md).
 
-## Everyday Safari preview
+## Everyday development: use the control page
+
+In Finder, open the project folder and double-click:
+
+**`Start Bare Træn.command`**
+
+A Terminal window opens and then the Bare Træn Dev Console opens in the browser. Keep the Terminal window open while using it.
+
+The menu has three pages:
+
+- **Overview** is the welcome page. It summarizes what is running and how many tasks are in each column.
+- **Services** starts and stops Supabase, administration, mobile web, and the iPhone server; opens their pages; and shows recent credential-redacted logs.
+- **Tasks** keeps the active queue in **Backlog**, **To do**, **Doing**, and **Done**. Cards are always shown in priority order. Drag a card to change its priority or move it to another column; the up/down controls provide the same operation from a keyboard. **Hide Done** removes the completed column from view without deleting anything.
+
+The service page can also stop a Bare Træn preview that was started from another Terminal or agent. Before showing that stop button, the console verifies that the listening process belongs to this exact checkout or worktree. If an unrelated application—including Bare Træn from another worktree—uses the same port, the console labels it as protected and refuses to stop it.
+
+The console is intentionally limited. It runs only on this Mac, cannot execute arbitrary commands, cannot connect to Production, and does not offer a database reset. The full project roadmap remains in `TASKS.md`; the smaller editable board is plain JSON saved in `tools/dev-console/tasks.json`.
+
+Task edits are real repository changes and therefore appear in Git. Keep this JSON board to a small, versioned active queue; never put passwords, API keys, real child information, or other personal data in it. `TASKS.md` remains the durable roadmap, and an overlapping item should be updated deliberately in both places when it is completed.
+
+Mobile web and the iPhone development server both use port `11001`, so only one of those modes can run at a time. The console explains this instead of moving either service to an unexpected port.
+
+To close the console, use its stop buttons first and then press **Control-C** in its Terminal window.
+
+## Terminal alternative for the Safari preview
 
 Open one Terminal window and run:
 
