@@ -88,11 +88,12 @@ deployment flow will be:
    restricted to this repository and apply new migration files from its
    selected production branch, `main`.
 
-`main` is now protected by pull requests and the required `quality` and
-`database` checks. This automatic database flow is not active yet because the
-native integration still needs its one-time GitHub access confirmation and a
-first end-to-end merge verification. Until both are complete, a merge must not
-be treated as proof that Hosted Development received the migration.
+`main` is now protected by pull requests and the required `quality`,
+`database`, and Vercel preview checks. This automatic database flow is not
+active yet because the native integration still needs its one-time GitHub
+access confirmation and a first end-to-end merge verification. Until both are
+complete, a merge must not be treated as proof that Hosted Development received
+the migration.
 
 Automatic Supabase preview branches are off while Hosted Development uses the
 Free plan. A Vercel pull-request preview therefore uses the shared hosted

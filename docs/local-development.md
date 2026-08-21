@@ -115,7 +115,7 @@ Supabase hosts the backend, not the visible previews. The administration preview
 
 ## Planned automatic merge and preview flow
 
-Vercel already creates protected administration previews for pull requests and updates the stable preview from `main`. `main` is protected by pull requests and the required quality and database checks. The database deployment itself is **not active yet**: the native Supabase GitHub connection is waiting for its one-time GitHub access confirmation and the first end-to-end merge verification. Until both are complete, do not assume that merging a pull request deploys its database migrations.
+Vercel already creates protected administration previews for pull requests and updates the stable preview from `main`. `main` is protected by pull requests and the required quality, database, and Vercel preview checks. The database deployment itself is **not active yet**: the native Supabase GitHub connection is waiting for its one-time GitHub access confirmation and the first end-to-end merge verification. Until both are complete, do not assume that merging a pull request deploys its database migrations.
 
 When that remaining setup is complete, the shared preview flow will work as follows:
 

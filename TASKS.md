@@ -103,7 +103,7 @@ Exit condition: local development does not depend on hand-created dashboard stat
 - [x] Apply the tested migration, without the credential-bearing local seed, to the hosted development project.
 - [x] Make a private logical pre-deploy backup outside the repository and Git, then deploy the tested parent- and child-onboarding migrations to Hosted Development after explicit authorization and a successful fail-fast preflight on 2026-08-21.
 - [ ] Complete GitHub access confirmation for the native Supabase integration, restrict it to `nikolaiaas/just-train`, select `main` as its production branch, and keep automatic preview branches off on Free.
-- [x] Protect `main` with pull requests, strict required quality and database CI checks, resolved conversations, squash-only linear history, and no force pushes or deletion.
+- [x] Protect `main` with pull requests, strict required quality, database, and Vercel preview checks, resolved conversations, squash-only linear history, and no force pushes or deletion.
 - [ ] Verify end to end that a green protected merge automatically updates Hosted Development; Vercel's pull-request and stable preview updates are already active.
 - [x] Limit automatic hosted database delivery to immutable files in `supabase/migrations`; never deploy the local seed or push local `config.toml`.
 - [x] Require expand/contract database changes so shared pull-request previews, the stable web preview, and installed mobile builds remain compatible while releases overlap.
