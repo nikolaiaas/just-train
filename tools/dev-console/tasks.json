@@ -1,6 +1,6 @@
 {
   "version": 3,
-  "updatedAt": "2026-08-21T08:27:09.252Z",
+  "updatedAt": "2026-08-21T08:44:34.318Z",
   "items": [
     {
       "id": "auth-environment-slice",
@@ -122,23 +122,6 @@
       "priority": 5,
       "createdAt": "2026-08-20T21:43:38.513Z",
       "updatedAt": "2026-08-20T21:43:38.513Z"
-    },
-    {
-      "id": "9431a6e1-904d-4b49-b702-5f7574024c2b",
-      "title": "Automatisér Supabase-deploy og previews",
-      "details": "Deploy testede database-migrationer automatisk til Hosted Development efter grøn CI på main, uden seed. Tilføj serialisering, secrets- og backup-runbook, drift-detektion samt en sikker plan for Vercel- og Supabase-previewmiljøer.",
-      "implementationNotes": "Hosted Development er migreret uden seed og har en privat logisk backup. GitHub main er beskyttet af pull request samt krævede quality-, database- og Vercel-previewchecks. Den native Supabase GitHub-integration er nu begrænset til nikolaiaas/just-train, bruger working directory ., deployer main og har automatiske preview-branches slået fra. Den første beskyttede PR er grøn; kortet forbliver Doing indtil merge og den efterfølgende hostede deployment er verificeret.",
-      "evidence": [
-        {
-          "kind": "link",
-          "label": "Beskyttet PR og live preview",
-          "url": "https://github.com/nikolaiaas/just-train/pull/1"
-        }
-      ],
-      "status": "doing",
-      "priority": 0,
-      "createdAt": "2026-08-21T06:04:02.991Z",
-      "updatedAt": "2026-08-21T08:27:09.252Z"
     },
     {
       "id": "dev-console",
@@ -314,6 +297,28 @@
       "priority": 7,
       "createdAt": "2026-08-20T22:55:33.519Z",
       "updatedAt": "2026-08-21T06:26:31.654Z"
+    },
+    {
+      "id": "9431a6e1-904d-4b49-b702-5f7574024c2b",
+      "title": "Automatisér Supabase-deploy og previews",
+      "details": "Deploy testede database-migrationer automatisk til Hosted Development efter grøn CI på main, uden seed. Tilføj serialisering, secrets- og backup-runbook, drift-detektion samt en sikker plan for Vercel- og Supabase-previewmiljøer.",
+      "implementationNotes": "Hosted Development er migreret uden seed og har en privat logisk backup. GitHub main er beskyttet af pull request samt krævede quality-, database- og Vercel-checks. Den native Supabase GitHub-integration er begrænset til nikolaiaas/just-train, bruger working directory ., deployer main automatisk og holder betalte preview-branches slået fra. PR #1 blev squash-merget som 2654243; den første automatiske Supabase-produktionsdeployment bestod, migrationerne er synkroniserede, Hosted Auth svarer 200 med publishable key, en anonym RLS-læsning svarer 200, og main-CI samt Vercel er grønne.",
+      "evidence": [
+        {
+          "kind": "link",
+          "label": "Beskyttet og merget Supabase-PR",
+          "url": "https://github.com/nikolaiaas/just-train/pull/1"
+        },
+        {
+          "kind": "link",
+          "label": "Grøn main-CI efter automatisk deployment",
+          "url": "https://github.com/nikolaiaas/just-train/actions/runs/32464283634"
+        }
+      ],
+      "status": "done",
+      "priority": 8,
+      "createdAt": "2026-08-21T06:04:02.991Z",
+      "updatedAt": "2026-08-21T08:44:34.318Z"
     }
   ]
 }

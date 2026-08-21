@@ -104,7 +104,7 @@ Exit condition: local development does not depend on hand-created dashboard stat
 - [x] Make a private logical pre-deploy backup outside the repository and Git, then deploy the tested parent- and child-onboarding migrations to Hosted Development after explicit authorization and a successful fail-fast preflight on 2026-08-21.
 - [x] Enable the native Supabase GitHub integration, restrict it to `nikolaiaas/just-train`, use working directory `.`, select `main` as its production branch, and keep automatic preview branches off until their paid-plan configuration is reviewed.
 - [x] Protect `main` with pull requests, strict required quality, database, and Vercel preview checks, resolved conversations, squash-only linear history, and no force pushes or deletion.
-- [ ] Verify end to end that a green protected merge automatically updates Hosted Development; Vercel's pull-request and stable preview updates are already active.
+- [x] Verify end to end that a green protected merge automatically updates Hosted Development; the first protected merge completed the native Supabase deployment, retained aligned migrations, and passed hosted Auth/RLS health checks as well as the stable Vercel update.
 - [x] Limit automatic hosted database delivery to immutable files in `supabase/migrations`; never deploy the local seed or push local `config.toml`.
 - [x] Require expand/contract database changes so shared pull-request previews, the stable web preview, and installed mobile builds remain compatible while releases overlap.
 - [ ] Before any real-data pilot, separately approve Supabase Pro billing, verify automatic database backup and recovery, and implement a separate backup for Storage object bytes; Free has no automatic backups or uptime guarantee.
