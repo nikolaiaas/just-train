@@ -1,14 +1,21 @@
 import "server-only";
 
+import type { BareTraenClient } from "@bare-traen/api-client";
+
 import { decideAdminAccess, type AdminAccessDecision } from "./access";
 import { getAdminRequestContext } from "./request-context";
 import { createAdminServerClient } from "../supabase/server-client";
 
-export async function getAdminAccess(): Promise<AdminAccessDecision> {
+export type AdminAccessSession = {
+  access: AdminAccessDecision;
+  client: BareTraenClient | null;
+};
+
+export async function getAdminAccessSession(): Promise<AdminAccessSession> {
   const context = await getAdminRequestContext();
 
   if (!context.externalLocation || !context.resolution.configured) {
-    return { kind: "unavailable" };
+    return { access: { kind: "unavailable" }, client: null };
   }
 
   const client = createAdminServerClient(context.resolution, {
@@ -30,7 +37,7 @@ export async function getAdminAccess(): Promise<AdminAccessDecision> {
   } = await client.auth.getUser();
 
   if (userError || !user) {
-    return { kind: "unauthenticated" };
+    return { access: { kind: "unauthenticated" }, client };
   }
 
   const { data: profile, error: profileError } = await client
@@ -39,9 +46,16 @@ export async function getAdminAccess(): Promise<AdminAccessDecision> {
     .eq("id", user.id)
     .maybeSingle();
 
-  return decideAdminAccess({
-    userId: user.id,
-    profile,
-    profileQueryFailed: Boolean(profileError),
-  });
+  return {
+    access: decideAdminAccess({
+      userId: user.id,
+      profile,
+      profileQueryFailed: Boolean(profileError),
+    }),
+    client,
+  };
+}
+
+export async function getAdminAccess(): Promise<AdminAccessDecision> {
+  return (await getAdminAccessSession()).access;
 }

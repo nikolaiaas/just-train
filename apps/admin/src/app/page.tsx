@@ -1,8 +1,10 @@
 import { redirect } from "next/navigation";
 
 import type { AdminProfile } from "@/lib/auth/access";
-import { getAdminAccess } from "@/lib/auth/dal";
+import { getAdminAccessSession } from "@/lib/auth/dal";
 
+import { getAiPromptCatalog, type AiPromptCatalog } from "./ai-prompts/data";
+import { AiPromptWorkspace } from "./ai-prompts/prompt-workspace";
 import { ContentOverview, type Topic } from "./content-overview";
 import { logoutAdmin } from "./login/actions";
 import styles from "./page.module.css";
@@ -47,10 +49,16 @@ const topics: Topic[] = [
 ];
 
 const navigation = [
-  { label: "Emner", icon: "grid", active: true },
-  { label: "Gennemgang", icon: "check", active: false },
-  { label: "Garderober", icon: "hanger", active: false },
-  { label: "Indstillinger", icon: "settings", active: false },
+  { label: "Emner", icon: "grid", active: true, href: "#emner" },
+  {
+    label: "AI-prompter",
+    icon: "sparkle",
+    active: false,
+    href: "#ai-prompts",
+  },
+  { label: "Gennemgang", icon: "check", active: false, href: null },
+  { label: "Garderober", icon: "hanger", active: false, href: null },
+  { label: "Indstillinger", icon: "settings", active: false, href: null },
 ] as const;
 
 type NavIconName = (typeof navigation)[number]["icon"];
@@ -82,6 +90,9 @@ function NavIcon({ name }: { name: NavIconName }) {
         <circle cx="12" cy="12" r="3" />
         <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.86 2.86-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21H9.55v-.1A1.7 1.7 0 0 0 8.5 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.86-2.86.06-.06A1.7 1.7 0 0 0 4.1 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H2.3V9.55h.1A1.7 1.7 0 0 0 4.1 8.5a1.7 1.7 0 0 0-.34-1.88l-.06-.06L6.56 3.7l.06.06A1.7 1.7 0 0 0 8.5 4.1a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1v-.1h4.05v.1a1.7 1.7 0 0 0 1.05 1.7 1.7 1.7 0 0 0 1.88-.34l.06-.06 2.86 2.86-.06.06A1.7 1.7 0 0 0 19.4 8.5a1.7 1.7 0 0 0 .6 1 1.7 1.7 0 0 0 1.1.4h.1v4.05h-.1A1.7 1.7 0 0 0 19.4 15Z" />
       </>
+    ),
+    sparkle: (
+      <path d="m12 3 1.05 3.3A5.8 5.8 0 0 0 16.7 10L20 11l-3.3 1.05A5.8 5.8 0 0 0 13 15.7L12 19l-1.05-3.3A5.8 5.8 0 0 0 7.3 12L4 11l3.3-1.05A5.8 5.8 0 0 0 11 6.3L12 3Z" />
     ),
   };
 
@@ -132,7 +143,13 @@ function AccessDenied() {
   );
 }
 
-function AdminDashboard({ profile }: { profile: AdminProfile }) {
+function AdminDashboard({
+  profile,
+  promptCatalog,
+}: {
+  profile: AdminProfile;
+  promptCatalog: AiPromptCatalog;
+}) {
   const initial =
     profile.displayName.trim().charAt(0).toLocaleUpperCase("da-DK") || "A";
 
@@ -177,11 +194,11 @@ function AdminDashboard({ profile }: { profile: AdminProfile }) {
             <p className={styles.navLabel}>Indhold</p>
             <nav className={styles.navigation} aria-label="Primær navigation">
               {navigation.map((item) =>
-                item.active ? (
+                item.href ? (
                   <a
-                    className={`${styles.navItem} ${styles.navItemActive}`}
-                    href="#emner"
-                    aria-current="page"
+                    className={`${styles.navItem} ${item.active ? styles.navItemActive : styles.navItemAvailable}`}
+                    href={item.href}
+                    aria-current={item.active ? "page" : undefined}
                     key={item.label}
                   >
                     <NavIcon name={item.icon} />
@@ -215,7 +232,10 @@ function AdminDashboard({ profile }: { profile: AdminProfile }) {
             </div>
           </aside>
 
-          <ContentOverview topics={topics} />
+          <div className={styles.dashboardContent}>
+            <ContentOverview topics={topics} />
+            <AiPromptWorkspace catalog={promptCatalog} />
+          </div>
         </div>
       </section>
     </main>
@@ -223,7 +243,8 @@ function AdminDashboard({ profile }: { profile: AdminProfile }) {
 }
 
 export default async function Home() {
-  const access = await getAdminAccess();
+  const session = await getAdminAccessSession();
+  const access = session.access;
 
   if (access.kind === "unauthenticated") {
     redirect("/login");
@@ -237,5 +258,16 @@ export default async function Home() {
     return <AccessDenied />;
   }
 
-  return <AdminDashboard profile={access.profile} />;
+  if (!session.client) {
+    redirect("/login?reason=configuration");
+  }
+
+  const promptCatalog = await getAiPromptCatalog(
+    session.client,
+    access.profile,
+  );
+
+  return (
+    <AdminDashboard profile={access.profile} promptCatalog={promptCatalog} />
+  );
 }
