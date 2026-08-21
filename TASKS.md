@@ -55,12 +55,12 @@ The recommended iPhone progression is:
 - [ ] Confirm the first pilot age range and supported devices.
 - [x] Confirm that the first release uses parent-owned child profiles with no child Auth account, email, password, age, or photo; direct child login is deferred.
 - [x] Require the family owner to accept a versioned guardian notice before creating a persistent child profile, and record that acknowledgement privately.
-- [ ] Approve the legal/privacy basis, guardian wording, withdrawal, deletion, and retention flow before a real-child pilot or any child-photo upload.
+- [ ] Approve the legal/privacy basis, guardian wording, withdrawal, deletion, and retention flow before a broader real-child pilot; the owner has accepted the narrower risk for the private family cartoon prototype.
 - [ ] Define the first goal: `Fodbold → Lær at jonglere`, including its ordered exercises and completion thresholds.
 - [ ] Define how a result advances an exercise and when a goal is complete.
 - [ ] Define the initial point calculation and three fixed rewards.
 - [ ] Decide whether points are spent or only used as unlock thresholds.
-- [x] Write the development-media rule: synthetic/adult test images only until the consent and retention policy is approved.
+- [x] Write the development-media rule: repository development, automated tests, previews, and task evidence use synthetic people and media only; the private authenticated product flow may accept a photo linked to the selected family child.
 - [ ] Decide how long original photos and videos may remain after transformation.
 
 Exit condition: the pilot can be described without inventing progression, reward, consent, or retention behaviour while implementing it.
@@ -136,14 +136,14 @@ Exit condition: a pull request gets a safe administration preview without touchi
 - [x] Confirm that a paid Apple Developer Program membership is available for stable distribution and additional testers.
 - [ ] Confirm the Apple Developer Program account that will own long-lived signing credentials.
 - [ ] When enabling EAS distribution, register the owner's iPhone for ad hoc provisioning.
-- [ ] Build and install a fresh Expo `1.1.0` development client through EAS from the unlisted link/QR code.
+- [ ] Build and install a fresh Expo `1.2.0` development client through EAS from the unlisted link/QR code.
 - [ ] Point the phone build at the hosted development Supabase project.
 - [ ] Confirm live local development through Metro on the same network or a tunnel.
-- [ ] Verify native OTP, cold and warm magic-link callbacks, session restoration, and logout in the fresh `1.1.0` build.
+- [ ] Verify native OTP, cold and warm magic-link callbacks, session restoration, logout, and gallery permission in the fresh `1.2.0` build.
 - [ ] Create a production-like EAS internal-distribution preview build that runs without Metro.
 - [ ] Disable unauthenticated EAS internal-build access, or otherwise document and enforce who may receive unlisted build URLs.
 - [x] Configure a `preview` EAS Update channel so JavaScript, styling, and asset changes usually do not require a new binary.
-- [x] Document that native-library, permission, and native-configuration changes require a new build, and that the `1.1.0` Auth slice must not be sent to an old `1.0.0` binary through EAS Update.
+- [x] Document that native-library, permission, and native-configuration changes require a new build, and that the `1.2.0` AI-media slice must not be sent to a `1.1.0` or older binary through EAS Update.
 - [ ] Keep TestFlight as the later route for a larger tester group; it is beta distribution, not a public App Store launch.
 
 Exit condition: the owner can run Bare Træn on the iPhone without App Store publication. With paid distribution enabled, the same build can be installed from a restricted or carefully shared unlisted link and receive compatible preview updates.
@@ -165,11 +165,14 @@ Exit condition: pilot screens can be assembled from reviewed components rather t
 - [x] Add account profiles, families, family memberships, and parent-owned child profiles.
 - [ ] Add family invitations.
 - [x] Add a private, immutable, versioned guardian-acknowledgement record for child-profile creation without adding child identity fields.
-- [ ] Define and implement the approved legal-consent, withdrawal, deletion, and retention records before a real-child pilot or child-photo storage.
+- [ ] Define and implement the approved legal-consent, withdrawal, deletion, and retention records before a broader real-child pilot; the private family prototype is an explicitly accepted narrow exception.
 - [ ] Add topics, immutable topic releases, goals, ordered exercise steps, equipment, and safety text.
 - [ ] Add goal enrolments, training sessions, attempts, personal bests, and difficulty ratings.
 - [ ] Add an append-only point ledger, rewards, and child inventory.
-- [ ] Add media assets and processing-job metadata without implementing generation yet.
+- [x] Add stable AI operations, immutable prompt/provider versions, generic family/admin jobs, private media metadata, named media slots, and worker-only attempt audit.
+- [x] Store the initial cartoon prompt in the database and let an administrator atomically publish a replacement while existing jobs remain pinned.
+- [ ] Build the reviewed administration UI for prompt-version publication and active-version history.
+- [ ] Implement and test the retention worker that deletes private Storage bytes at `delete_after` and records the completed deletion.
 - [ ] Add AI draft/suggestion, review decision, publication, and audit-log structures.
 - [x] Configure six-digit passwordless email locally, remove fixture passwords, and protect magic links behind an explicit scanner-safe confirmation page.
 - [x] Implement administrator email/OTP sign-in with server-side session handling and an `is_admin` route guard.
@@ -179,7 +182,7 @@ Exit condition: pilot screens can be assembled from reviewed components rather t
 - [x] Add administrator roles in protected metadata and server-side route guards.
 - [x] Write and test parent RLS for the current profile, family, membership, and child-profile tables, including owner-only child creation and default-deny private acknowledgement evidence.
 - [ ] Resolve or explicitly document every current Supabase Database Advisor warning: review the platform `rls_auto_enable` execute grants, preserve the tested boundaries of the two intentional `SECURITY DEFINER` RPCs, and measure or consolidate overlapping read policies for topics, goals, and exercises.
-- [ ] Add direct-child and worker policies when those identities and data flows are introduced.
+- [x] Add narrow service-role worker RPCs and positive/negative RLS and Storage-policy tests for the first AI media flow, including parent-session family isolation and selected-child linkage; direct child authentication remains deferred.
 - [ ] Add policies and positive/negative tests for each future personal-data table and private Storage bucket as it is introduced.
 - [x] Ensure the content-administrator role alone cannot browse child data.
 
@@ -191,7 +194,8 @@ Exit condition: access is denied by the database itself when a client attempts t
 - [x] Load the authenticated parent's profile and family, create the first family safely, and select existing active child profiles.
 - [x] Implement owner-only child creation under the parent's session, with a versioned guardian acknowledgement and a limit of 10 active children per family.
 - [x] Use four non-photo preset avatars for child profiles in this slice.
-- [ ] Keep any future child camera/photo route disabled until the legal/privacy gate is approved, then add it behind a feature flag.
+- [x] Require every portrait request to be linked to the selected active child in the authenticated family member's family, and preserve that link across the mobile contract, Storage metadata, preparation RPC, and worker claim.
+- [x] Add a gallery-only private family cartoon prototype using database-versioned prompts and `openai/gpt-image-2` through an OpenAI-only, no-fallback OpenRouter route; keep development and evidence synthetic.
 - [x] Persist a caller-scoped child-creation request identity and safely retry it after refresh or interruption without creating a duplicate child.
 - [ ] Implement topic selection, goal list, and goal detail for the seeded football content.
 - [ ] Implement goal enrolment and the child's home screen.
@@ -237,8 +241,14 @@ Exit condition: an authorized person can edit and publish content without direct
 - [ ] Test Danish speech recognition for the single word “stop” on representative iPhones and Android devices in a noisy room.
 - [ ] Keep the large stop button available regardless of speech results.
 - [ ] Verify that no microphone recording is retained for the voice-stop feature.
-- [ ] Test camera capture, gallery selection, compression, upload progress, cancellation, and deletion using adult test material.
+- [ ] Test camera capture, gallery selection, compression, upload progress, cancellation, and deletion using synthetic test material.
 - [ ] Compare at least two avatar-generation approaches for quality, latency, price, API terms, EU processing, deletion, and failure handling.
+- [x] Build and unit-test a bounded OpenRouter image adapter with private Storage, selected-child linkage, idempotent reservation, one provider attempt, sanitized audit data, timeout, and cost ceilings. Preserve the failed Azure/MAI version 1 history and use active version 2 with `openai/gpt-image-2`, OpenAI-only, and no fallback.
+- [x] Create a separate 90-day OpenRouter development key with a USD 5 total limit and USD 5 daily guardrail, install it only in the ignored local Function environment and Hosted Development's Edge secrets, and verify the exact GPT Image 2 route with a synthetic 1024 by 1024 PNG: HTTP 200, valid PNG, about 19 seconds, USD 0 OpenRouter billing, and USD 0.014237 reported upstream BYOK cost. No migration or Function was deployed.
+- [ ] Add an autonomous stale-job sweeper and durable failure-transition retry so recovery does not depend on the mobile screen remaining open.
+- [ ] Add a durable provider-success checkpoint and idempotent finalizer so an uploaded paid output can be reconciled without regeneration.
+- [ ] Delete private Storage objects at their recorded retention deadline and prove both deletion and off-platform byte recovery.
+- [ ] Resolve the recorded Zero Data Retention, EU processing, processor-contract, and under-18 risks before any broader real-child rollout; the owner has explicitly accepted them only for the private family prototype.
 - [ ] Test short exercise-video download size, playback, caching, and offline behaviour.
 - [ ] Prototype personalized motion/video generation separately and record quality, cost, latency, consent, and moderation blockers.
 - [ ] Prototype schema-validated AI content drafts that can only create a reviewable draft revision.
@@ -255,6 +265,7 @@ Exit condition: each risky feature has a written go/defer decision and does not 
 - [ ] Add error reporting with personal-data scrubbing and no session replay on child screens.
 - [ ] Add an audit for logs, analytics, crash reports, backups, and third-party processors.
 - [ ] Verify account deletion/export and media deletion can be implemented from the chosen data model.
+- [ ] Run an end-to-end AI-media integration test with synthetic material only; keep all input and output bytes out of Git and task evidence.
 - [ ] Write a repeatable internal-preview release checklist.
 
 Exit condition: a failed permission test, migration, type check, or core-flow smoke test prevents a preview release.
@@ -294,3 +305,10 @@ Exit condition: a failed permission test, migration, type check, or core-flow sm
 - [Expo preview updates](https://docs.expo.dev/eas-update/preview/)
 - [Apple membership and Personal Team limits](https://developer.apple.com/support/compare-memberships/)
 - [Apple TestFlight overview](https://developer.apple.com/help/app-store-connect/test-a-beta-version/testflight-overview)
+- [Microsoft MAI Image 2.5 on Azure](https://learn.microsoft.com/azure/foundry/foundry-models/how-to/use-foundry-models-mai-image)
+- [Azure model data, privacy, and abuse monitoring](https://learn.microsoft.com/azure/foundry/responsible-ai/openai/data-privacy)
+- [OpenRouter image generation](https://openrouter.ai/docs/guides/overview/multimodal/image-generation)
+- [OpenAI GPT Image 2](https://developers.openai.com/api/docs/models/gpt-image-2)
+- [OpenRouter Zero Data Retention](https://openrouter.ai/docs/guides/features/zdr)
+- [OpenRouter Data Processing Addendum](https://openrouter.ai/data-processing-agreement)
+- [OpenRouter terms](https://openrouter.ai/terms)

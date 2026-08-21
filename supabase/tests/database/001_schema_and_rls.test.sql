@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(25);
+select plan(30);
 
 select has_table('public', 'profiles', 'profiles table exists');
 select has_table('public', 'families', 'families table exists');
@@ -20,6 +20,15 @@ select has_table(
   'child_exercise_progress',
   'child_exercise_progress table exists'
 );
+select has_table('public', 'ai_operations', 'AI operations table exists');
+select has_table(
+  'public',
+  'ai_operation_versions',
+  'AI operation versions table exists'
+);
+select has_table('public', 'media_assets', 'media assets table exists');
+select has_table('public', 'ai_jobs', 'AI jobs table exists');
+select has_table('public', 'ai_job_media', 'AI job media table exists');
 
 select is(
   (
@@ -38,11 +47,16 @@ select is(
         'child_goals',
         'exercise_sessions',
         'exercise_attempts',
-        'child_exercise_progress'
+        'child_exercise_progress',
+        'ai_operations',
+        'ai_operation_versions',
+        'media_assets',
+        'ai_jobs',
+        'ai_job_media'
       )
       and relation.relrowsecurity
   ),
-  11,
+  16,
   'RLS is enabled on every API-facing table'
 );
 

@@ -59,6 +59,15 @@ export default ({ config }: ConfigContext): ExpoConfig => {
           configureAndroidBackup: true,
         },
       ],
+      [
+        "expo-image-picker",
+        {
+          photosPermission:
+            "Vælg et billede af dit barn for at lave et privat tegneserieportræt i Bare Træn.",
+          cameraPermission: false,
+          microphonePermission: false,
+        },
+      ],
     ],
     extra: {
       ...config.extra,

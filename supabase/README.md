@@ -32,6 +32,83 @@ The three local fixture users are passwordless:
 - `parent.two@example.test` owns a separate family used to verify RLS isolation.
 - `content.admin@example.test` can manage draft and published training content.
 
+## Private family AI cartoon prototype
+
+The local schema includes a reusable AI-operation foundation and the
+`process-ai-job` Edge Function. The first operation is
+`portrait.cartoon_3d`. Immutable version 1 preserves the earlier unsuccessful
+Microsoft `microsoft/mai-image-2.5` Azure route as history. Active version 2
+sends one validated reference image to OpenAI `openai/gpt-image-2` through an
+OpenAI-only, no-fallback OpenRouter route and stores the generated PNG in the
+private `ai-media-private` bucket.
+
+The prompt is an immutable, versioned database row, not client code. An
+authenticated content administrator can publish and atomically select a new
+prompt with `publish_ai_operation_version`; existing jobs keep their pinned
+version. There is no feature or tester toggle.
+
+The product RPC accepts a child subject only when it includes an active child
+profile from the signed-in family member's family. The job and both media records keep
+that child link, and the worker verifies that all links agree before it reads
+the private input. Family isolation, private Storage, server-only credentials,
+idempotency, one provider attempt, timeout, and request/cost ceilings remain.
+Repository development, automated tests, previews, and task evidence must use
+synthetic people and media only, even though the private family product flow
+permits a family member to choose a real photo of the selected child.
+
+Adapter unit tests need no credential:
+
+```sh
+pnpm test:ai-worker
+```
+
+For a local synthetic integration test, copy
+`supabase/functions/.env.example` to the ignored
+`supabase/functions/.env.local`, add a limited development OpenRouter key
+there, and serve the function from the repository root:
+
+```sh
+pnpm exec supabase functions serve process-ai-job --env-file supabase/functions/.env.local
+```
+
+Do not put that key in Expo, Next.js public variables, Git, task evidence, or
+logs. The hosted secret is already present, but a key alone does not deploy the
+migration or Edge Function.
+
+The separate 90-day development key has a USD 5 total limit. Its guardrail now
+retains only a USD 5 daily spending ceiling; earlier provider/model allowlists
+and the non-frontier ZDR requirement were removed. The worker independently
+pins model `openai/gpt-image-2`, provider `openai`, and disables fallback.
+
+An exact live test on 2026-08-21 used the database prompt and one fully
+synthetic 1024 by 1024 PNG. It returned HTTP 200 and one valid PNG in about 19
+seconds. OpenRouter marked it as BYOK and billed USD 0, while the response
+reported USD 0.014237 of upstream inference cost. No real family image was
+used. The two earlier Azure/MAI version 1 tests returned HTTP 400 with no billed
+usage and remain historical context.
+
+The current worker performs one provider POST at most; an uncertain outcome is
+audited and never regenerated automatically, avoiding accidental duplicate
+image charges. A durable queue/sweeper plus provider-success checkpoint and
+idempotent finalizer remain roadmap work. The owner has accepted the current
+under-18/provider risk for the private family prototype; this is not a broader
+production/privacy approval.
+
+A new client request supersedes an older unclaimed reservation for the same
+family member and operation, while jobs for other AI operations remain
+independent. The transition closes the old upload metadata. If input bytes had
+already reached private Storage before the client disappeared, they remain
+inaccessible but are not physically deleted by that database transition.
+`delete_after` records an intended retention deadline; it is not proof of
+deletion. The physical retention worker and a Storage-byte recovery test remain
+required before a broader rollout.
+
+Merging a migration through the existing integration does not deploy Edge
+Functions or their secrets. The GPT Image 2 migration and `process-ai-job`
+function have not been deployed to Hosted Development. Deploying them or
+changing `OPENROUTER_API_KEY` remains a separate hosted mutation requiring
+explicit authorization.
+
 Request a sign-in email from the application, then open local Mailpit at
 <http://127.0.0.1:54324>. Each Danish email contains both a six-digit one-time
 code and a magic-link button. They are two ways to use the same one-time
@@ -140,9 +217,10 @@ dashboard exposes three pre-upgrade physical daily backups with Restore
 controls, most recently 2026-08-20 at 23:07 UTC. Because all three predate the
 upgrade, database-backup verification stays open until the first scheduled
 backup dated after 2026-08-21 appears. An independent Storage-object backup and
-restore test remains required before any real-person or real-child data is
-allowed. Destructive or data-rewriting hosted migrations require a fresh
-private backup and a recorded recovery plan before merge.
+restore test remains required before a broader real-data pilot, although the
+owner accepts this reliability gap for the private family cartoon prototype.
+Destructive or data-rewriting hosted migrations require a fresh private backup
+and a recorded recovery plan before merge.
 
 The 2026-08-21 recovery rehearsal verified the private files and checksums,
 roles, application schema and data, migration history, all 11 RLS-enabled app

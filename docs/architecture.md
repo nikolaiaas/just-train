@@ -33,7 +33,7 @@ The native Supabase GitHub integration is enabled, restricted to `nikolaiaas/jus
 
 Only `supabase/migrations` will be part of automatic hosted database deployment. The local credential-bearing `seed.sql` and local `config.toml` are never pushed to Hosted Development; environment configuration such as Auth callbacks, templates, SMTP, and rate controls is reviewed separately. Deployed migrations are immutable. Schema changes use expand/contract releases so the shared preview backend remains compatible with pull-request frontends, the stable web deployment, and older installed mobile builds.
 
-Immediately before the 2026-08-21 hosted deployment, a private logical backup of the migration-relevant database state was stored outside this repository and Git. It is a point-in-time recovery aid rather than continuous protection, and it does not copy Supabase Storage object bytes. The organization is on Pro with Spend Cap enabled; Hosted Development remains healthy on Nano compute, with PITR and automatic preview branches off. The dashboard exposes three pre-upgrade physical daily backups with Restore controls, most recently 2026-08-20 at 23:07 UTC. The automatic-backup checkpoint stays open until a scheduled backup dated after the 2026-08-21 upgrade appears, and a separate Storage-object backup and restore test remains required before real-person or real-child data is permitted.
+Immediately before the 2026-08-21 hosted deployment, a private logical backup of the migration-relevant database state was stored outside this repository and Git. It is a point-in-time recovery aid rather than continuous protection, and it does not copy Supabase Storage object bytes. The organization is on Pro with Spend Cap enabled; Hosted Development remains healthy on Nano compute, with PITR and automatic preview branches off. The dashboard exposes three pre-upgrade physical daily backups with Restore controls, most recently 2026-08-20 at 23:07 UTC. The automatic-backup checkpoint stays open until a scheduled backup dated after the 2026-08-21 upgrade appears, and a separate Storage-object backup and restore test remains required before a broader real-data pilot. The owner has accepted that this reliability work does not gate the private family cartoon prototype.
 
 The Dev Console at `127.0.0.1:11009` is a development tool only. Its React 19 interface is compiled with Vite 8 and Tailwind CSS 4; a small local Node process is still required because browser code cannot start programs by itself. The process binds only to loopback, accepts same-origin requests with a per-run token, exposes only fixed Bare Træn actions, and never provides arbitrary shell access or a production-backend selector. It may stop a process it did not launch only after a fixed inspection proves that the process is a Bare Træn development command from this exact checkout or worktree. A coincidental port occupant remains protected.
 
@@ -42,13 +42,73 @@ The Dev Console at `127.0.0.1:11009` is a development tool only. Its React 19 in
 - Row-Level Security is default-deny. A parent may access only families where their authenticated profile has an active membership.
 - Child profiles do not log in directly in the initial slice. A parent owns the authenticated session and chooses a child context; the slice collects no child Auth account, email, password, age, or photo.
 - First-family onboarding is bound to the authenticated parent's identity in a retry-safe database operation. Child creation is a separate owner-only operation bound to the expected authenticated adult, permits only four preset avatars, and enforces at most 10 active children per family.
-- Before child creation, the owner accepts a versioned guardian notice. The immutable acknowledgement is stored outside the exposed API schema with a default-deny boundary; it does not replace the unresolved legal/privacy, withdrawal, deletion, and retention work required before real-child or child-photo use.
+- Before child creation, the owner accepts a versioned guardian notice. The immutable acknowledgement is stored outside the exposed API schema with a default-deny boundary. The owner has accepted the remaining legal/privacy, withdrawal, deletion, and retention risk for the private family cartoon prototype; that work remains required before a broader pilot.
 - A caller- and backend-scoped child-creation request identity is persisted before submission and reused after interruption, while the database makes repeated submissions idempotent.
 - Content administration is restricted by an explicit profile role and is separated from family data.
 - Browser and mobile clients receive only a Supabase URL and publishable key. Elevated database keys remain in trusted server or worker environments.
 - Native Auth sessions are encrypted with AES-256-GCM before their ciphertext reaches AsyncStorage, with the encryption key stored separately in the platform key store through SecureStore. Web PKCE state uses separate origin-scoped browser storage.
-- OpenRouter will be called only from a server route, Edge Function, or worker. `OPENROUTER_API_KEY` must never use `EXPO_PUBLIC_*` or `NEXT_PUBLIC_*` prefixes.
-- Development and previews contain synthetic people and media. Real child profiles and media are blocked until the legal/privacy basis, guardian wording, withdrawal, retention, deletion, processor, and threat-model work is approved.
+- OpenRouter is called only from a server route, Edge Function, or worker. `OPENROUTER_API_KEY` must never use `EXPO_PUBLIC_*` or `NEXT_PUBLIC_*` prefixes.
+- Development, automated tests, previews, and task evidence contain synthetic people and media. The product contract separately permits an authenticated family member to process a photo linked to a selected child in that member's family. Broader pilot or production use still requires the unresolved legal/privacy, guardian wording, withdrawal, retention, deletion, processor, and threat-model work.
+
+## AI operation foundation
+
+AI features share one server-owned operation model instead of letting clients
+send prompts, model names, providers, or arbitrary options. `ai_operations`
+contains stable capability keys. Each active configuration is an immutable
+`ai_operation_versions` row containing the prompt, provider route,
+request and input/output contracts, timeout, attempt limit, and cost ceiling.
+An administrator can publish a new prompt version through a guarded RPC; jobs
+already created remain pinned to their original version, so prompt changes do
+not require a mobile release and cannot silently alter in-flight work.
+
+`ai_jobs` is the generic family/admin work record and leaves room for future
+text and structured-output operations. Media capabilities attach named,
+ordered private assets through `ai_job_media`, while provider attempts remain
+in the non-exposed `private` schema. A client supplies only an operation key and
+validated input. The Edge worker claims the pinned configuration, downloads the
+exact reserved private object, calls OpenRouter server-side, and exposes only a
+ready generated output through a short-lived signed URL.
+
+A new validated client request safely supersedes an older unclaimed upload
+reservation for the same family member and operation, so a crash cannot lock
+that capability forever while a different AI operation remains independent.
+This closes the old job and both media metadata slots but deliberately does not
+mutate Storage tables as a substitute for object deletion. Any bytes uploaded
+before the crash remain private. `delete_after` is currently a retention
+deadline in metadata, not proof that the bytes are physically deleted; an
+automatic deletion worker is still required before a broader rollout.
+
+The first operation, `portrait.cartoon_3d`, preserves the unsuccessful
+Microsoft `microsoft/mai-image-2.5` Azure route as immutable version 1 history.
+Its active version 2 pins OpenAI `openai/gpt-image-2` to OpenRouter's OpenAI
+image endpoint with provider fallback disabled and keeps the prompt in the
+database:
+
+> Create a friendly stylized 3D cartoon version of this person. Preserve their recognizable face, hairstyle, skin tone and distinctive features.
+
+This is a private authenticated family feature. A family member submits one
+gallery image for a currently selected active child, and the database verifies
+both family membership and the child link before reserving private input/output
+objects. There is no feature or tester toggle. Authentication, family
+isolation, private Storage, a server-only key, one provider attempt, idempotent
+jobs, and request/cost ceilings remain enforced.
+
+On 2026-08-21 the exact version 2 route was verified with a synthetic 1024 by
+1024 PNG: OpenRouter returned HTTP 200 and a valid PNG in about 19 seconds. The
+request was OpenAI-only with fallback disabled. OpenRouter reported the request
+as BYOK and billed USD 0, while reporting an upstream inference cost of USD
+0.014237. The external key guardrail now enforces the USD 5 daily budget only;
+its earlier provider, model, and ZDR restrictions were removed. The worker
+still independently pins the exact OpenAI model/provider route.
+
+The migration and Edge Function have not been deployed to Hosted Development,
+so this new flow is local source state rather than a live hosted feature. The
+owner has accepted the under-18/provider risk for the private family prototype.
+A durable queue and stale-job sweeper, provider-success checkpoint and
+idempotent finalizer, physical retention deletion, Storage-byte recovery test,
+and the broader legal/privacy review remain roadmap work rather than claims of
+current protection. The decision history is recorded in
+[`ai-image-provider-review.md`](./ai-image-provider-review.md).
 
 ## First vertical slice
 
@@ -61,4 +121,6 @@ The first backend-connected implementation should prove:
 5. Progress remains after the app restarts.
 6. Automated RLS tests prove that another family cannot read or modify the records.
 
-AI generation, camera/avatar work, personalized video, speech recognition, rewards, notifications, and full offline support remain outside this slice.
+The private selected-child cartoon prototype is separate from this training
+slice. Production camera/avatar integration, personalized video, speech
+recognition, rewards, notifications, and full offline support remain outside it.

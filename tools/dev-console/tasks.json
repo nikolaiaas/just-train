@@ -1,6 +1,6 @@
 {
   "version": 3,
-  "updatedAt": "2026-08-21T09:08:01.418Z",
+  "updatedAt": "2026-08-21T12:42:52.000Z",
   "items": [
     {
       "id": "auth-environment-slice",
@@ -44,13 +44,13 @@
     {
       "id": "iphone-smoke-test",
       "title": "Bekræft udviklingsappen på iPhone",
-      "details": "Byg og installér en frisk Bare Træn Dev 1.1.0, slå Developer Mode til, forbind Metro på port 11001, og verificér OTP, cold/warm magic-link, session efter genstart og logout. Send aldrig 1.1.0-koden som update til en 1.0.0-binary.",
+      "details": "Byg og installér en frisk Bare Træn Dev 1.2.0, slå Developer Mode til, forbind Metro på port 11001, og verificér OTP, cold/warm magic-link, session efter genstart, logout og galleriadgang. Send aldrig 1.2.0-koden som update til en 1.1.0- eller ældre binary.",
       "implementationNotes": "",
       "evidence": [],
       "status": "backlog",
       "priority": 3,
       "createdAt": "2026-08-20T18:45:00.000Z",
-      "updatedAt": "2026-08-20T22:57:02.999Z"
+      "updatedAt": "2026-08-21T10:30:00.000Z"
     },
     {
       "id": "pilot-goal-contract",
@@ -66,13 +66,24 @@
     {
       "id": "5d2244ac-cdce-413d-9e77-67aacf070687",
       "title": "Godkend privacy-flow før rigtige børnedata",
-      "details": "Afklar juridisk grundlag, værgetekst, tilbagetrækning, sletning og retention før en pilot med rigtige børn eller upload af børnefotos.",
-      "implementationNotes": "",
+      "details": "Afklar juridisk grundlag, værgetekst, tilbagetrækning, sletning, retention, ZDR, EU-behandling og processoraftaler før en bredere pilot med rigtige børn.",
+      "implementationNotes": "Ejeren har accepteret den snævre risiko for den private familieprototype med valgt barn. GPT Image 2-ruten er teknisk verificeret med syntetiske data, men den beslutning er ikke en juridisk eller produktionsmæssig godkendelse til en bredere pilot. Se docs/ai-image-provider-review.md.",
       "evidence": [],
       "status": "backlog",
       "priority": 5,
       "createdAt": "2026-08-20T23:58:25.783Z",
-      "updatedAt": "2026-08-20T23:58:25.783Z"
+      "updatedAt": "2026-08-21T12:42:52.000Z"
+    },
+    {
+      "id": "ai-prompt-admin",
+      "title": "Byg administration til AI-prompter",
+      "details": "Vis den aktive immutable promptversion, publicér en ny version med forventet aktiv version og audit, og vis versionshistorikken uden at sende prompt eller modelvalg fra klienten.",
+      "implementationNotes": "Database-RPCen til versionssikker promptpublicering findes allerede; kortet dækker den manglende gennemsete administrationsflade.",
+      "evidence": [],
+      "status": "backlog",
+      "priority": 6,
+      "createdAt": "2026-08-21T10:30:00.000Z",
+      "updatedAt": "2026-08-21T12:42:52.000Z"
     },
     {
       "id": "25d3bfc2-3592-4e67-ab7c-9de6e02ee7bc",
@@ -88,13 +99,13 @@
     {
       "id": "cce5847c-7d0c-477d-87ec-82e41aced1bd",
       "title": "Opret privat lager til profilbilleder",
-      "details": "Opret privat Supabase Storage, filsti-kontrakt samt positive og negative adgangstests til voksne profilbilleder. Rigtige børnebilleder forbliver blokeret.",
-      "implementationNotes": "",
+      "details": "Opret privat Supabase Storage, filsti-kontrakt samt positive og negative adgangstests til voksne profilbilleder. Hold denne profilbilledestrøm adskilt fra AI-prototypens private, valgt-barn-linkede mediepladser.",
+      "implementationNotes": "AI-prototypen har allerede sin egen private ai-media-private-bucket; dette kort dækker fortsat almindelige voksne profilbilleder.",
       "evidence": [],
       "status": "todo",
       "priority": 1,
       "createdAt": "2026-08-20T19:52:36.397Z",
-      "updatedAt": "2026-08-20T19:56:04.060Z"
+      "updatedAt": "2026-08-21T12:42:52.000Z"
     },
     {
       "id": "341749c2-fc2d-4e9b-a322-f2815882cb09",
@@ -119,37 +130,26 @@
       "updatedAt": "2026-08-20T19:56:04.066Z"
     },
     {
-      "id": "f6037e94-8519-46d7-b240-e1891227424e",
-      "title": "Opret server-only OpenRouter-modul",
-      "details": "Tilføj et godkendt, skemavalideret servermodul med timeout, omkostningsgrænser og redigerede logs; ingen nøgle i klienterne.",
-      "implementationNotes": "",
-      "evidence": [],
-      "status": "todo",
-      "priority": 4,
-      "createdAt": "2026-08-20T19:52:36.403Z",
-      "updatedAt": "2026-08-20T19:56:04.072Z"
-    },
-    {
-      "id": "226c2fe3-d78a-487d-9a62-4682531f3cf9",
-      "title": "Opret og installer OpenRouter-token",
-      "details": "Opret en særskilt projektnøgle i den indloggede browser og læg den kun i lokal servermiljø og det valgte hostede servermiljø.",
-      "implementationNotes": "",
-      "evidence": [],
-      "status": "todo",
-      "priority": 5,
-      "createdAt": "2026-08-20T19:52:36.409Z",
-      "updatedAt": "2026-08-20T19:56:04.078Z"
-    },
-    {
       "id": "d97167f0-083f-4801-88ca-e4a83006a4b7",
       "title": "Beskyt offentligt login mod misbrug",
       "details": "Tilføj CAPTCHA eller server-side throttling til email- og kodehandlinger, før den stabile admin- og forældrelogin-side åbnes offentligt; bevar samme generiske svar for kendte og ukendte adresser.",
       "implementationNotes": "",
       "evidence": [],
       "status": "todo",
-      "priority": 6,
+      "priority": 4,
       "createdAt": "2026-08-20T21:43:38.513Z",
       "updatedAt": "2026-08-20T21:43:38.513Z"
+    },
+    {
+      "id": "ai-reliability-gates",
+      "title": "Luk AI-driftens pålidelighedshuller",
+      "details": "Tilføj autonom stale-job-sweeper, holdbart checkpoint og reconciliation efter betalt provider-resultat samt fysisk retention-sletning før en bredere udrulning.",
+      "implementationNotes": "Den begrænsede provider-nøgle og budget-guardrail er på plads. Prototypen udfører højst ét provider-POST; delete_after er kun metadata, og mobil polling er ikke en autonom kø. Funktionen og migrationen er ikke deployed til Hosted Development.",
+      "evidence": [],
+      "status": "todo",
+      "priority": 5,
+      "createdAt": "2026-08-21T10:30:00.000Z",
+      "updatedAt": "2026-08-21T12:42:52.000Z"
     },
     {
       "id": "a5ed6926-00b7-49c4-ad6b-41a4974b6728",
@@ -271,7 +271,7 @@
       "id": "966dd664-161c-4526-97b5-19c0ce621948",
       "title": "Forbind forælderens login og oprettelse",
       "details": "Byg passwordfri login, session-gendannelse og første familie-onboarding for den voksne konto.",
-      "implementationNotes": "Mobilappen har nu passwordfri forældrelogin med email, sekscifret kode og PKCE-magic-link, sikker session-gendannelse og logout, krypteret native sessionslager, retry-sikker første familie-onboarding og valg af eksisterende aktive børn. En lokal Safari-gennemgang med kun syntetiske data bekræftede login, onboarding, session efter genindlæsning, tom familie, eksisterende barn og logout. 22 fokuserede mobiltests, hele repository-suiten, web- og iOS-exports, Expo Doctor 21/21 samt 89 database/RLS-tests består. Hosted Development-migration og en frisk iOS 1.1.0-build følges op på separate kort.",
+      "implementationNotes": "Mobilappen har nu passwordfri forældrelogin med email, sekscifret kode og PKCE-magic-link, sikker session-gendannelse og logout, krypteret native sessionslager, retry-sikker første familie-onboarding og valg af eksisterende aktive børn. En lokal Safari-gennemgang med kun syntetiske data bekræftede login, onboarding, session efter genindlæsning, tom familie, eksisterende barn og logout. 22 fokuserede mobiltests, hele repository-suiten, web- og iOS-exports, Expo Doctor 21/21 samt 89 database/RLS-tests består. Hosted Development-migrationen er siden deployet; den aktuelle friske iOS 1.2.0-build følges op på et separat kort.",
       "evidence": [
         {
           "kind": "image",
@@ -381,6 +381,28 @@
       "priority": 9,
       "createdAt": "2026-08-21T09:02:49.284Z",
       "updatedAt": "2026-08-21T09:02:49.284Z"
+    },
+    {
+      "id": "f6037e94-8519-46d7-b240-e1891227424e",
+      "title": "Opret server-only OpenRouter-modul",
+      "details": "Tilføj et godkendt, skemavalideret servermodul med timeout, omkostningsgrænser og redigerede logs; ingen nøgle i klienterne.",
+      "implementationNotes": "Den server-only AI-foundation har versionslåst prompt/model-konfiguration i databasen, privat Storage, valgt-barn-linkede og idempotente jobs samt en valideret OpenRouter-adapter låst til OpenAI GPT Image 2 uden fallback. Timeout, én provider-attempt, sanitiserede fejl og BYOK-aware omkostningsaudit bevares; ingen hemmelighed eller prompt kommer fra klienten. Der er ingen feature- eller tester-toggle. Migration og Edge Function er ikke deployed til Hosted Development.",
+      "evidence": [],
+      "status": "done",
+      "priority": 10,
+      "createdAt": "2026-08-20T19:52:36.403Z",
+      "updatedAt": "2026-08-21T12:42:52.000Z"
+    },
+    {
+      "id": "226c2fe3-d78a-487d-9a62-4682531f3cf9",
+      "title": "Opret og installer OpenRouter-token",
+      "details": "Brug en særskilt begrænset udviklingsnøgle med totalbudget og daglig budget-guardrail. Worker-requesten håndhæver OpenAI GPT Image 2, OpenAI-only og ingen fallback. Nøglen må kun ligge i lokal Function-env og som hosted Edge secret; installation deployer ikke funktionen.",
+      "implementationNotes": "Nøglen udløber efter 90 dage og har USD 5 totalgrænse; guardrailen har USD 5 daglig grænse og ingen provider-, model- eller ZDR-restriktioner. Hemmeligheden er installeret uden at blive vist eller committed. En eksakt test med et syntetisk 1024 x 1024-portræt gav HTTP 200, en gyldig PNG på cirka 19 sekunder, USD 0 faktureret af OpenRouter og USD 0.014237 rapporteret upstream BYOK-omkostning. Ingen Function eller migration blev deployet; de to tidligere Azure/MAI-tests med HTTP 400 bevares som historik.",
+      "evidence": [],
+      "status": "done",
+      "priority": 11,
+      "createdAt": "2026-08-20T19:52:36.409Z",
+      "updatedAt": "2026-08-21T12:42:52.000Z"
     }
   ]
 }

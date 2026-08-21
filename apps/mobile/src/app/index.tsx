@@ -37,6 +37,7 @@ const goalProgress = getGoalProgress(demoGoal, demoProgress);
 const currentExercise = getCurrentExercise(demoExercises, demoProgress);
 const football = demoTopics.find((topic) => topic.id === demoGoal.topicId)!;
 const NEW_CHILD_ROUTE = "/child/new" as Href;
+const AI_CARTOON_ROUTE = "/ai/cartoon" as Href;
 
 export default function TodayScreen() {
   const {
@@ -449,6 +450,8 @@ function FixtureToday({
         </View>
       </View>
 
+      <AiCartoonLabCard child={selectedChild} />
+
       <View style={styles.previewNote}>
         <Text style={styles.previewNoteText}>
           Valgt barn kommer fra Supabase · mål, øvelser og point er stadig
@@ -456,6 +459,28 @@ function FixtureToday({
         </Text>
       </View>
     </Screen>
+  );
+}
+
+function AiCartoonLabCard({ child }: { child: ParentChild }) {
+  const router = useRouter();
+
+  return (
+    <SurfaceCard style={styles.aiLabCard}>
+      <View style={styles.aiLabCopy}>
+        <Kicker>Privat AI-portræt</Kicker>
+        <Text style={styles.weekTitle}>
+          Lav {child.displayName} som tegneseriefigur
+        </Text>
+        <Body>
+          Vælg et billede. Portrættet gemmes privat og knyttes til{" "}
+          {child.displayName}.
+        </Body>
+      </View>
+      <ActionButton onPress={() => router.push(AI_CARTOON_ROUTE)}>
+        Lav tegneserieportræt
+      </ActionButton>
+    </SurfaceCard>
   );
 }
 
@@ -717,6 +742,8 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.body,
     fontWeight: typography.weights.bold,
   },
+  aiLabCard: { gap: spacing.md },
+  aiLabCopy: { gap: spacing.xs },
   previewNote: { alignItems: "center", marginTop: spacing.sm },
   previewNoteText: {
     color: colors.muted,

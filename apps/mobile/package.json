@@ -1,7 +1,7 @@
 {
   "name": "@bare-traen/mobile",
   "main": "expo-router/entry",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "dependencies": {
     "@bare-traen/api-client": "workspace:*",
     "@bare-traen/design": "workspace:*",
@@ -13,9 +13,12 @@
     "expo-crypto": "~57.0.1",
     "expo-dev-client": "~57.0.13",
     "expo-device": "~57.0.1",
+    "expo-file-system": "~57.0.5",
     "expo-font": "~57.0.1",
     "expo-glass-effect": "~57.0.1",
     "expo-image": "~57.0.3",
+    "expo-image-manipulator": "~57.0.12",
+    "expo-image-picker": "~57.0.12",
     "expo-linking": "~57.0.7",
     "expo-router": "~57.0.15",
     "expo-secure-store": "~57.0.1",
@@ -32,9 +35,9 @@
     "react-native-reanimated": "4.5.1",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.0",
+    "react-native-url-polyfill": "3.0.0",
     "react-native-web": "~0.21.0",
-    "react-native-worklets": "0.10.1",
-    "react-native-url-polyfill": "3.0.0"
+    "react-native-worklets": "0.10.1"
   },
   "devDependencies": {
     "@types/react": "~19.2.2",

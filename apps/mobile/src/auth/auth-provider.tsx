@@ -1,15 +1,25 @@
 import {
+  AI_CARTOON_OPERATION_KEY,
+  createAiMediaOutputUrl,
   CHILD_PROFILE_CONSENT_VERSION,
   CreateChildProfileError,
   completeAuthCallback,
   completeParentOnboarding,
   createChildProfile,
+  getAiMediaJob,
   logout as logoutSession,
   onAuthSessionChange,
   requestEmailSignIn,
   restoreSession,
+  startAiMediaJob,
+  prepareAiMediaJob,
+  uploadAiMediaInput,
   verifyEmailOtp,
+  type AiMediaJob,
+  type AiMediaMimeType,
+  type AiMediaOutput,
   type BareTraenAuthSession,
+  type PreparedAiMediaJob,
 } from "@bare-traen/api-client";
 import {
   createContext,
@@ -69,12 +79,23 @@ type CreateChildInput = {
   displayName: string;
 };
 
+type SubmitAiCartoonInput = {
+  bytes: Uint8Array;
+  childProfileId: string;
+  clientRequestId: string;
+  mimeType: AiMediaMimeType;
+};
+
 type AuthContextValue = {
   authNotice: string | null;
   authStatus: AuthStatus;
   bootstrap: BootstrapState;
   clearAuthNotice(): void;
   createChild(input: CreateChildInput): Promise<ParentChild>;
+  getAiCartoonJob(jobId: string): Promise<AiMediaJob>;
+  getAiCartoonOutput(jobId: string): Promise<AiMediaOutput>;
+  reconcileAiCartoonJob(jobId: string): Promise<void>;
+  submitAiCartoon(input: SubmitAiCartoonInput): Promise<PreparedAiMediaJob>;
   completeMagicLink(callbackUrl: string): Promise<void>;
   completeOnboarding(input: {
     displayName: string;
@@ -361,6 +382,72 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
     return mobileClient.client;
   }, [mobileClient]);
+
+  const getAiRequestContext = useCallback(() => {
+    if (
+      bootstrap.status !== "ready" ||
+      !bootstrap.data.family ||
+      !sessionUserId ||
+      bootstrap.data.profile.id !== sessionUserId ||
+      currentSessionUserId.current !== sessionUserId
+    ) {
+      throw new Error("AI-billedlabben kræver en aktiv forældresession.");
+    }
+
+    return {
+      client: getClient(),
+      familyId: bootstrap.data.family.id,
+      userId: sessionUserId,
+    };
+  }, [bootstrap, getClient, sessionUserId]);
+
+  const submitAiCartoon = useCallback(
+    async (input: SubmitAiCartoonInput): Promise<PreparedAiMediaJob> => {
+      const context = getAiRequestContext();
+
+      if (
+        bootstrap.status !== "ready" ||
+        !bootstrap.data.children.some(
+          (child) => child.id === input.childProfileId,
+        )
+      ) {
+        throw new Error("Det valgte barn er ikke tilgængeligt i familien.");
+      }
+
+      const prepared = await prepareAiMediaJob(context.client, {
+        childProfileId: input.childProfileId,
+        clientRequestId: input.clientRequestId,
+        expectedUserId: context.userId,
+        familyId: context.familyId,
+        inputMimeType: input.mimeType,
+        operationKey: AI_CARTOON_OPERATION_KEY,
+        subjectKind: "child",
+      });
+
+      await uploadAiMediaInput(context.client, prepared, input.bytes);
+      await startAiMediaJob(context.client, prepared.jobId);
+      return prepared;
+    },
+    [bootstrap, getAiRequestContext],
+  );
+
+  const getAiCartoonJob = useCallback(
+    (jobId: string) => getAiMediaJob(getAiRequestContext().client, jobId),
+    [getAiRequestContext],
+  );
+
+  const reconcileAiCartoonJob = useCallback(
+    async (jobId: string) => {
+      await startAiMediaJob(getAiRequestContext().client, jobId);
+    },
+    [getAiRequestContext],
+  );
+
+  const getAiCartoonOutput = useCallback(
+    (jobId: string) =>
+      createAiMediaOutputUrl(getAiRequestContext().client, jobId),
+    [getAiRequestContext],
+  );
 
   const requestEmail = useCallback(
     async (email: string) => {
@@ -735,11 +822,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
       completeMagicLink,
       completeOnboarding,
       emailFlow,
+      getAiCartoonJob,
+      getAiCartoonOutput,
       logout,
       logoutError,
       pendingChildCreation,
       pendingChildCreationStatus,
       refreshParent: () => setBootstrapRevision((revision) => revision + 1),
+      reconcileAiCartoonJob,
       retryPendingChildCreation: () => {
         setPendingChildCreationStatus("loading");
         setPendingChildStorageRevision((revision) => revision + 1);
@@ -756,6 +846,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       selectChild,
       selectedChild,
       session,
+      submitAiCartoon,
       verifyCode,
     }),
     [
@@ -766,16 +857,20 @@ export function AuthProvider({ children }: PropsWithChildren) {
       completeMagicLink,
       completeOnboarding,
       emailFlow,
+      getAiCartoonJob,
+      getAiCartoonOutput,
       logout,
       logoutError,
       pendingChildCreation,
       pendingChildCreationStatus,
       requestEmail,
+      reconcileAiCartoonJob,
       resendEmail,
       retryAuth,
       selectChild,
       selectedChild,
       session,
+      submitAiCartoon,
       verifyCode,
     ],
   );

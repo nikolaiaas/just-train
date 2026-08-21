@@ -17,7 +17,12 @@ The app currently uses synthetic fixture data while the Supabase schema and priv
 - React 19, Vite 8, Tailwind CSS 4, and a loopback-only Node controller for the local Dev Console.
 - Vercel for web previews and Expo/EAS for private iPhone previews.
 
-Supabase hosts the backend, not the visual app previews. OpenRouter is reserved for later server-side AI operations; its secret key must never be included in the mobile bundle or a `NEXT_PUBLIC_*` variable.
+Supabase hosts the backend, not the visual app previews. The first private family
+image operation now uses OpenAI `openai/gpt-image-2` through OpenRouter, pinned
+to OpenAI with provider fallback disabled. An authenticated family member can submit a
+photo for the currently selected child; the prompt and provider configuration
+are versioned in the database. The OpenRouter secret remains server-only and
+must never be included in the mobile bundle or a `NEXT_PUBLIC_*` variable.
 
 ## Requirements
 
@@ -71,6 +76,15 @@ pnpm dev:mobile
 
 The App Store version of Expo Go is currently incompatible with this Expo SDK 57 project. Use the Safari preview first, then install **Bare Træn Dev** through the EAS `development` profile for real-device work. Do not downgrade the project to make Expo Go work.
 
+The private family cartoon prototype adds native gallery and image-processing
+modules and advances the app/runtime version to `1.2.0`. Any installed `1.1.0`
+or older development/preview app must be replaced with a fresh EAS build before
+this branch can run natively; do not send the slice as an EAS Update to an older
+runtime. There is no feature or tester toggle: access is bounded by the signed-in
+family, selected child, private Storage, server-only provider call, one attempt,
+and spending limits. Repository development, automated tests, previews, and
+task evidence must still use synthetic people and media only.
+
 ### Local Supabase
 
 Start the local backend and Supabase Studio:
@@ -91,7 +105,7 @@ The native Supabase GitHub integration is enabled and restricted to `nikolaiaas/
 
 When enabled, only migration files will take this automatic route. Never deploy `supabase/seed.sql` or push local `supabase/config.toml` settings to Hosted Development. Hosted Auth and other operational configuration are reviewed separately. Use backward-compatible expand/contract migrations: add the new shape first, update all clients, and remove an old shape only in a later reviewed migration. This is especially important because an installed iPhone build can outlive a web deployment.
 
-Immediately before the 2026-08-21 onboarding deployment, a private logical database backup was saved outside this repository and outside Git. It is a point-in-time recovery aid, not an automatic backup service and not a copy of uploaded Storage object bytes. After the Pro upgrade, the dashboard exposes three physical daily backups with Restore controls, most recently 2026-08-20 at 23:07 UTC. All three predate the upgrade, so the automatic-backup checkpoint remains open until a scheduled backup dated after 2026-08-21 appears. Database backups do not include uploaded Storage object bytes; a separate backup and restore test remains required before any real-person or real-child data is allowed. Put only the hosted project's public URL and publishable key in each app's ignored `.env.local` file.
+Immediately before the 2026-08-21 onboarding deployment, a private logical database backup was saved outside this repository and outside Git. It is a point-in-time recovery aid, not an automatic backup service and not a copy of uploaded Storage object bytes. After the Pro upgrade, the dashboard exposes three physical daily backups with Restore controls, most recently 2026-08-20 at 23:07 UTC. All three predate the upgrade, so the automatic-backup checkpoint remains open until a scheduled backup dated after 2026-08-21 appears. Database backups do not include uploaded Storage object bytes; a separate Storage-byte backup and restore test remains a required reliability step before a broader real-data pilot, although it is not used as a feature gate for the private family prototype. Put only the hosted project's public URL and publishable key in each app's ignored `.env.local` file.
 
 ## iPhone without an App Store release
 
