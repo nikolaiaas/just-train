@@ -65,9 +65,10 @@ not require a mobile release and cannot silently alter in-flight work.
 text and structured-output operations. Media capabilities attach named,
 ordered private assets through `ai_job_media`, while provider attempts remain
 in the non-exposed `private` schema. A client supplies only an operation key and
-validated input. The Edge worker claims the pinned configuration, downloads the
-exact reserved private object, calls OpenRouter server-side, and exposes only a
-ready generated output through a short-lived signed URL.
+validated input. Media workers download the exact reserved private object and
+expose a ready generated output only through a short-lived signed URL.
+Structured-content workers send only bounded editorial context and return a
+schema-validated proposal; they never write content rows or publish a version.
 
 A new validated client request safely supersedes an older unclaimed upload
 reservation for the same family member and operation, so a crash cannot lock
@@ -114,6 +115,15 @@ deletion, Storage-byte recovery test, and the broader legal/privacy review
 remain roadmap work rather than claims of current protection. The decision
 history is recorded in
 [`ai-image-provider-review.md`](./ai-image-provider-review.md).
+
+Administration uses four additional bounded operations:
+`content.topic_brief`, `content.goal_draft`, `content.exercise_draft`, and
+`content.wardrobe_examples`. Their prompts and strict JSON contracts live in
+immutable database versions. They pin `openai/gpt-5-mini` through OpenRouter to
+OpenAI-only routing with fallback disabled. The browser can provide the current
+draft and a short bounded conversation, but cannot select a provider, model,
+prompt, cost limit, publication state, or database identity. A redaktør must
+explicitly copy a proposal into the form and save an unpublished draft.
 
 ## First vertical slice
 

@@ -385,6 +385,7 @@
   border-radius: 12px;
   font-size: 13px;
   font-weight: 650;
+  text-decoration: none;
   transition:
     background 160ms ease,
     border-color 160ms ease,
@@ -782,6 +783,7 @@
 
 .dialogActions {
   display: flex;
+  gap: 10px;
   justify-content: flex-end;
   margin-top: 24px;
 }

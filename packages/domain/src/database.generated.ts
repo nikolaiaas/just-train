@@ -616,12 +616,15 @@ export type Database = {
           content_version: number;
           created_at: string;
           created_by: string | null;
+          equipment: string[];
+          estimated_minutes: number | null;
           goal_id: string;
           id: string;
           instructions: string;
           is_published: boolean;
           measurement: Database["public"]["Enums"]["exercise_measurement"];
           published_at: string | null;
+          safety_notes: string;
           slug: string;
           sort_order: number;
           target_value: number | null;
@@ -633,12 +636,15 @@ export type Database = {
           content_version?: number;
           created_at?: string;
           created_by?: string | null;
+          equipment?: string[];
+          estimated_minutes?: number | null;
           goal_id: string;
           id?: string;
           instructions?: string;
           is_published?: boolean;
           measurement?: Database["public"]["Enums"]["exercise_measurement"];
           published_at?: string | null;
+          safety_notes?: string;
           slug: string;
           sort_order?: number;
           target_value?: number | null;
@@ -650,12 +656,15 @@ export type Database = {
           content_version?: number;
           created_at?: string;
           created_by?: string | null;
+          equipment?: string[];
+          estimated_minutes?: number | null;
           goal_id?: string;
           id?: string;
           instructions?: string;
           is_published?: boolean;
           measurement?: Database["public"]["Enums"]["exercise_measurement"];
           published_at?: string | null;
+          safety_notes?: string;
           slug?: string;
           sort_order?: number;
           target_value?: number | null;
@@ -1003,6 +1012,24 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      claim_admin_ai_job_for_worker: {
+        Args: { p_job_id: string };
+        Returns: {
+          attempt_number: number;
+          gateway: string;
+          input_contract: Json;
+          input_data: Json;
+          job_id: string;
+          max_cost_microusd: number;
+          model: string;
+          operation_key: string;
+          output_contract: Json;
+          prompt_template: string;
+          provider: string;
+          request_options: Json;
+          timeout_ms: number;
+        }[];
+      };
       claim_ai_media_job_for_worker: {
         Args: { p_job_id: string };
         Returns: {
@@ -1023,6 +1050,17 @@ export type Database = {
           storage_bucket: string;
           timeout_ms: number;
         }[];
+      };
+      complete_admin_ai_job_for_worker: {
+        Args: {
+          p_attempt_number: number;
+          p_cost_microusd: number;
+          p_job_id: string;
+          p_output_data: Json;
+          p_provider_request_id: string;
+          p_usage: Json;
+        };
+        Returns: undefined;
       };
       complete_ai_media_job_for_worker: {
         Args: {
@@ -1069,6 +1107,18 @@ export type Database = {
           is_active: boolean;
         }[];
       };
+      fail_admin_ai_job_for_worker: {
+        Args: {
+          p_attempt_error_code: string;
+          p_attempt_number: number;
+          p_cost_microusd?: number;
+          p_job_id: string;
+          p_provider_request_id?: string;
+          p_public_error_code: string;
+          p_usage?: Json;
+        };
+        Returns: undefined;
+      };
       fail_ai_media_job_for_worker: {
         Args: {
           p_attempt_error_code: string;
@@ -1080,6 +1130,17 @@ export type Database = {
           p_usage?: Json;
         };
         Returns: undefined;
+      };
+      prepare_admin_ai_job: {
+        Args: {
+          p_client_request_id: string;
+          p_input_data: Json;
+          p_operation_key: string;
+        };
+        Returns: {
+          job_id: string;
+          job_status: Database["public"]["Enums"]["ai_job_status"];
+        }[];
       };
       prepare_ai_media_job: {
         Args: {

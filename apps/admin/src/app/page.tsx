@@ -1,5 +1,10 @@
 import { redirect } from "next/navigation";
 
+import {
+  loadAdminTopicLibrary,
+  type AdminTopicLibraryItem,
+} from "@bare-traen/api-client";
+
 import type { AdminProfile } from "@/lib/auth/access";
 import { getAdminAccessSession } from "@/lib/auth/dal";
 
@@ -11,42 +16,6 @@ import styles from "./page.module.css";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
-
-const topics: Topic[] = [
-  {
-    id: "football",
-    name: "Fodbold",
-    emoji: "⚽",
-    goals: 4,
-    exercises: 24,
-    status: "published",
-    updatedAt: "I dag kl. 09.42",
-    description:
-      "Boldkontrol, afleveringer og afslutninger bygget op i korte, trygge forløb.",
-  },
-  {
-    id: "gymnastics",
-    name: "Gymnastik",
-    emoji: "🤸",
-    goals: 3,
-    exercises: 18,
-    status: "review",
-    updatedAt: "I går kl. 15.08",
-    description:
-      "Balance, kolbøtter og håndstand med tydelige sikkerhedstrin til barnet.",
-  },
-  {
-    id: "painting",
-    name: "Lær at male",
-    emoji: "🎨",
-    goals: 1,
-    exercises: 6,
-    status: "draft",
-    updatedAt: "18. aug. kl. 11.31",
-    description:
-      "Leg med farver, former og pensler i et roligt kreativt forløb.",
-  },
-];
 
 const navigation = [
   { label: "Emner", icon: "grid", active: true, href: "#emner" },
@@ -146,12 +115,19 @@ function AccessDenied() {
 function AdminDashboard({
   profile,
   promptCatalog,
+  topics,
+  topicLibraryUnavailable,
 }: {
   profile: AdminProfile;
   promptCatalog: AiPromptCatalog;
+  topics: Topic[];
+  topicLibraryUnavailable: boolean;
 }) {
   const initial =
     profile.displayName.trim().charAt(0).toLocaleUpperCase("da-DK") || "A";
+  const reviewCount = topics.filter(
+    (topic) => topic.status !== "published",
+  ).length;
 
   return (
     <main className={styles.viewport}>
@@ -214,8 +190,11 @@ function AdminDashboard({
                     <NavIcon name={item.icon} />
                     <span>{item.label}</span>
                     {item.label === "Gennemgang" ? (
-                      <span className={styles.navCount} aria-label="2 afventer">
-                        2
+                      <span
+                        className={styles.navCount}
+                        aria-label={`${reviewCount} afventer`}
+                      >
+                        {reviewCount}
                       </span>
                     ) : null}
                   </span>
@@ -226,20 +205,46 @@ function AdminDashboard({
             <div className={styles.previewStatus}>
               <span className={styles.statusDot} aria-hidden="true" />
               <span>
-                <strong>Lokal preview</strong>
-                Fixture-data
+                <strong>Forbundet indhold</strong>
+                {topicLibraryUnavailable
+                  ? "Midlertidigt utilgængeligt"
+                  : "Supabase"}
               </span>
             </div>
           </aside>
 
           <div className={styles.dashboardContent}>
-            <ContentOverview topics={topics} />
+            <ContentOverview
+              topics={topics}
+              unavailable={topicLibraryUnavailable}
+            />
             <AiPromptWorkspace catalog={promptCatalog} />
           </div>
         </div>
       </section>
     </main>
   );
+}
+
+function formatTopicUpdatedAt(value: string): string {
+  return new Intl.DateTimeFormat("da-DK", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "Europe/Copenhagen",
+  }).format(new Date(value));
+}
+
+function toOverviewTopic(topic: AdminTopicLibraryItem): Topic {
+  return {
+    id: topic.id,
+    name: topic.title,
+    emoji: topic.icon || "✨",
+    goals: topic.goalCount,
+    exercises: topic.exerciseCount,
+    status: topic.status,
+    updatedAt: formatTopicUpdatedAt(topic.updatedAt),
+    description: topic.description,
+  };
 }
 
 export default async function Home() {
@@ -262,12 +267,20 @@ export default async function Home() {
     redirect("/login?reason=configuration");
   }
 
-  const promptCatalog = await getAiPromptCatalog(
-    session.client,
-    access.profile,
-  );
+  const [promptCatalog, topicLibraryResult] = await Promise.all([
+    getAiPromptCatalog(session.client, access.profile),
+    loadAdminTopicLibrary(session.client).then(
+      (items) => ({ ok: true as const, items }),
+      () => ({ ok: false as const, items: [] }),
+    ),
+  ]);
 
   return (
-    <AdminDashboard profile={access.profile} promptCatalog={promptCatalog} />
+    <AdminDashboard
+      profile={access.profile}
+      promptCatalog={promptCatalog}
+      topics={topicLibraryResult.items.map(toOverviewTopic)}
+      topicLibraryUnavailable={!topicLibraryResult.ok}
+    />
   );
 }

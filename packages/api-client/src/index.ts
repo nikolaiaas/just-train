@@ -8,6 +8,8 @@ import {
 export * from "./auth.ts";
 export * from "./ai-media.ts";
 export * from "./child.ts";
+export * from "./content.ts";
+export * from "./content-steps.ts";
 export * from "./parent.ts";
 
 export type BareTraenClient = SupabaseClient<Database>;

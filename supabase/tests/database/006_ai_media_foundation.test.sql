@@ -639,9 +639,13 @@ select set_config(
 set local role authenticated;
 
 select is(
-  (select count(*)::integer from public.ai_operations),
+  (
+    select count(*)::integer
+    from public.ai_operations
+    where operation_key = 'portrait.cartoon_3d'
+  ),
   1,
-  'a content admin can read AI operation configuration'
+  'a content admin can read the configured portrait operation'
 );
 select is(
   (select count(*)::integer from public.ai_jobs),
