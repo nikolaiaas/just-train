@@ -109,9 +109,28 @@ Starting local Supabase does **not** automatically switch either app away from i
 
 With Local Supabase selected, a synthetic adult can complete first-family onboarding and then create a child profile with only a nickname and one of four non-photo preset avatars. Only the family owner may create one, the flow records a versioned guardian acknowledgement privately, and each family is limited to 10 active children. The app saves a request identity before submission so an interrupted or uncertain request can be retried without creating a duplicate child. Do not use real child details or media: the acknowledgement does not complete the legal/privacy, withdrawal, deletion, or retention work required for a real-child or child-photo pilot.
 
-The local Auth callback list is ready for ports 11000/11001 and the development, preview, and production app schemes. The same exact callbacks are already registered in Hosted Development. The tested parent- and child-onboarding migrations are local only and have not been deployed there; both require explicit authorization, and the child migration's fail-fast preflight must pass before deployment. Custom hosted SMTP with the Danish template and CAPTCHA or server-side throttling remain separate gates before passwordless login is exposed publicly.
+The local Auth callback list is ready for ports 11000/11001 and the development, preview, and production app schemes. The same exact callbacks are already registered in Hosted Development, and the tested parent- and child-onboarding migrations were deployed there on 2026-08-21 after the child migration's fail-fast preflight passed. Custom hosted SMTP with the Danish template and CAPTCHA or server-side throttling remain separate gates before passwordless login is exposed publicly.
 
 Supabase hosts the backend, not the visible previews. The administration preview belongs on Vercel, and iPhone previews belong on Expo/EAS.
+
+## Planned automatic merge and preview flow
+
+Vercel already creates protected administration previews for pull requests and updates the stable preview from `main`. `main` is protected by pull requests and the required quality and database checks. The database deployment itself is **not active yet**: the native Supabase GitHub connection is waiting for its one-time GitHub access confirmation and the first end-to-end merge verification. Until both are complete, do not assume that merging a pull request deploys its database migrations.
+
+When that remaining setup is complete, the shared preview flow will work as follows:
+
+1. A pull request runs the required GitHub **quality** and **database** checks. The database check starts a disposable local Supabase stack, applies every migration, and runs the permission tests without touching Hosted Development.
+2. Vercel creates or refreshes a protected administration preview for the pull request. Because automatic Supabase preview branches are off on the current Free plan, that page uses the shared Hosted Development backend and does not receive an unmerged database migration.
+3. GitHub protects `main`: the required checks must pass before the pull request can be merged. The Supabase GitHub integration is allowed to use only `nikolaiaas/just-train`, with `main` selected as its production branch.
+4. After the green pull request is merged, the integration automatically applies new files from `supabase/migrations` to Hosted Development, and Vercel updates the stable administration preview at [just-train-admin.vercel.app](https://just-train-admin.vercel.app).
+
+Once enabled, the automatic Supabase path is deliberately limited to database migrations. It must not deploy the local synthetic `supabase/seed.sql`, and it must not push local `supabase/config.toml` to the hosted project. Hosted Auth URLs, email templates, SMTP, and other operational settings are changed separately and reviewed as environment configuration.
+
+A database change must use an **expand/contract** sequence. First add a backward-compatible table, column, function, or policy; then merge and update the web and mobile clients; only after every relevant client no longer needs the old shape may a separate reviewed migration remove it. Never edit an already-deployed migration. This keeps the stable web preview, pull-request previews, and installed iPhone builds compatible while releases overlap.
+
+Immediately before the onboarding migrations were deployed on 2026-08-21, a private logical backup of the migration-relevant database state was written to a folder outside the repository and outside Git. It is a manual point-in-time safety copy. It does not make the Free project continuously backed up, and database backups do not copy the bytes of files uploaded to Supabase Storage.
+
+The Free project has no automatic database backups or uptime guarantee. Do not put real-person or real-child data in it. Before a real-data pilot, the owner must separately approve Supabase Pro billing, confirm the automatic database-backup and recovery setup, and approve a separate backup process for Storage object bytes. A migration that removes or rewrites data must not be merged on the Free plan until a fresh private backup and a tested recovery plan have been recorded.
 
 ## First installation on your iPhone
 
@@ -174,7 +193,7 @@ If the local network blocks the connection, stop the command with Control-C and 
 mise exec -- pnpm dev:iphone:tunnel
 ```
 
-The phone should normally use the hosted development Supabase project. `127.0.0.1` on an iPhone means the phone itself, not this Mac. New-parent family onboarding and owner-only child creation cannot be accepted on the phone until both tested onboarding migrations have been explicitly approved and deployed to Hosted Development, with the child migration's fail-fast preflight passing first.
+The phone should normally use the hosted development Supabase project. `127.0.0.1` on an iPhone means the phone itself, not this Mac. New-parent family onboarding and owner-only child creation are now available there for synthetic or adult testing. Real child data remains blocked by the unresolved privacy, retention, backup, and paid-hosting gates.
 
 ## A standalone preview for another tester
 

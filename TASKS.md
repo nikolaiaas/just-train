@@ -24,12 +24,12 @@ The administration slice is:
 | --------------------------- | ----------------------------------------------- | --------------------------------------------------------------------- | -------------------------------------------------------- |
 | Local Mac                   | Next.js dev server plus Expo web/iOS simulator  | Hosted Development normally; local Supabase for explicit backend work | Visual development plus local backend tests              |
 | Physical iPhone development | EAS development build with Expo dev client      | Hosted non-production Supabase                                        | Camera, permissions, timers, and real-device testing     |
-| Pull request web preview    | Vercel preview URL                              | Shared development Supabase initially; Supabase preview branch later  | Review administration changes                            |
-| Pull request mobile preview | Installed development build plus EAS Update     | Shared development Supabase initially; Supabase preview branch later  | Review JavaScript and asset changes by QR/link           |
+| Pull request web preview    | Protected Vercel preview URL                    | Shared development Supabase; automatic preview branches off on Free   | Review administration changes                            |
+| Pull request mobile preview | Installed development build plus EAS Update     | Shared development Supabase; automatic preview branches off on Free   | Review JavaScript and asset changes by QR/link           |
 | Stakeholder iPhone preview  | EAS internal-distribution build                 | Hosted non-production Supabase                                        | Production-like testing without public App Store release |
 | Production                  | App Store build and production admin deployment | Separate production Supabase                                          | Deferred until after the pilot                           |
 
-Supabase provides the backend, not frontend preview hosting. Supabase Preview Branches can create an isolated database, Auth, Storage, Realtime, and Edge Functions environment per pull request. They currently require a Pro plan. Vercel should host administration previews, and Expo/EAS should distribute mobile previews.
+Supabase provides the backend, not frontend preview hosting. Supabase Preview Branches can create an isolated database, Auth, Storage, Realtime, and Edge Functions environment per pull request. They require a separately approved Pro plan and are currently off. Vercel automatically hosts protected administration previews for pull requests and updates the stable preview from `main`; Expo/EAS distributes mobile previews.
 
 Running a frontend on localhost does not select its backend. The administration login has a localhost-only selector between Local Supabase and Hosted Development, with isolated sessions and no Production option. The mobile app deliberately uses the backend fixed by its ignored `.env.local`; local Supabase remains the explicit choice for migrations, tests, Studio, and full-local integration work.
 
@@ -39,7 +39,7 @@ For the initial phase, use:
 2. One hosted `development` Supabase project for physical phones and shared previews.
 3. Vercel preview deployments for the administration app.
 4. One EAS development build on the owner's iPhone, followed by an EAS preview build when stable sharing is needed.
-5. Supabase per-PR branches only when the project needs parallel schema previews.
+5. Keep automatic Supabase per-PR branches off on Free; enable them only after the project needs parallel schema previews and the owner separately approves Pro billing.
 
 Never copy production child data into local, development, or preview environments. Seed them with synthetic families and children only.
 
@@ -101,7 +101,14 @@ Exit condition: local development does not depend on hand-created dashboard stat
 
 - [x] Create a hosted non-production Supabase project in a specific EU region.
 - [x] Apply the tested migration, without the credential-bearing local seed, to the hosted development project.
-- [ ] Deploy the tested parent- and child-onboarding migrations to Hosted Development after explicit authorization; require the child migration's fail-fast preflight to pass and never deploy the local seed.
+- [x] Make a private logical pre-deploy backup outside the repository and Git, then deploy the tested parent- and child-onboarding migrations to Hosted Development after explicit authorization and a successful fail-fast preflight on 2026-08-21.
+- [ ] Complete GitHub access confirmation for the native Supabase integration, restrict it to `nikolaiaas/just-train`, select `main` as its production branch, and keep automatic preview branches off on Free.
+- [x] Protect `main` with pull requests, strict required quality and database CI checks, resolved conversations, squash-only linear history, and no force pushes or deletion.
+- [ ] Verify end to end that a green protected merge automatically updates Hosted Development; Vercel's pull-request and stable preview updates are already active.
+- [x] Limit automatic hosted database delivery to immutable files in `supabase/migrations`; never deploy the local seed or push local `config.toml`.
+- [x] Require expand/contract database changes so shared pull-request previews, the stable web preview, and installed mobile builds remain compatible while releases overlap.
+- [ ] Before any real-data pilot, separately approve Supabase Pro billing, verify automatic database backup and recovery, and implement a separate backup for Storage object bytes; Free has no automatic backups or uptime guarantee.
+- [ ] Document and rehearse restoration from a private logical backup using synthetic data without exposing backup contents or credentials.
 - [ ] Add a separate safe bootstrap for shared synthetic hosted data without known-password accounts.
 - [ ] Configure separate local, development, preview, and production environment names.
 - [x] Ensure only the Supabase URL and publishable key reach client applications; never expose a service-role or secret key.
@@ -111,7 +118,7 @@ Exit condition: local development does not depend on hand-created dashboard stat
 - [x] Configure Vercel and EAS preview environment variables for the hosted development backend.
 - [x] Set the hosted development Auth site URL to the stable administration URL and allow the exact 11000/11001 callbacks plus all three app schemes.
 - [ ] Connect a custom hosted SMTP provider, disable link tracking, and install the same Danish code-and-magic-link template used locally.
-- [x] Add CI that resets the database, runs migrations, generates/checks types, and executes RLS tests before preview deployment.
+- [x] Add CI that resets the database, runs migrations, generates/checks types, and executes RLS tests, and require those checks before merging to `main`.
 - [x] Document the optional Supabase Pro upgrade path for per-pull-request preview branches.
 - [ ] If Supabase branching is enabled, connect each Vercel preview to its matching Supabase branch and synthetic seed.
 - [ ] If mobile PR previews are automated later, publish an EAS Update after the Supabase preview branch is ready and inject only that branch's public URL/key.
@@ -277,6 +284,8 @@ Exit condition: a failed permission test, migration, type check, or core-flow sm
 - [Supabase local development](https://supabase.com/docs/guides/local-development)
 - [Supabase deployment and preview branching](https://supabase.com/docs/guides/deployment)
 - [Supabase GitHub branch integration](https://supabase.com/docs/guides/deployment/branching/github-integration)
+- [Supabase database backups](https://supabase.com/docs/guides/platform/backups)
+- [Supabase database migration workflow](https://supabase.com/docs/guides/deployment/database-migrations)
 - [Expo development builds](https://docs.expo.dev/develop/development-builds/introduction/)
 - [Expo internal iOS distribution](https://docs.expo.dev/build/internal-distribution/)
 - [Expo preview updates](https://docs.expo.dev/eas-update/preview/)

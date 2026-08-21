@@ -15,19 +15,25 @@ This is one pnpm workspace so domain rules can be tested once and used by both i
 
 ## Environments and previews
 
-| Environment  | Interface                                               | Backend                                                                  | Data policy                                      |
-| ------------ | ------------------------------------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------ |
-| Local        | Next.js on localhost; Expo web/Simulator                | Local Supabase for backend work; hosted Development for normal UI work   | Synthetic seed only                              |
-| Development  | Local UI or shared preview                              | Hosted `bare-traen-development` Supabase project in Stockholm            | Synthetic test data only                         |
-| Pull request | Vercel preview; later EAS Update                        | Shared development initially; isolated Supabase branch if Pro is adopted | Disposable synthetic data                        |
-| Pilot        | Protected web preview; EAS internal build or TestFlight | Separate persistent staging project/branch                               | Consented pilot data only after the privacy gate |
-| Production   | Public releases later                                   | Separate production project                                              | Production data                                  |
+| Environment  | Interface                                               | Backend                                                                 | Data policy                                      |
+| ------------ | ------------------------------------------------------- | ----------------------------------------------------------------------- | ------------------------------------------------ |
+| Local        | Next.js on localhost; Expo web/Simulator                | Local Supabase for backend work; hosted Development for normal UI work  | Synthetic seed only                              |
+| Development  | Local UI or shared preview                              | Hosted `bare-traen-development` Supabase project in Stockholm           | Synthetic test data only                         |
+| Pull request | Protected Vercel preview; later EAS Update              | Shared development; automatic Supabase preview branches are off on Free | Synthetic test data only                         |
+| Pilot        | Protected web preview; EAS internal build or TestFlight | Separate persistent staging project/branch                              | Consented pilot data only after the privacy gate |
+| Production   | Public releases later                                   | Separate production project                                             | Production data                                  |
 
-Supabase preview branches are useful once parallel schema work justifies the Pro plan. They provide isolated backend resources, not a frontend hosting surface. Vercel is the intended administration preview host and Expo/EAS is the mobile preview channel.
+Supabase preview branches are useful once parallel schema work justifies an explicitly approved Pro upgrade. They provide isolated backend resources, not a frontend hosting surface. Vercel is the administration preview host and Expo/EAS is the mobile preview channel. On the current Free plan, automatic preview branches are off: a pull-request Vercel deployment uses shared Hosted Development and cannot rely on an unmerged migration.
 
 The frontend location and backend target are independent. A page on localhost does not automatically use Local Supabase. The administration login exposes a localhost-only choice between Local Supabase and Hosted Development, with isolated sessions and no Production option. Mobile builds are fixed to the backend in their build or ignored local environment and intentionally have no runtime environment selector. Schema tests, Studio, and explicit full-local work use the Docker stack.
 
-The parent- and child-onboarding migrations are implemented and tested in Local Supabase but are not deployed to Hosted Development. A hosted deployment requires explicit authorization, and the child migration must pass its fail-fast compatibility preflight; the local synthetic seed is never part of that deployment.
+The parent- and child-onboarding migrations were tested locally and deployed to Hosted Development on 2026-08-21 after explicit authorization and a successful fail-fast compatibility preflight. Vercel creates protected previews for pull requests and updates the stable administration preview from `main`.
+
+The selected automatic database-delivery design uses the native Supabase GitHub integration, restricted to `nikolaiaas/just-train`, with `main` as its production branch. `main` is protected by current pull requests, required GitHub quality and database checks, resolved conversations, squash-only linear history, and blocked force pushes/deletion. GitHub access confirmation for the Supabase integration and the first end-to-end merge verification remain pending, so automatic hosted deployment is not yet an active guarantee.
+
+Only `supabase/migrations` will be part of automatic hosted database deployment. The local credential-bearing `seed.sql` and local `config.toml` are never pushed to Hosted Development; environment configuration such as Auth callbacks, templates, SMTP, and rate controls is reviewed separately. Deployed migrations are immutable. Schema changes use expand/contract releases so the shared preview backend remains compatible with pull-request frontends, the stable web deployment, and older installed mobile builds.
+
+Immediately before the 2026-08-21 hosted deployment, a private logical backup of the migration-relevant database state was stored outside this repository and Git. It is a point-in-time recovery aid rather than continuous protection, and it does not copy Supabase Storage object bytes. The Free project has no automatic database backups or uptime guarantee. Supabase Pro billing, recovery verification, and a separate Storage-object backup process must be explicitly approved before real-person or real-child data is permitted.
 
 The Dev Console at `127.0.0.1:11009` is a development tool only. Its React 19 interface is compiled with Vite 8 and Tailwind CSS 4; a small local Node process is still required because browser code cannot start programs by itself. The process binds only to loopback, accepts same-origin requests with a per-run token, exposes only fixed Bare Træn actions, and never provides arbitrary shell access or a production-backend selector. It may stop a process it did not launch only after a fixed inspection proves that the process is a Bare Træn development command from this exact checkout or worktree. A coincidental port occupant remains protected.
 

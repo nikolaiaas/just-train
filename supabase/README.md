@@ -40,12 +40,12 @@ continue before the underlying one-use Supabase link is opened. This prevents
 email link scanners from consuming the credential before the user sees it.
 
 Both new-account confirmations and returning-user sign-ins use
-`templates/passwordless.html`. Hosted Development must be configured with the
-same template and callback allowlist separately; local `config.toml` settings
-do not change a hosted Supabase project. The administration app implements the
-scanner-safe `/auth/continue` page. This local operational test covers returning
-passwordless users; the parent-onboarding slice will exercise new-user
-confirmation through the real UI.
+`templates/passwordless.html`. Hosted Development has the exact callback
+allowlist, but custom SMTP and the matching Danish template remain a separate
+hosted-configuration gate; local `config.toml` settings do not change a hosted
+Supabase project. The administration app implements the scanner-safe
+`/auth/continue` page. Local operational tests cover both returning passwordless
+users and the new-parent onboarding flow without sending real email.
 
 ## Authentication and authorization assumptions
 
@@ -74,9 +74,59 @@ confirmation through the real UI.
   writes, but cannot overwrite derived progress or rewrite/delete individual
   attempts. It must never be embedded in the Expo app or browser bundle.
 
-Before applying changes to a linked development project, preview them with
-`pnpm exec supabase db push --dry-run`. Do not run a linked reset unless the
-target has been confirmed as disposable development infrastructure.
+## Hosted Development delivery
+
+The parent- and child-onboarding migrations through
+`202608210001_child_profile_creation.sql` were deployed to Hosted Development
+on 2026-08-21 after the compatibility preflight passed. The selected routine
+deployment flow will be:
+
+1. Open a pull request in `nikolaiaas/just-train`.
+2. The required GitHub quality and database jobs install a disposable local
+   Supabase stack, apply all migrations, and run the database tests.
+3. Merge only after those checks pass. The Supabase GitHub integration will be
+   restricted to this repository and apply new migration files from its
+   selected production branch, `main`.
+
+`main` is now protected by pull requests and the required `quality` and
+`database` checks. This automatic database flow is not active yet because the
+native integration still needs its one-time GitHub access confirmation and a
+first end-to-end merge verification. Until both are complete, a merge must not
+be treated as proof that Hosted Development received the migration.
+
+Automatic Supabase preview branches are off while Hosted Development uses the
+Free plan. A Vercel pull-request preview therefore uses the shared hosted
+schema and will not see a new database migration until it reaches `main`. Make
+schema changes with an expand/contract sequence: add a backward-compatible
+shape first, migrate all web and mobile callers, then remove the old shape in a
+later reviewed migration. Never modify an already-deployed migration.
+
+Only `supabase/migrations` will belong in the automatic hosted deployment path. Never use
+`--include-seed`, never deploy `seed.sql`, and never push this directory's
+`config.toml` to Hosted Development. Auth callbacks, templates, SMTP, and other
+operational settings are managed separately with an explicit review. A manual
+`pnpm exec supabase db push --dry-run` is useful for an authorized diagnostic,
+and, after the integration is verified, normal changes should reach Hosted
+Development through a green pull request and merge rather than an ad hoc local
+push. Never run a linked reset.
+
+## Backup boundary
+
+Immediately before the 2026-08-21 onboarding deployment, a private logical
+backup was saved outside this repository and outside Git. In plain terms, it is
+a dated point-in-time copy of the database roles, application schema, and
+application table rows needed as a migration recovery aid. It contains no
+committed credentials and its private path and contents must not be copied into
+issues, task evidence, or CI logs.
+
+This one manual copy is not continuous backup coverage. The current Supabase
+Free project has no automatic database backups or uptime guarantee, and a
+database backup does not copy the bytes stored in Supabase Storage. Before any
+real-person or real-child data is allowed, the owner must separately approve
+Supabase Pro billing, verify database backup and recovery, and approve an
+independent backup process for Storage object bytes. Until then, destructive or
+data-rewriting hosted migrations require a fresh private backup and a recorded
+recovery plan before merge.
 
 ### Child-creation migration preflight
 
