@@ -141,12 +141,17 @@ select is(
         'public.child_goals',
         'public.exercise_sessions',
         'public.exercise_attempts',
-        'public.child_exercise_progress'
+        'public.child_exercise_progress',
+        'public.ai_operations',
+        'public.ai_operation_versions',
+        'public.media_assets',
+        'public.ai_jobs',
+        'public.ai_job_media'
       ]
     ) as relation_name
     where has_table_privilege('service_role', relation_name, 'select')
   ),
-  11,
+  16,
   'service_role can read every application table'
 );
 select is(

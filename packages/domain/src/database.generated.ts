@@ -34,6 +34,282 @@ export type Database = {
   };
   public: {
     Tables: {
+      ai_job_media: {
+        Row: {
+          created_at: string;
+          family_id: string;
+          job_id: string;
+          media_asset_id: string;
+          ordinal: number;
+          slot: string;
+        };
+        Insert: {
+          created_at?: string;
+          family_id: string;
+          job_id: string;
+          media_asset_id: string;
+          ordinal?: number;
+          slot: string;
+        };
+        Update: {
+          created_at?: string;
+          family_id?: string;
+          job_id?: string;
+          media_asset_id?: string;
+          ordinal?: number;
+          slot?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "ai_job_media_asset_family_fkey";
+            columns: ["media_asset_id", "family_id"];
+            isOneToOne: false;
+            referencedRelation: "media_assets";
+            referencedColumns: ["id", "family_id"];
+          },
+          {
+            foreignKeyName: "ai_job_media_job_family_fkey";
+            columns: ["job_id", "family_id"];
+            isOneToOne: false;
+            referencedRelation: "ai_jobs";
+            referencedColumns: ["id", "family_id"];
+          },
+        ];
+      };
+      ai_jobs: {
+        Row: {
+          actual_cost_microusd: number | null;
+          attempt_count: number;
+          child_profile_id: string | null;
+          client_request_id: string;
+          completed_at: string | null;
+          created_at: string;
+          family_id: string | null;
+          id: string;
+          input_data: Json;
+          max_attempts: number;
+          max_cost_microusd: number;
+          operation_id: string;
+          operation_version_id: string;
+          output_data: Json | null;
+          processing_started_at: string | null;
+          public_error_code: string | null;
+          queued_at: string | null;
+          requested_by: string;
+          scope_kind: Database["public"]["Enums"]["ai_job_scope_kind"];
+          status: Database["public"]["Enums"]["ai_job_status"];
+          subject_kind:
+            Database["public"]["Enums"]["media_subject_kind"] | null;
+          updated_at: string;
+        };
+        Insert: {
+          actual_cost_microusd?: number | null;
+          attempt_count?: number;
+          child_profile_id?: string | null;
+          client_request_id: string;
+          completed_at?: string | null;
+          created_at?: string;
+          family_id?: string | null;
+          id?: string;
+          input_data?: Json;
+          max_attempts: number;
+          max_cost_microusd: number;
+          operation_id: string;
+          operation_version_id: string;
+          output_data?: Json | null;
+          processing_started_at?: string | null;
+          public_error_code?: string | null;
+          queued_at?: string | null;
+          requested_by: string;
+          scope_kind?: Database["public"]["Enums"]["ai_job_scope_kind"];
+          status?: Database["public"]["Enums"]["ai_job_status"];
+          subject_kind?:
+            Database["public"]["Enums"]["media_subject_kind"] | null;
+          updated_at?: string;
+        };
+        Update: {
+          actual_cost_microusd?: number | null;
+          attempt_count?: number;
+          child_profile_id?: string | null;
+          client_request_id?: string;
+          completed_at?: string | null;
+          created_at?: string;
+          family_id?: string | null;
+          id?: string;
+          input_data?: Json;
+          max_attempts?: number;
+          max_cost_microusd?: number;
+          operation_id?: string;
+          operation_version_id?: string;
+          output_data?: Json | null;
+          processing_started_at?: string | null;
+          public_error_code?: string | null;
+          queued_at?: string | null;
+          requested_by?: string;
+          scope_kind?: Database["public"]["Enums"]["ai_job_scope_kind"];
+          status?: Database["public"]["Enums"]["ai_job_status"];
+          subject_kind?:
+            Database["public"]["Enums"]["media_subject_kind"] | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "ai_jobs_child_family_fkey";
+            columns: ["child_profile_id", "family_id"];
+            isOneToOne: false;
+            referencedRelation: "child_profiles";
+            referencedColumns: ["id", "family_id"];
+          },
+          {
+            foreignKeyName: "ai_jobs_family_id_fkey";
+            columns: ["family_id"];
+            isOneToOne: false;
+            referencedRelation: "families";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "ai_jobs_operation_id_fkey";
+            columns: ["operation_id"];
+            isOneToOne: false;
+            referencedRelation: "ai_operations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "ai_jobs_operation_version_fkey";
+            columns: ["operation_version_id", "operation_id"];
+            isOneToOne: false;
+            referencedRelation: "ai_operation_versions";
+            referencedColumns: ["id", "operation_id"];
+          },
+          {
+            foreignKeyName: "ai_jobs_requested_by_fkey";
+            columns: ["requested_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      ai_operation_versions: {
+        Row: {
+          created_at: string;
+          created_by: string | null;
+          gateway: string;
+          id: string;
+          input_contract: Json;
+          max_attempts: number;
+          max_cost_microusd: number;
+          model: string;
+          operation_id: string;
+          output_contract: Json;
+          prompt_template: string;
+          provider: string;
+          request_options: Json;
+          timeout_ms: number;
+          version: number;
+        };
+        Insert: {
+          created_at?: string;
+          created_by?: string | null;
+          gateway: string;
+          id?: string;
+          input_contract?: Json;
+          max_attempts?: number;
+          max_cost_microusd: number;
+          model: string;
+          operation_id: string;
+          output_contract?: Json;
+          prompt_template: string;
+          provider: string;
+          request_options?: Json;
+          timeout_ms?: number;
+          version: number;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string | null;
+          gateway?: string;
+          id?: string;
+          input_contract?: Json;
+          max_attempts?: number;
+          max_cost_microusd?: number;
+          model?: string;
+          operation_id?: string;
+          output_contract?: Json;
+          prompt_template?: string;
+          provider?: string;
+          request_options?: Json;
+          timeout_ms?: number;
+          version?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "ai_operation_versions_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "ai_operation_versions_operation_id_fkey";
+            columns: ["operation_id"];
+            isOneToOne: false;
+            referencedRelation: "ai_operations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      ai_operations: {
+        Row: {
+          active_version_id: string | null;
+          capability: string;
+          created_at: string;
+          created_by: string | null;
+          description: string;
+          id: string;
+          is_enabled: boolean;
+          operation_key: string;
+          updated_at: string;
+        };
+        Insert: {
+          active_version_id?: string | null;
+          capability: string;
+          created_at?: string;
+          created_by?: string | null;
+          description?: string;
+          id?: string;
+          is_enabled?: boolean;
+          operation_key: string;
+          updated_at?: string;
+        };
+        Update: {
+          active_version_id?: string | null;
+          capability?: string;
+          created_at?: string;
+          created_by?: string | null;
+          description?: string;
+          id?: string;
+          is_enabled?: boolean;
+          operation_key?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "ai_operations_active_version_fkey";
+            columns: ["active_version_id", "id"];
+            isOneToOne: false;
+            referencedRelation: "ai_operation_versions";
+            referencedColumns: ["id", "operation_id"];
+          },
+          {
+            foreignKeyName: "ai_operations_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       child_exercise_progress: {
         Row: {
           attempts_count: number;
@@ -557,6 +833,88 @@ export type Database = {
           },
         ];
       };
+      media_assets: {
+        Row: {
+          asset_role: Database["public"]["Enums"]["media_asset_role"];
+          byte_size: number | null;
+          child_profile_id: string | null;
+          created_at: string;
+          created_by: string;
+          delete_after: string | null;
+          deleted_at: string | null;
+          family_id: string;
+          id: string;
+          metadata: Json;
+          mime_type: string;
+          sha256_hex: string | null;
+          status: Database["public"]["Enums"]["media_asset_status"];
+          storage_bucket: string;
+          storage_object_path: string;
+          subject_kind: Database["public"]["Enums"]["media_subject_kind"];
+          updated_at: string;
+        };
+        Insert: {
+          asset_role: Database["public"]["Enums"]["media_asset_role"];
+          byte_size?: number | null;
+          child_profile_id?: string | null;
+          created_at?: string;
+          created_by: string;
+          delete_after?: string | null;
+          deleted_at?: string | null;
+          family_id: string;
+          id?: string;
+          metadata?: Json;
+          mime_type: string;
+          sha256_hex?: string | null;
+          status?: Database["public"]["Enums"]["media_asset_status"];
+          storage_bucket?: string;
+          storage_object_path: string;
+          subject_kind: Database["public"]["Enums"]["media_subject_kind"];
+          updated_at?: string;
+        };
+        Update: {
+          asset_role?: Database["public"]["Enums"]["media_asset_role"];
+          byte_size?: number | null;
+          child_profile_id?: string | null;
+          created_at?: string;
+          created_by?: string;
+          delete_after?: string | null;
+          deleted_at?: string | null;
+          family_id?: string;
+          id?: string;
+          metadata?: Json;
+          mime_type?: string;
+          sha256_hex?: string | null;
+          status?: Database["public"]["Enums"]["media_asset_status"];
+          storage_bucket?: string;
+          storage_object_path?: string;
+          subject_kind?: Database["public"]["Enums"]["media_subject_kind"];
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "media_assets_child_family_fkey";
+            columns: ["child_profile_id", "family_id"];
+            isOneToOne: false;
+            referencedRelation: "child_profiles";
+            referencedColumns: ["id", "family_id"];
+          },
+          {
+            foreignKeyName: "media_assets_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "media_assets_family_id_fkey";
+            columns: ["family_id"];
+            isOneToOne: false;
+            referencedRelation: "families";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       profiles: {
         Row: {
           avatar_url: string | null;
@@ -648,6 +1006,40 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      claim_ai_media_job_for_worker: {
+        Args: { p_job_id: string };
+        Returns: {
+          attempt_number: number;
+          gateway: string;
+          input_contract: Json;
+          input_mime_type: string;
+          input_object_path: string;
+          job_id: string;
+          max_cost_microusd: number;
+          model: string;
+          output_asset_id: string;
+          output_contract: Json;
+          output_object_path: string;
+          prompt_template: string;
+          provider: string;
+          request_options: Json;
+          storage_bucket: string;
+          timeout_ms: number;
+        }[];
+      };
+      complete_ai_media_job_for_worker: {
+        Args: {
+          p_attempt_number: number;
+          p_cost_microusd: number;
+          p_job_id: string;
+          p_output_asset_id: string;
+          p_output_byte_size: number;
+          p_output_sha256_hex: string;
+          p_provider_request_id: string;
+          p_usage: Json;
+        };
+        Returns: undefined;
+      };
       complete_parent_onboarding: {
         Args: { p_display_name: string; p_family_name: string };
         Returns: {
@@ -680,13 +1072,63 @@ export type Database = {
           is_active: boolean;
         }[];
       };
+      fail_ai_media_job_for_worker: {
+        Args: {
+          p_attempt_error_code: string;
+          p_attempt_number: number;
+          p_cost_microusd?: number;
+          p_job_id: string;
+          p_provider_request_id?: string;
+          p_public_error_code: string;
+          p_usage?: Json;
+        };
+        Returns: undefined;
+      };
+      prepare_ai_media_job: {
+        Args: {
+          p_child_profile_id?: string;
+          p_client_request_id: string;
+          p_expected_user_id: string;
+          p_family_id: string;
+          p_input_mime_type: string;
+          p_operation_key: string;
+          p_subject_kind: Database["public"]["Enums"]["media_subject_kind"];
+        };
+        Returns: {
+          created: boolean;
+          input_asset_id: string;
+          input_object_path: string;
+          job_id: string;
+          job_status: Database["public"]["Enums"]["ai_job_status"];
+          output_asset_id: string;
+          storage_bucket: string;
+        }[];
+      };
+      publish_ai_operation_version: {
+        Args: {
+          p_expected_active_version_id: string;
+          p_operation_key: string;
+          p_prompt_template: string;
+        };
+        Returns: {
+          operation_id: string;
+          operation_version_id: string;
+          version: number;
+        }[];
+      };
     };
     Enums: {
+      ai_job_scope_kind: "family" | "admin";
+      ai_job_status:
+        "awaiting_upload" | "processing" | "succeeded" | "failed" | "cancelled";
       attempt_outcome: "completed" | "partial" | "skipped";
       child_goal_status: "active" | "completed" | "archived";
       exercise_difficulty: "beginner" | "intermediate" | "advanced";
       exercise_measurement: "completion" | "repetitions" | "duration";
       family_member_role: "owner" | "caregiver";
+      media_asset_role: "reference_input" | "generated_output";
+      media_asset_status: "pending" | "ready" | "failed" | "deleted";
+      media_subject_kind: "synthetic" | "adult_test" | "child";
       progress_state: "in_progress" | "completed";
       session_status: "in_progress" | "completed" | "abandoned";
     };
@@ -819,11 +1261,22 @@ export const Constants = {
   },
   public: {
     Enums: {
+      ai_job_scope_kind: ["family", "admin"],
+      ai_job_status: [
+        "awaiting_upload",
+        "processing",
+        "succeeded",
+        "failed",
+        "cancelled",
+      ],
       attempt_outcome: ["completed", "partial", "skipped"],
       child_goal_status: ["active", "completed", "archived"],
       exercise_difficulty: ["beginner", "intermediate", "advanced"],
       exercise_measurement: ["completion", "repetitions", "duration"],
       family_member_role: ["owner", "caregiver"],
+      media_asset_role: ["reference_input", "generated_output"],
+      media_asset_status: ["pending", "ready", "failed", "deleted"],
+      media_subject_kind: ["synthetic", "adult_test", "child"],
       progress_state: ["in_progress", "completed"],
       session_status: ["in_progress", "completed", "abandoned"],
     },

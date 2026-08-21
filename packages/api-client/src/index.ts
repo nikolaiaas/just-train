@@ -6,6 +6,7 @@ import {
 } from "@supabase/supabase-js";
 
 export * from "./auth.ts";
+export * from "./ai-media.ts";
 export * from "./child.ts";
 export * from "./parent.ts";
 

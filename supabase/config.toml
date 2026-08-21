@@ -47,6 +47,15 @@ port = 54324
 enabled = true
 file_size_limit = "10MiB"
 
+# Background Edge work must survive the initiating HTTP response locally, just
+# as it does in the hosted runtime.
+[edge_runtime]
+policy = "per_worker"
+
+[functions.process-ai-job]
+enabled = true
+verify_jwt = true
+
 [auth]
 enabled = true
 site_url = "http://127.0.0.1:11000"
