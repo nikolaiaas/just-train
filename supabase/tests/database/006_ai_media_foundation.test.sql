@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(77);
+select plan(79);
 
 select has_table('public', 'ai_operations', 'AI operations exist');
 select has_table(
@@ -276,6 +276,52 @@ select results_eq(
   $$ values (true) $$,
   'a family member can reserve an upload before an interrupted client flow'
 );
+select throws_ok(
+  $$
+    insert into storage.objects (
+      bucket_id,
+      name,
+      owner_id,
+      metadata
+    )
+    select
+      'ai-media-private',
+      format(
+        '20000000-0000-4000-8000-000000000001/10000000-0000-4000-8000-000000000001/%s/input.jpg',
+        job.id
+      ),
+      '10000000-0000-4000-8000-000000000001',
+      '{"contentLength": 1024, "size": "1024x", "mimetype": "image/jpeg"}'::jsonb
+    from public.ai_jobs as job
+    where job.client_request_id = 'a3000000-0000-4000-8000-000000000098'
+  $$,
+  '42501',
+  null,
+  'malformed legacy size metadata cannot be hidden by a valid contentLength'
+);
+select throws_ok(
+  $$
+    insert into storage.objects (
+      bucket_id,
+      name,
+      owner_id,
+      metadata
+    )
+    select
+      'ai-media-private',
+      format(
+        '20000000-0000-4000-8000-000000000001/10000000-0000-4000-8000-000000000001/%s/input.jpg',
+        job.id
+      ),
+      '10000000-0000-4000-8000-000000000001',
+      '{"contentLength": 1024, "size": 2048, "mimetype": "image/jpeg"}'::jsonb
+    from public.ai_jobs as job
+    where job.client_request_id = 'a3000000-0000-4000-8000-000000000098'
+  $$,
+  '42501',
+  null,
+  'conflicting Storage length metadata fails closed'
+);
 select lives_ok(
   $$
     insert into storage.objects (
@@ -534,11 +580,11 @@ select lives_ok(
         job.id
       ),
       '10000000-0000-4000-8000-000000000001',
-      '{"size": 1024, "mimetype": "image/jpeg"}'::jsonb
+      '{"contentLength": 1024, "mimetype": "image/jpeg"}'::jsonb
     from public.ai_jobs as job
     where job.client_request_id = 'a3000000-0000-4000-8000-000000000001'
   $$,
-  'the requester can upload the exact pre-reserved child input path'
+  'the requester can upload the exact pre-reserved child input path through the current Storage preflight metadata'
 );
 select throws_ok(
   $$
