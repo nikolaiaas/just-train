@@ -115,14 +115,14 @@ The local Auth callback list is ready for ports 11000/11001 and the development,
 
 Supabase hosts the backend, not the visible previews. The administration preview belongs on Vercel, and iPhone previews belong on Expo/EAS.
 
-## Planned automatic merge and preview flow
+## Automatic merge and preview flow
 
-Vercel already creates protected administration previews for pull requests and updates the stable preview from `main`. `main` is protected by pull requests and the required quality, database, and Vercel preview checks. The native Supabase GitHub integration is enabled for this repository with `main` production deploys on and preview branches off. The first end-to-end merge verification is still pending, so do not yet assume that merging a pull request deploys its database migrations.
+Vercel creates protected administration previews for pull requests and updates the stable preview from `main`. `main` is protected by pull requests and the required quality, database, and Vercel preview checks. The native Supabase GitHub integration is enabled for this repository with `main` production deploys on and preview branches off. A protected merge has been verified end to end to update Hosted Development automatically, retain aligned migrations, pass hosted Auth and RLS health checks, and update the stable Vercel deployment.
 
-When that remaining setup is complete, the shared preview flow will work as follows:
+The shared preview flow works as follows:
 
 1. A pull request runs the required GitHub **quality** and **database** checks. The database check starts a disposable local Supabase stack, applies every migration, and runs the permission tests without touching Hosted Development.
-2. Vercel creates or refreshes a protected administration preview for the pull request. Because automatic Supabase preview branches are off on the current Free plan, that page uses the shared Hosted Development backend and does not receive an unmerged database migration.
+2. Vercel creates or refreshes a protected administration preview for the pull request. Automatic Supabase preview branches remain deliberately off on the current Pro plan, so that page uses the shared Hosted Development backend and does not receive an unmerged database migration.
 3. GitHub protects `main`: the required checks must pass before the pull request can be merged. The Supabase GitHub integration is allowed to use only `nikolaiaas/just-train`, with `main` selected as its production branch.
 4. After the green pull request is merged, the integration automatically applies new files from `supabase/migrations` to Hosted Development, and Vercel updates the stable administration preview at [just-train-admin.vercel.app](https://just-train-admin.vercel.app).
 
@@ -130,9 +130,9 @@ Once enabled, the automatic Supabase path is deliberately limited to database mi
 
 A database change must use an **expand/contract** sequence. First add a backward-compatible table, column, function, or policy; then merge and update the web and mobile clients; only after every relevant client no longer needs the old shape may a separate reviewed migration remove it. Never edit an already-deployed migration. This keeps the stable web preview, pull-request previews, and installed iPhone builds compatible while releases overlap.
 
-Immediately before the onboarding migrations were deployed on 2026-08-21, a private logical backup of the migration-relevant database state was written to a folder outside the repository and outside Git. It is a manual point-in-time safety copy. It does not make the Free project continuously backed up, and database backups do not copy the bytes of files uploaded to Supabase Storage.
+Immediately before the onboarding migrations were deployed on 2026-08-21, a private logical backup of the migration-relevant database state was written to a folder outside the repository and outside Git. It is a manual point-in-time safety copy rather than continuous backup coverage, and database backups do not copy the bytes of files uploaded to Supabase Storage.
 
-The Free project has no automatic database backups or uptime guarantee. Do not put real-person or real-child data in it. Before a real-data pilot, the owner must separately approve Supabase Pro billing, confirm the automatic database-backup and recovery setup, and approve a separate backup process for Storage object bytes. A migration that removes or rewrites data must not be merged on the Free plan until a fresh private backup and a tested recovery plan have been recorded.
+The owning organization is now on Supabase Pro with Spend Cap enabled. Hosted Development remains healthy on Nano compute, and PITR and automatic preview branches remain off. The dashboard exposes three pre-upgrade physical daily backups with Restore controls, most recently 2026-08-20 at 23:07 UTC; the automatic-backup checkpoint stays open until the first scheduled backup dated after the 2026-08-21 upgrade appears. Before a real-data pilot, independently back up and restore-test the bytes in Supabase Storage. A migration that removes or rewrites data must not be merged until a fresh private backup and a tested recovery plan have been recorded.
 
 ## First installation on your iPhone
 

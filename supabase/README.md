@@ -88,28 +88,31 @@ users and the new-parent onboarding flow without sending real email.
 The parent- and child-onboarding migrations through
 `202608210001_child_profile_creation.sql` were deployed to Hosted Development
 on 2026-08-21 after the compatibility preflight passed. The selected routine
-deployment flow will be:
+deployment flow is:
 
 1. Open a pull request in `nikolaiaas/just-train`.
 2. The required GitHub quality and database jobs install a disposable local
    Supabase stack, apply all migrations, and run the database tests.
-3. Merge only after those checks pass. The Supabase GitHub integration will be
-   restricted to this repository and apply new migration files from its
+3. Merge only after those checks pass. The Supabase GitHub integration is
+   restricted to this repository and applies new migration files from its
    selected production branch, `main`.
 
 `main` is now protected by pull requests and the required `quality`,
 `database`, and Vercel preview checks. The native integration is enabled for
 `nikolaiaas/just-train`, working directory `.`, production branch `main`, with
-production deploys on and preview branches off. Until the first end-to-end
-merge verification is complete, a merge must not be treated as proof that
-Hosted Development received the migration.
+production deploys on and preview branches off. The first end-to-end merge
+verification completed successfully: the protected merge updated Hosted
+Development, kept migrations aligned, passed hosted Auth and RLS health checks,
+and updated the stable Vercel deployment.
 
-Automatic Supabase preview branches are off while Hosted Development uses the
-Free plan. A Vercel pull-request preview therefore uses the shared hosted
-schema and will not see a new database migration until it reaches `main`. Make
-schema changes with an expand/contract sequence: add a backward-compatible
-shape first, migrate all web and mobile callers, then remove the old shape in a
-later reviewed migration. Never modify an already-deployed migration.
+The Supabase organization is on Pro, but automatic preview branches remain
+deliberately off until branch-safe Auth, synthetic seed, Vercel wiring, and the
+separate compute cost are reviewed. A Vercel pull-request preview therefore
+uses the shared hosted schema and will not see a new database migration until
+it reaches `main`. Make schema changes with an expand/contract sequence: add a
+backward-compatible shape first, migrate all web and mobile callers, then
+remove the old shape in a later reviewed migration. Never modify an
+already-deployed migration.
 
 Only `supabase/migrations` will belong in the automatic hosted deployment path. Never use
 `--include-seed`, never deploy `seed.sql`, and never push this directory's
@@ -129,14 +132,17 @@ application table rows needed as a migration recovery aid. It contains no
 committed credentials and its private path and contents must not be copied into
 issues, task evidence, or CI logs.
 
-This one manual copy is not continuous backup coverage. The current Supabase
-Free project has no automatic database backups or uptime guarantee, and a
-database backup does not copy the bytes stored in Supabase Storage. Before any
-real-person or real-child data is allowed, the owner must separately approve
-Supabase Pro billing, verify database backup and recovery, and approve an
-independent backup process for Storage object bytes. Until then, destructive or
-data-rewriting hosted migrations require a fresh private backup and a recorded
-recovery plan before merge.
+This one manual copy is not continuous backup coverage, and a database backup
+does not copy the bytes stored in Supabase Storage. The owning organization is
+now on Supabase Pro with Spend Cap enabled. Hosted Development remains healthy
+on Nano compute, while PITR and automatic preview branches remain off. The
+dashboard exposes three pre-upgrade physical daily backups with Restore
+controls, most recently 2026-08-20 at 23:07 UTC. Because all three predate the
+upgrade, database-backup verification stays open until the first scheduled
+backup dated after 2026-08-21 appears. An independent Storage-object backup and
+restore test remains required before any real-person or real-child data is
+allowed. Destructive or data-rewriting hosted migrations require a fresh
+private backup and a recorded recovery plan before merge.
 
 The 2026-08-21 recovery rehearsal verified the private files and checksums,
 roles, application schema and data, migration history, all 11 RLS-enabled app
