@@ -485,6 +485,7 @@ export function validateActionRequest(value) {
   if (
     body.action === "start-local-web" ||
     body.action === "stop-my-apps" ||
+    body.action === "prepare-iphone-preview" ||
     body.action === "refresh"
   ) {
     if (Object.hasOwn(body, "service")) {

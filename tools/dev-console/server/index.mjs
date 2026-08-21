@@ -19,6 +19,7 @@ import {
   validateTaskRequest,
   validateTaskStatus,
 } from "./core.mjs";
+import { IphonePreviewManager } from "./iphone-preview-manager.mjs";
 import { ServiceManager } from "./service-manager.mjs";
 import { TaskStore } from "./task-store.mjs";
 
@@ -251,6 +252,7 @@ export function createDevConsole({
   taskFile = path.join(defaultConsoleDirectory, "tasks.json"),
   evidenceDirectory = path.join(defaultConsoleDirectory, "evidence"),
   manager = new ServiceManager({ repositoryRoot }),
+  iphonePreviewManager = new IphonePreviewManager({ repositoryRoot }),
   taskStore = new TaskStore(taskFile),
 } = {}) {
   const csrfToken = randomBytes(32).toString("base64url");
@@ -268,6 +270,7 @@ export function createDevConsole({
       csrfToken,
       console: { url: consoleUrl, startedAt },
       git,
+      iphonePreview: iphonePreviewManager.getState(),
       services,
       logs: manager.getLogs(),
       tasks,
@@ -399,7 +402,16 @@ export function createDevConsole({
         }
         validateMutationRequest(request, csrfToken, port);
         const action = validateActionRequest(await readJsonBody(request));
-        await manager.perform(action);
+        if (action.action === "prepare-iphone-preview") {
+          await iphonePreviewManager.prepare();
+        } else if (action.action === "refresh") {
+          await Promise.all([
+            manager.perform(action),
+            iphonePreviewManager.refresh(),
+          ]);
+        } else {
+          await manager.perform(action);
+        }
         sendJson(response, 200, { ok: true, state: await getState() }, method);
         return;
       }
@@ -528,10 +540,11 @@ export function createDevConsole({
       server.listen(port, host);
     });
     void manager.initialize().catch(() => undefined);
+    void iphonePreviewManager.initialize().catch(() => undefined);
   }
 
   async function close() {
-    await manager.shutdown();
+    await Promise.all([manager.shutdown(), iphonePreviewManager.shutdown()]);
     await new Promise((resolve) => server.close(resolve));
     server.closeIdleConnections?.();
   }
@@ -539,6 +552,7 @@ export function createDevConsole({
   return {
     server,
     manager,
+    iphonePreviewManager,
     taskStore,
     getState,
     listen,

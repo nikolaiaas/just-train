@@ -47,7 +47,7 @@ A Terminal window opens and then the Bare Træn Dev Console opens in the browser
 
 The menu has three pages:
 
-- **Overview** is the welcome page. It summarizes what is running and how many tasks are in each column.
+- **Overview** is the welcome page. It summarizes what is running and how many tasks are in each column. **Installér på iPhone** checks whether the current mobile code already has a finished standalone EAS Preview build. It opens that private build when it is current; otherwise it asks before starting one new build, follows its status, and never starts Metro.
 - **Services** starts and stops Supabase, administration, mobile web, and the iPhone server; opens their pages; and shows recent credential-redacted logs.
 - **Tasks** keeps the active queue in **Backlog**, **To do**, **Doing**, and **Done**. Cards are always shown in priority order. Drag a card to change its priority or move it to another column; the up/down controls provide the same operation from a keyboard. **Hide Done** removes the completed column from view without deleting anything. Edit a task to add a plain-language implementation note and several proof items. Proof can be a stable HTTPS link or a small screenshot stored under `tools/dev-console/evidence/<task-id>/`.
 
@@ -248,6 +248,10 @@ The phone should normally use the hosted development Supabase project. `127.0.0.
 ## A standalone preview for another tester
 
 Use the `preview` build when someone should test without keeping this Mac and its development server running:
+
+For the owner's already registered iPhone, open the Dev Console overview and choose **Installér på iPhone**. The console checks whether the current mobile build inputs already have a successful private Preview build. It opens that build when possible; otherwise it asks before starting exactly one new build, follows the EAS status in the background, and makes the same button available again when installation is ready. A new phone must still be registered interactively before it can be included in Apple's ad hoc provisioning profile.
+
+The equivalent manual commands are:
 
 ```bash
 cd "/Users/nikolaiaas/Documents/Bare Træn/apps/mobile"

@@ -91,6 +91,20 @@ test("serves local state and requires same-origin CSRF protection for actions", 
   );
 
   const performed = [];
+  const previewActions = [];
+  const iphonePreviewState = {
+    status: "needs-build",
+    message: "A fresh build is needed.",
+    version: "1.2.0",
+    checkedAt: "2026-08-21T19:00:00.000Z",
+  };
+  const iphonePreviewManager = {
+    getState: () => ({ ...iphonePreviewState }),
+    initialize: async () => undefined,
+    shutdown: async () => undefined,
+    prepare: async () => previewActions.push("prepare"),
+    refresh: async () => previewActions.push("refresh"),
+  };
   const manager = {
     initialize: async () => undefined,
     shutdown: async () => undefined,
@@ -116,6 +130,7 @@ test("serves local state and requires same-origin CSRF protection for actions", 
     evidenceDirectory,
     taskFile: path.join(directory, "tasks.json"),
     manager,
+    iphonePreviewManager,
   });
   runningApps.push(app);
   await app.listen();
@@ -158,6 +173,7 @@ test("serves local state and requires same-origin CSRF protection for actions", 
   assert.equal(stateResponse.status, 200);
   const state = await stateResponse.json();
   assert.equal(typeof state.csrfToken, "string");
+  assert.deepEqual(state.iphonePreview, iphonePreviewState);
   assert.equal(state.tasks.version, 3);
   assert.deepEqual(state.tasks.items, []);
 
@@ -216,6 +232,19 @@ test("serves local state and requires same-origin CSRF protection for actions", 
     body: JSON.stringify({ action: "start", service: "admin" }),
   });
   assert.equal(accepted.status, 200);
+  assert.deepEqual(performed, [{ action: "start", service: "admin" }]);
+
+  const prepared = await fetch(`${app.consoleUrl}/api/actions`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Origin: app.consoleUrl,
+      "X-CSRF-Token": state.csrfToken,
+    },
+    body: JSON.stringify({ action: "prepare-iphone-preview" }),
+  });
+  assert.equal(prepared.status, 200);
+  assert.deepEqual(previewActions, ["prepare"]);
   assert.deepEqual(performed, [{ action: "start", service: "admin" }]);
 
   const arbitraryCommand = await fetch(`${app.consoleUrl}/api/actions`, {

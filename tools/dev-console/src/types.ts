@@ -69,6 +69,16 @@ export interface GitSummary {
   status?: string;
 }
 
+export type IphonePreviewStatus =
+  "checking" | "ready" | "needs-build" | "queued" | "building" | "error";
+
+export interface IphonePreviewState {
+  status: IphonePreviewStatus;
+  message: string;
+  version: string | null;
+  checkedAt: string | null;
+}
+
 export interface ConsoleSnapshot {
   csrfToken: string;
   console: {
@@ -78,6 +88,7 @@ export interface ConsoleSnapshot {
   services: Record<ServiceId, ServiceState>;
   logs: Record<ServiceId, LogEntry[]>;
   tasks: TaskBoard;
+  iphonePreview: IphonePreviewState;
   git?: GitSummary;
 }
 

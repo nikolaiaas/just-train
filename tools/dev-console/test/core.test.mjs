@@ -39,6 +39,10 @@ describe("development action validation", () => {
     assert.deepEqual(validateActionRequest({ action: "stop-my-apps" }), {
       action: "stop-my-apps",
     });
+    assert.deepEqual(
+      validateActionRequest({ action: "prepare-iphone-preview" }),
+      { action: "prepare-iphone-preview" },
+    );
   });
 
   test("rejects arbitrary commands and unsupported fields", () => {
@@ -57,6 +61,22 @@ describe("development action validation", () => {
           action: "start",
           service: "admin",
           arguments: ["--inspect"],
+        }),
+      InputError,
+    );
+    assert.throws(
+      () =>
+        validateActionRequest({
+          action: "prepare-iphone-preview",
+          service: "iphoneMetro",
+        }),
+      InputError,
+    );
+    assert.throws(
+      () =>
+        validateActionRequest({
+          action: "prepare-iphone-preview",
+          url: "https://example.test/build",
         }),
       InputError,
     );
