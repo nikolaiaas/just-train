@@ -1,6 +1,6 @@
 {
   "version": 3,
-  "updatedAt": "2026-08-21T08:44:34.318Z",
+  "updatedAt": "2026-08-21T09:08:01.418Z",
   "items": [
     {
       "id": "auth-environment-slice",
@@ -16,13 +16,30 @@
     {
       "id": "hosted-preview-safety",
       "title": "Luk de sidste preview-huller",
-      "details": "Tilføj sikker syntetisk hosted data, Auth callbacks og korrekt APP_VARIANT til preview-opdateringer.",
+      "details": "Tilføj sikker syntetisk branch-data, branch-safe Auth/callbacks og korrekt APP_VARIANT, og forbind derefter Vercel med Supabase preview branches. Branching Compute faktureres separat og er ikke dækket af Spend Cap.",
       "implementationNotes": "",
       "evidence": [],
       "status": "backlog",
       "priority": 1,
       "createdAt": "2026-08-20T18:45:00.000Z",
-      "updatedAt": "2026-08-20T19:48:23.490Z"
+      "updatedAt": "2026-08-21T09:02:49.268Z"
+    },
+    {
+      "id": "f7f114f4-e2bb-4ac2-a8bf-1cec4032f9b2",
+      "title": "Ryd Supabase Advisor-advarsler",
+      "details": "Gennemgå de syv nuværende database-advarsler: begræns platformens rls_auto_enable-execute-rettigheder hvis sikkert, dokumentér de to tilsigtede SECURITY DEFINER-RPCer, og mål eller foren de overlappende læsepolitikker for topics, goals og exercises.",
+      "implementationNotes": "Ingen Advisor-fejl er fundet. RPCernes adgangsgrænser er allerede dækket af RLS- og concurrency-tests; event-triggerens standard execute-grants og de overlappende permissive policies skal stadig vurderes i en separat, testet migration før en rigtig pilot.",
+      "evidence": [
+        {
+          "kind": "link",
+          "label": "Supabase database advisors (login kræves)",
+          "url": "https://supabase.com/dashboard/project/wxhshsouhrjtlxdagwmh/advisors/security"
+        }
+      ],
+      "status": "backlog",
+      "priority": 2,
+      "createdAt": "2026-08-21T09:08:00.832Z",
+      "updatedAt": "2026-08-21T09:08:01.418Z"
     },
     {
       "id": "iphone-smoke-test",
@@ -31,7 +48,7 @@
       "implementationNotes": "",
       "evidence": [],
       "status": "backlog",
-      "priority": 2,
+      "priority": 3,
       "createdAt": "2026-08-20T18:45:00.000Z",
       "updatedAt": "2026-08-20T22:57:02.999Z"
     },
@@ -42,7 +59,7 @@
       "implementationNotes": "",
       "evidence": [],
       "status": "backlog",
-      "priority": 3,
+      "priority": 4,
       "createdAt": "2026-08-20T18:45:00.000Z",
       "updatedAt": "2026-08-20T19:48:09.561Z"
     },
@@ -53,7 +70,7 @@
       "implementationNotes": "",
       "evidence": [],
       "status": "backlog",
-      "priority": 4,
+      "priority": 5,
       "createdAt": "2026-08-20T23:58:25.783Z",
       "updatedAt": "2026-08-20T23:58:25.783Z"
     },
@@ -80,13 +97,24 @@
       "updatedAt": "2026-08-20T19:56:04.060Z"
     },
     {
+      "id": "341749c2-fc2d-4e9b-a322-f2815882cb09",
+      "title": "Sikkerhedskopiér Storage-filbytes",
+      "details": "Design, automatisér og restore-test en separat off-platform backup af filbytes i private Supabase Storage-buckets. Databasebackups indeholder kun metadata.",
+      "implementationNotes": "Afventer de private Storage-buckets og den godkendte retention- og slettepolitik. Pro-databasebackups genskaber ikke slettede Storage-objekter.",
+      "evidence": [],
+      "status": "todo",
+      "priority": 2,
+      "createdAt": "2026-08-21T09:02:49.313Z",
+      "updatedAt": "2026-08-21T09:03:03.406Z"
+    },
+    {
       "id": "ec85937a-c159-47d1-9281-71b595bb8c22",
       "title": "Tilføj profilbillede på voksenprofilen",
       "details": "Byg valg, upload, fremskridt, visning, udskiftning, sletning og fejltilstande med et syntetisk eller voksent testbillede.",
       "implementationNotes": "",
       "evidence": [],
       "status": "todo",
-      "priority": 2,
+      "priority": 3,
       "createdAt": "2026-08-20T19:56:04.024Z",
       "updatedAt": "2026-08-20T19:56:04.066Z"
     },
@@ -97,7 +125,7 @@
       "implementationNotes": "",
       "evidence": [],
       "status": "todo",
-      "priority": 3,
+      "priority": 4,
       "createdAt": "2026-08-20T19:52:36.403Z",
       "updatedAt": "2026-08-20T19:56:04.072Z"
     },
@@ -108,7 +136,7 @@
       "implementationNotes": "",
       "evidence": [],
       "status": "todo",
-      "priority": 4,
+      "priority": 5,
       "createdAt": "2026-08-20T19:52:36.409Z",
       "updatedAt": "2026-08-20T19:56:04.078Z"
     },
@@ -119,9 +147,26 @@
       "implementationNotes": "",
       "evidence": [],
       "status": "todo",
-      "priority": 5,
+      "priority": 6,
       "createdAt": "2026-08-20T21:43:38.513Z",
       "updatedAt": "2026-08-20T21:43:38.513Z"
+    },
+    {
+      "id": "a5ed6926-00b7-49c4-ad6b-41a4974b6728",
+      "title": "Bekræft første Pro-backup og recovery",
+      "details": "Bekræft den første fuldførte daglige databasebackup, som er dateret efter Pro-opgraderingen 21. august 2026, og dokumentér restorevalg og forventet nedetid uden at udføre en destruktiv restore på Hosted Development.",
+      "implementationNotes": "Tre fysiske restore points fra før opgraderingen er allerede synlige med Restore-handling; den nyeste er 20. august 2026 kl. 23:07 UTC. Kortet forbliver Doing, indtil den første planlagte backup efter Pro-opgraderingen er synlig.",
+      "evidence": [
+        {
+          "kind": "link",
+          "label": "Supabase databasebackups (login kræves)",
+          "url": "https://supabase.com/dashboard/project/wxhshsouhrjtlxdagwmh/database/backups/scheduled"
+        }
+      ],
+      "status": "doing",
+      "priority": 0,
+      "createdAt": "2026-08-21T09:02:49.299Z",
+      "updatedAt": "2026-08-21T09:02:49.299Z"
     },
     {
       "id": "dev-console",
@@ -319,6 +364,23 @@
       "priority": 8,
       "createdAt": "2026-08-21T06:04:02.991Z",
       "updatedAt": "2026-08-21T08:44:34.318Z"
+    },
+    {
+      "id": "4920b545-fa25-46f0-9e02-3b8039f82966",
+      "title": "Opgradér Supabase sikkert til Pro",
+      "details": "Aktivér Pro uden at slå ekstra, variable omkostninger eller destruktive driftstilvalg til.",
+      "implementationNotes": "Organisationen Nikolai Aas er opgraderet til Pro. Spend Cap er slået til, bare-traen-development er sund på den eksisterende Nano-compute, og PITR, større compute og automatiske preview branches er ikke aktiveret. Dashboardet viser $25 i nuværende og forventede omkostninger for perioden.",
+      "evidence": [
+        {
+          "kind": "link",
+          "label": "Supabase billing (login kræves)",
+          "url": "https://supabase.com/dashboard/org/mwdrnejmbnxrcxgshduh/billing"
+        }
+      ],
+      "status": "done",
+      "priority": 9,
+      "createdAt": "2026-08-21T09:02:49.284Z",
+      "updatedAt": "2026-08-21T09:02:49.284Z"
     }
   ]
 }
