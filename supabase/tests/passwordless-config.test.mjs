@@ -6,13 +6,16 @@ const configUrl = new URL("../config.toml", import.meta.url);
 const readmeUrl = new URL("../README.md", import.meta.url);
 const seedUrl = new URL("../seed.sql", import.meta.url);
 const templateUrl = new URL("../templates/passwordless.html", import.meta.url);
+const packageUrl = new URL("../../package.json", import.meta.url);
 
-const [config, readme, seed, template] = await Promise.all([
+const [config, readme, seed, template, packageSource] = await Promise.all([
   readFile(configUrl, "utf8"),
   readFile(readmeUrl, "utf8"),
   readFile(seedUrl, "utf8"),
   readFile(templateUrl, "utf8"),
+  readFile(packageUrl, "utf8"),
 ]);
+const packageJson = JSON.parse(packageSource);
 
 function section(source, name) {
   const marker = `[${name}]`;
@@ -98,4 +101,35 @@ test("local fixture users have no password hash", () => {
   assert.equal(occurrences(seed, "@example.test"), 6);
   assert.match(readme, /fixture users are passwordless/);
   assert.match(readme, /127\.0\.0\.1:54324/);
+});
+
+test("hosted branches cannot seed automatically", () => {
+  const dbSeed = section(config, "db.seed");
+
+  assert.match(dbSeed, /^enabled = false$/m);
+  assert.match(dbSeed, /^sql_paths = \["\.\/seed\.sql"\]$/m);
+});
+
+test("the explicit fixture reset is local-only and fail-closed", () => {
+  assert.equal(
+    packageJson.scripts["supabase:reset"],
+    "supabase db reset --local --sql-paths ./seed.sql",
+  );
+  assert.doesNotMatch(packageJson.scripts["supabase:reset"], /--linked/);
+  assert.match(
+    seed,
+    /current_setting\('app\.settings\.jwt_secret', true\)[\s\S]*?is distinct from 'super-secret-jwt-token-with-at-least-32-characters-long'/,
+  );
+  assert.match(
+    seed,
+    /raise exception 'Refusing to load Bare Træn local fixtures outside the Supabase CLI stack\.'/,
+  );
+});
+
+test("Mailpit uses the hosted-parser-compatible section name", () => {
+  const inbucket = section(config, "inbucket");
+
+  assert.match(inbucket, /^enabled = true$/m);
+  assert.match(inbucket, /^port = 54324$/m);
+  assert.doesNotMatch(config, /^\[local_smtp\]$/m);
 });

@@ -1,6 +1,6 @@
 {
   "version": 3,
-  "updatedAt": "2026-08-20T23:58:25.783Z",
+  "updatedAt": "2026-08-21T08:27:09.252Z",
   "items": [
     {
       "id": "auth-environment-slice",
@@ -58,24 +58,13 @@
       "updatedAt": "2026-08-20T23:58:25.783Z"
     },
     {
-      "id": "4ede58dd-3297-45bd-8d46-ee333d3ef36b",
-      "title": "Deployér onboarding-migrationer til Hosted Development",
-      "details": "Få eksplicit godkendelse, kør child-migrationens fail-fast preflight, deploy de testede parent- og child-onboarding-migrationer uden lokal seed, og verificér med en syntetisk eller voksen testkonto.",
-      "implementationNotes": "",
-      "evidence": [],
-      "status": "todo",
-      "priority": 0,
-      "createdAt": "2026-08-20T22:55:33.519Z",
-      "updatedAt": "2026-08-20T23:58:13.034Z"
-    },
-    {
       "id": "25d3bfc2-3592-4e67-ab7c-9de6e02ee7bc",
       "title": "Konfigurér mailafsender til Hosted Development",
       "details": "Vælg og tilslut en brugerdefineret SMTP-udbyder i Supabase, indsæt den danske kode- og magic-link-template, slå link-tracking fra, og test kun med en syntetisk eller voksen adresse.",
       "implementationNotes": "",
       "evidence": [],
       "status": "todo",
-      "priority": 1,
+      "priority": 0,
       "createdAt": "2026-08-20T20:34:52.396Z",
       "updatedAt": "2026-08-20T20:35:20.548Z"
     },
@@ -86,7 +75,7 @@
       "implementationNotes": "",
       "evidence": [],
       "status": "todo",
-      "priority": 2,
+      "priority": 1,
       "createdAt": "2026-08-20T19:52:36.397Z",
       "updatedAt": "2026-08-20T19:56:04.060Z"
     },
@@ -97,7 +86,7 @@
       "implementationNotes": "",
       "evidence": [],
       "status": "todo",
-      "priority": 3,
+      "priority": 2,
       "createdAt": "2026-08-20T19:56:04.024Z",
       "updatedAt": "2026-08-20T19:56:04.066Z"
     },
@@ -108,7 +97,7 @@
       "implementationNotes": "",
       "evidence": [],
       "status": "todo",
-      "priority": 4,
+      "priority": 3,
       "createdAt": "2026-08-20T19:52:36.403Z",
       "updatedAt": "2026-08-20T19:56:04.072Z"
     },
@@ -119,7 +108,7 @@
       "implementationNotes": "",
       "evidence": [],
       "status": "todo",
-      "priority": 5,
+      "priority": 4,
       "createdAt": "2026-08-20T19:52:36.409Z",
       "updatedAt": "2026-08-20T19:56:04.078Z"
     },
@@ -130,9 +119,26 @@
       "implementationNotes": "",
       "evidence": [],
       "status": "todo",
-      "priority": 6,
+      "priority": 5,
       "createdAt": "2026-08-20T21:43:38.513Z",
       "updatedAt": "2026-08-20T21:43:38.513Z"
+    },
+    {
+      "id": "9431a6e1-904d-4b49-b702-5f7574024c2b",
+      "title": "Automatisér Supabase-deploy og previews",
+      "details": "Deploy testede database-migrationer automatisk til Hosted Development efter grøn CI på main, uden seed. Tilføj serialisering, secrets- og backup-runbook, drift-detektion samt en sikker plan for Vercel- og Supabase-previewmiljøer.",
+      "implementationNotes": "Hosted Development er migreret uden seed og har en privat logisk backup. GitHub main er beskyttet af pull request samt krævede quality-, database- og Vercel-previewchecks. Den native Supabase GitHub-integration er nu begrænset til nikolaiaas/just-train, bruger working directory ., deployer main og har automatiske preview-branches slået fra. Den første beskyttede PR er grøn; kortet forbliver Doing indtil merge og den efterfølgende hostede deployment er verificeret.",
+      "evidence": [
+        {
+          "kind": "link",
+          "label": "Beskyttet PR og live preview",
+          "url": "https://github.com/nikolaiaas/just-train/pull/1"
+        }
+      ],
+      "status": "doing",
+      "priority": 0,
+      "createdAt": "2026-08-21T06:04:02.991Z",
+      "updatedAt": "2026-08-21T08:27:09.252Z"
     },
     {
       "id": "dev-console",
@@ -291,6 +297,23 @@
       "priority": 6,
       "createdAt": "2026-08-20T19:56:04.018Z",
       "updatedAt": "2026-08-20T23:58:01.914Z"
+    },
+    {
+      "id": "4ede58dd-3297-45bd-8d46-ee333d3ef36b",
+      "title": "Deployér onboarding-migrationer til Hosted Development",
+      "details": "Få eksplicit godkendelse, kør child-migrationens fail-fast preflight, deploy de testede parent- og child-onboarding-migrationer uden lokal seed, og verificér med en syntetisk eller voksen testkonto.",
+      "implementationNotes": "Den 21. august 2026 blev en privat logisk backup gemt uden for repository og Git med låste filrettigheder og verificerede checksums. Dry-run fandt kun parent- og child-onboarding. Begge migrationsfiler blev anvendt uden seed, og Hosted Development viser nu alle tre migrationer i sync. Auth health og en offentlig RLS-læsning svarer 200; det hostede udviklingsmiljø indeholder ingen app-rækker.",
+      "evidence": [
+        {
+          "kind": "link",
+          "label": "Testede onboarding-migrationer",
+          "url": "https://github.com/nikolaiaas/just-train/commit/99eed4613589b98a321907136b786bd262810c53"
+        }
+      ],
+      "status": "done",
+      "priority": 7,
+      "createdAt": "2026-08-20T22:55:33.519Z",
+      "updatedAt": "2026-08-21T06:26:31.654Z"
     }
   ]
 }

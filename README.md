@@ -85,7 +85,13 @@ Studio is normally available at [http://localhost:54323](http://localhost:54323)
 
 The local Supabase stack is development-only and must not be exposed to the public internet. A physical iPhone should normally use the hosted development project rather than the Mac's local database.
 
-The shared `bare-traen-development` project runs in Supabase's Stockholm region. Its schema is deployed exclusively from `supabase/migrations`; the credential-bearing local fixture seed is deliberately blocked from hosted environments. Put only the hosted project's public URL and publishable key in each app's ignored `.env.local` file.
+The shared `bare-traen-development` project runs in Supabase's Stockholm region. Its current parent- and child-onboarding schema is deployed. Vercel already creates protected pull-request previews and updates the stable administration preview from `main`; both use the shared Hosted Development backend because automatic Supabase preview branches are off on the Free plan.
+
+The native Supabase GitHub integration is enabled and restricted to `nikolaiaas/just-train`, with working directory `.`, `main` as its production branch, production deploys enabled, and automatic preview branches off until their paid-plan setup is reviewed. `main` is protected: every change must arrive through a current pull request with successful `quality`, `database`, and Vercel preview checks, resolved conversations, squash merge, and linear history. The first end-to-end merge verification is still pending, so a merge must not yet be assumed to update Hosted Development automatically.
+
+When enabled, only migration files will take this automatic route. Never deploy `supabase/seed.sql` or push local `supabase/config.toml` settings to Hosted Development. Hosted Auth and other operational configuration are reviewed separately. Use backward-compatible expand/contract migrations: add the new shape first, update all clients, and remove an old shape only in a later reviewed migration. This is especially important because an installed iPhone build can outlive a web deployment.
+
+Immediately before the 2026-08-21 onboarding deployment, a private logical database backup was saved outside this repository and outside Git. It is a point-in-time recovery aid, not an automatic backup service and not a copy of uploaded Storage object bytes. The current Free project has no automatic database backups or uptime guarantee. Supabase Pro billing and a separate Storage-object backup plan require explicit approval before any real-person or real-child data is allowed. Put only the hosted project's public URL and publishable key in each app's ignored `.env.local` file.
 
 ## iPhone without an App Store release
 
