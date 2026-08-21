@@ -93,13 +93,15 @@ export async function completeParentOnboarding(
   const displayName = normalizeName(input.displayName, "invalid_display_name");
   const familyName = normalizeName(input.familyName, "invalid_family_name");
 
-  let response: Awaited<ReturnType<BareTraenClient["rpc"]>>;
-
-  try {
-    response = await client.rpc("complete_parent_onboarding", {
+  const request = () =>
+    client.rpc("complete_parent_onboarding", {
       p_display_name: displayName,
       p_family_name: familyName,
     });
+  let response: Awaited<ReturnType<typeof request>>;
+
+  try {
+    response = await request();
   } catch {
     throw new ParentOnboardingError("onboarding_failed");
   }

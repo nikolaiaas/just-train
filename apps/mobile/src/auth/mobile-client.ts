@@ -17,11 +17,21 @@ import {
   type MobilePlatform,
 } from "./core";
 import { createMobileAuthStorage } from "./storage";
+import {
+  parsePendingChildCreation,
+  serializePendingChildCreation,
+  type PendingChildCreation,
+} from "@/children/child-setup";
 
 export type MobileAuthClient = {
+  clearPendingChildCreation(userId: string): Promise<void>;
   clearStoredSession(): Promise<void>;
   client: BareTraenClient;
+  loadPendingChildCreation(
+    userId: string,
+  ): Promise<PendingChildCreation | null>;
   redirectTo: string;
+  savePendingChildCreation(pending: PendingChildCreation): Promise<void>;
 };
 
 export function createMobileAuthClient(): MobileAuthClient {
@@ -55,6 +65,8 @@ export function createMobileAuthClient(): MobileAuthClient {
       : undefined,
   );
   const storage = createMobileAuthStorage(storageKey);
+  const pendingStorageKey = (userId: string) =>
+    `${storageKey}.child-create.${userId.toLowerCase()}`;
   const client = createBareTraenClient(config, {
     auth: {
       storage,
@@ -63,8 +75,25 @@ export function createMobileAuthClient(): MobileAuthClient {
   });
 
   return {
+    clearPendingChildCreation: (userId) =>
+      storage.removeDurableItem(pendingStorageKey(userId)),
     clearStoredSession: () => storage.removeItem(storageKey),
     client,
+    async loadPendingChildCreation(userId) {
+      const key = pendingStorageKey(userId);
+      const serialized = await storage.getDurableItem(key);
+
+      if (serialized === null) {
+        return null;
+      }
+
+      return parsePendingChildCreation(serialized, userId);
+    },
     redirectTo,
+    savePendingChildCreation: (pending) =>
+      storage.setDurableItem(
+        pendingStorageKey(pending.userId),
+        serializePendingChildCreation(pending),
+      ),
   };
 }

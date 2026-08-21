@@ -659,6 +659,27 @@ export type Database = {
           role: Database["public"]["Enums"]["family_member_role"];
         }[];
       };
+      create_child_profile: {
+        Args: {
+          p_avatar_seed: string;
+          p_consent_granted: boolean;
+          p_consent_version: string;
+          p_creation_request_id: string;
+          p_display_name: string;
+          p_expected_user_id: string;
+          p_family_id: string;
+        };
+        Returns: {
+          avatar_seed: string;
+          child_profile_id: string;
+          consent_version: string;
+          consented_at: string;
+          created: boolean;
+          display_name: string;
+          family_id: string;
+          is_active: boolean;
+        }[];
+      };
     };
     Enums: {
       attempt_outcome: "completed" | "partial" | "skipped";

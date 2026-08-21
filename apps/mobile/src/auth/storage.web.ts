@@ -1,8 +1,4 @@
-type AuthStorage = {
-  getItem(key: string): Promise<string | null>;
-  removeItem(key: string): Promise<void>;
-  setItem(key: string, value: string): Promise<void>;
-};
+import type { AuthStorage } from "./encrypted-storage";
 
 const tombstone = Symbol("removed");
 const memoryOverrides = new Map<string, string | typeof tombstone>();
@@ -40,6 +36,16 @@ export function createMobileAuthStorage(namespace: string): AuthStorage {
   }
 
   return {
+    async getDurableItem(key) {
+      const storage = browserStorage();
+
+      if (!storage) {
+        throw new Error("Det sikre lager kunne ikke læses.");
+      }
+
+      return storage.getItem(storageKey(key));
+    },
+
     async getItem(key) {
       const scopedKey = storageKey(key);
       const override = memoryOverrides.get(scopedKey);
@@ -61,6 +67,23 @@ export function createMobileAuthStorage(namespace: string): AuthStorage {
       }
     },
 
+    async removeDurableItem(key) {
+      const scopedKey = storageKey(key);
+      const storage = browserStorage();
+
+      if (!storage) {
+        throw new Error("Det sikre lager kunne ikke opdateres.");
+      }
+
+      storage.removeItem(scopedKey);
+
+      if (storage.getItem(scopedKey) !== null) {
+        throw new Error("Det sikre lager kunne ikke opdateres.");
+      }
+
+      memoryOverrides.delete(scopedKey);
+    },
+
     async removeItem(key) {
       const scopedKey = storageKey(key);
       memoryOverrides.set(scopedKey, tombstone);
@@ -78,6 +101,23 @@ export function createMobileAuthStorage(namespace: string): AuthStorage {
         // recover the stale browser value.
         throw error;
       }
+    },
+
+    async setDurableItem(key, value) {
+      const scopedKey = storageKey(key);
+      const storage = browserStorage();
+
+      if (!storage) {
+        throw new Error("Det sikre lager kunne ikke opdateres.");
+      }
+
+      storage.setItem(scopedKey, value);
+
+      if (storage.getItem(scopedKey) !== value) {
+        throw new Error("Det sikre lager kunne ikke opdateres.");
+      }
+
+      memoryOverrides.delete(scopedKey);
     },
 
     async setItem(key, value) {

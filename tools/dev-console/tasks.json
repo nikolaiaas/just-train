@@ -1,6 +1,6 @@
 {
   "version": 3,
-  "updatedAt": "2026-08-20T22:57:02.999Z",
+  "updatedAt": "2026-08-20T23:58:25.783Z",
   "items": [
     {
       "id": "auth-environment-slice",
@@ -47,15 +47,26 @@
       "updatedAt": "2026-08-20T19:48:09.561Z"
     },
     {
+      "id": "5d2244ac-cdce-413d-9e77-67aacf070687",
+      "title": "Godkend privacy-flow før rigtige børnedata",
+      "details": "Afklar juridisk grundlag, værgetekst, tilbagetrækning, sletning og retention før en pilot med rigtige børn eller upload af børnefotos.",
+      "implementationNotes": "",
+      "evidence": [],
+      "status": "backlog",
+      "priority": 4,
+      "createdAt": "2026-08-20T23:58:25.783Z",
+      "updatedAt": "2026-08-20T23:58:25.783Z"
+    },
+    {
       "id": "4ede58dd-3297-45bd-8d46-ee333d3ef36b",
-      "title": "Deployér familie-onboarding til Hosted Development",
-      "details": "Få eksplicit godkendelse, deploy den testede parent-onboarding-migration uden lokal seed, og verificér med en syntetisk eller voksen testkonto.",
+      "title": "Deployér onboarding-migrationer til Hosted Development",
+      "details": "Få eksplicit godkendelse, kør child-migrationens fail-fast preflight, deploy de testede parent- og child-onboarding-migrationer uden lokal seed, og verificér med en syntetisk eller voksen testkonto.",
       "implementationNotes": "",
       "evidence": [],
       "status": "todo",
       "priority": 0,
       "createdAt": "2026-08-20T22:55:33.519Z",
-      "updatedAt": "2026-08-20T22:55:41.745Z"
+      "updatedAt": "2026-08-20T23:58:13.034Z"
     },
     {
       "id": "25d3bfc2-3592-4e67-ab7c-9de6e02ee7bc",
@@ -69,24 +80,13 @@
       "updatedAt": "2026-08-20T20:35:20.548Z"
     },
     {
-      "id": "bd45f90b-bc50-4c2e-b031-33d28ec2e5a0",
-      "title": "Opret barn under forælderens session",
-      "details": "Opret barnet som en forælderejet profil med preset-avatar og uden en separat Auth-konto eller et password.",
-      "implementationNotes": "",
-      "evidence": [],
-      "status": "todo",
-      "priority": 2,
-      "createdAt": "2026-08-20T19:56:04.018Z",
-      "updatedAt": "2026-08-20T19:56:04.054Z"
-    },
-    {
       "id": "cce5847c-7d0c-477d-87ec-82e41aced1bd",
       "title": "Opret privat lager til profilbilleder",
       "details": "Opret privat Supabase Storage, filsti-kontrakt samt positive og negative adgangstests til voksne profilbilleder. Rigtige børnebilleder forbliver blokeret.",
       "implementationNotes": "",
       "evidence": [],
       "status": "todo",
-      "priority": 3,
+      "priority": 2,
       "createdAt": "2026-08-20T19:52:36.397Z",
       "updatedAt": "2026-08-20T19:56:04.060Z"
     },
@@ -97,7 +97,7 @@
       "implementationNotes": "",
       "evidence": [],
       "status": "todo",
-      "priority": 4,
+      "priority": 3,
       "createdAt": "2026-08-20T19:56:04.024Z",
       "updatedAt": "2026-08-20T19:56:04.066Z"
     },
@@ -108,7 +108,7 @@
       "implementationNotes": "",
       "evidence": [],
       "status": "todo",
-      "priority": 5,
+      "priority": 4,
       "createdAt": "2026-08-20T19:52:36.403Z",
       "updatedAt": "2026-08-20T19:56:04.072Z"
     },
@@ -119,7 +119,7 @@
       "implementationNotes": "",
       "evidence": [],
       "status": "todo",
-      "priority": 6,
+      "priority": 5,
       "createdAt": "2026-08-20T19:52:36.409Z",
       "updatedAt": "2026-08-20T19:56:04.078Z"
     },
@@ -130,7 +130,7 @@
       "implementationNotes": "",
       "evidence": [],
       "status": "todo",
-      "priority": 7,
+      "priority": 6,
       "createdAt": "2026-08-20T21:43:38.513Z",
       "updatedAt": "2026-08-20T21:43:38.513Z"
     },
@@ -269,6 +269,28 @@
       "priority": 5,
       "createdAt": "2026-08-20T19:52:36.390Z",
       "updatedAt": "2026-08-20T22:56:54.623Z"
+    },
+    {
+      "id": "bd45f90b-bc50-4c2e-b031-33d28ec2e5a0",
+      "title": "Opret barn under forælderens session",
+      "details": "Opret barnet som en forælderejet profil med preset-avatar og uden en separat Auth-konto eller et password.",
+      "implementationNotes": "Forælderen kan nu oprette en børneprofil uden barnelogin, alder, e-mail eller foto. Oprettelsen er owner-only, bruger fire preset-avatarer, gemmer en versioneret værgebekræftelse privat og håndhæver højst 10 aktive børn. En konto- og backend-afgrænset request-id gemmes sikkert før databasekaldet og genbruges efter afbrydelse, så retries ikke opretter dubletter. Lokal Supabase, 165 RLS/databasetests, to concurrency-regressioner, 34 mobiltests, typecheck, lint og en komplet syntetisk browsergennemgang består.",
+      "evidence": [
+        {
+          "kind": "image",
+          "label": "Tom, dataminimeret børneopsætning",
+          "path": "bd45f90b-bc50-4c2e-b031-33d28ec2e5a0/2026-08-21-child-setup-empty.png"
+        },
+        {
+          "kind": "image",
+          "label": "Syntetisk barn oprettet og valgt",
+          "path": "bd45f90b-bc50-4c2e-b031-33d28ec2e5a0/2026-08-21-synthetic-child-selected.png"
+        }
+      ],
+      "status": "done",
+      "priority": 6,
+      "createdAt": "2026-08-20T19:56:04.018Z",
+      "updatedAt": "2026-08-20T23:58:01.914Z"
     }
   ]
 }

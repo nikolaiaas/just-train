@@ -12,7 +12,7 @@ From the repository root:
 pnpm supabase:start
 pnpm supabase:reset
 pnpm test:supabase-auth
-pnpm exec supabase test db
+pnpm supabase:test
 pnpm supabase:lint
 ```
 
@@ -77,3 +77,23 @@ confirmation through the real UI.
 Before applying changes to a linked development project, preview them with
 `pnpm exec supabase db push --dry-run`. Do not run a linked reset unless the
 target has been confirmed as disposable development infrastructure.
+
+### Child-creation migration preflight
+
+`202608210001_child_profile_creation.sql` deliberately fails before adding its
+name constraint or active-child trigger when existing hosted data is not
+compatible. It reports only aggregate counts and refuses to make product
+decisions silently. The migration first takes a DML-conflicting lock on child
+profiles, so an older client cannot insert or reactivate a child between the
+compatibility count and installation of the new enforcement trigger.
+
+- A child name with surrounding whitespace or control characters must be
+  reviewed and normalized explicitly with the family. The migration does not
+  rewrite names automatically.
+- A family with more than ten active child profiles must be reviewed by its
+  owner. The appropriate profiles must be deactivated or otherwise remediated
+  before retrying; the migration never chooses a child on the family's behalf.
+
+Treat either preflight exception as a deployment stop, inspect the affected
+synthetic development rows through a trusted workflow, and rerun the complete
+local reset and database tests before attempting the hosted migration again.

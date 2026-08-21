@@ -1,6 +1,9 @@
 import {
+  CHILD_PROFILE_CONSENT_VERSION,
+  CreateChildProfileError,
   completeAuthCallback,
   completeParentOnboarding,
+  createChildProfile,
   logout as logoutSession,
   onAuthSessionChange,
   requestEmailSignIn,
@@ -20,12 +23,22 @@ import {
 } from "react";
 import { AppState, Platform } from "react-native";
 
+import {
+  isCurrentChildCreationContext,
+  isSamePendingChildCreation,
+  normalizeChildSetup,
+  shouldRetainPendingChildCreation,
+  type ChildAvatarPreset,
+  type PendingChildCreation,
+} from "@/children/child-setup";
+
 import { parseMobileAuthCallbackUrl } from "./callback";
 import { normalizeParentOnboarding, secondsUntilResend } from "./core";
 import { attemptLogout } from "./logout";
 import { createMobileAuthClient, type MobileAuthClient } from "./mobile-client";
 import {
   loadParentBootstrap,
+  resolveCreatedChildFromBootstrap,
   type ParentBootstrap,
   type ParentChild,
 } from "./parent-data";
@@ -37,6 +50,7 @@ import {
 } from "./session-transition";
 
 type AuthStatus = "loading" | "ready" | "configuration-error" | "error";
+type PendingChildCreationStatus = "loading" | "ready" | "error";
 type BootstrapState =
   | { status: "idle"; data: null }
   | { status: "loading"; data: null }
@@ -48,11 +62,19 @@ type EmailFlow = {
   sentAt: number;
 };
 
+type CreateChildInput = {
+  avatarSeed: ChildAvatarPreset;
+  consentGranted: boolean;
+  creationRequestId: string;
+  displayName: string;
+};
+
 type AuthContextValue = {
   authNotice: string | null;
   authStatus: AuthStatus;
   bootstrap: BootstrapState;
   clearAuthNotice(): void;
+  createChild(input: CreateChildInput): Promise<ParentChild>;
   completeMagicLink(callbackUrl: string): Promise<void>;
   completeOnboarding(input: {
     displayName: string;
@@ -61,7 +83,10 @@ type AuthContextValue = {
   emailFlow: EmailFlow | null;
   logout(): Promise<void>;
   logoutError: string | null;
+  pendingChildCreation: PendingChildCreation | null;
+  pendingChildCreationStatus: PendingChildCreationStatus;
   refreshParent(): void;
+  retryPendingChildCreation(): void;
   retryAuth(): void;
   requestEmail(email: string): Promise<void>;
   resendEmail(): Promise<void>;
@@ -93,9 +118,17 @@ export function AuthProvider({ children }: PropsWithChildren) {
   });
   const [bootstrapRevision, setBootstrapRevision] = useState(0);
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
+  const [pendingChildCreation, setPendingChildCreation] =
+    useState<PendingChildCreation | null>(null);
+  const [pendingChildCreationStatus, setPendingChildCreationStatus] =
+    useState<PendingChildCreationStatus>("ready");
+  const [pendingChildStorageRevision, setPendingChildStorageRevision] =
+    useState(0);
   const [runtimeRevision, setRuntimeRevision] = useState(0);
   const emailRequestInFlight = useRef(false);
   const otpVerificationInFlight = useRef(false);
+  const childCreationInFlight = useRef(false);
+  const pendingChildCreationRef = useRef<PendingChildCreation | null>(null);
   const callbackState = useRef<"idle" | "processing" | "done">("idle");
   const bootstrapRequest = useRef(0);
   const currentSessionUserId = useRef<string | null>(null);
@@ -118,6 +151,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
       if (transition.userChanged) {
         setBootstrap({ status: "idle", data: null });
         setSelectedChildId(null);
+        pendingChildCreationRef.current = null;
+        setPendingChildCreation(null);
+        setPendingChildCreationStatus(nextUserId ? "loading" : "ready");
       }
 
       setSession(nextSession);
@@ -125,6 +161,38 @@ export function AuthProvider({ children }: PropsWithChildren) {
     [],
   );
   const sessionUserId = session?.user.id ?? null;
+
+  useEffect(() => {
+    if (!mobileClient || !sessionUserId || authStatus !== "ready") {
+      return;
+    }
+
+    const requestedUserId = sessionUserId;
+    let active = true;
+
+    void mobileClient
+      .loadPendingChildCreation(requestedUserId)
+      .then((pending) => {
+        if (!active || currentSessionUserId.current !== requestedUserId) {
+          return;
+        }
+
+        pendingChildCreationRef.current = pending;
+        setPendingChildCreation(pending);
+        setPendingChildCreationStatus("ready");
+      })
+      .catch(() => {
+        if (active && currentSessionUserId.current === requestedUserId) {
+          pendingChildCreationRef.current = null;
+          setPendingChildCreation(null);
+          setPendingChildCreationStatus("error");
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [authStatus, mobileClient, pendingChildStorageRevision, sessionUserId]);
 
   useEffect(() => {
     let active = true;
@@ -403,6 +471,176 @@ export function AuthProvider({ children }: PropsWithChildren) {
     [getClient],
   );
 
+  const createChild = useCallback(
+    async (input: CreateChildInput): Promise<ParentChild> => {
+      const normalized = normalizeChildSetup(input);
+
+      if (childCreationInFlight.current) {
+        throw new Error("En børneprofil er allerede ved at blive oprettet.");
+      }
+
+      if (
+        bootstrap.status !== "ready" ||
+        !bootstrap.data.family ||
+        bootstrap.data.family.role !== "owner" ||
+        !sessionUserId
+      ) {
+        throw new Error("Familien kan ikke oprette en børneprofil nu.");
+      }
+
+      const client = getClient();
+      const activeMobileClient = mobileClient;
+      const requestedFamilyId = bootstrap.data.family.id;
+      const requestedUserId = sessionUserId;
+
+      if (
+        !activeMobileClient ||
+        !isCurrentChildCreationContext({
+          bootstrapFamilyId: bootstrap.data.family.id,
+          bootstrapProfileId: bootstrap.data.profile.id,
+          currentSessionUserId: currentSessionUserId.current,
+          requestedFamilyId,
+          requestedUserId,
+        })
+      ) {
+        throw new CreateChildProfileError("session_changed");
+      }
+
+      const pendingRequest: PendingChildCreation = {
+        ...normalized,
+        creationRequestId: input.creationRequestId,
+        familyId: requestedFamilyId,
+        userId: requestedUserId,
+      };
+      const existingPending = pendingChildCreationRef.current;
+
+      if (
+        existingPending &&
+        (existingPending.creationRequestId !==
+          pendingRequest.creationRequestId ||
+          existingPending.userId !== pendingRequest.userId ||
+          existingPending.familyId !== pendingRequest.familyId ||
+          existingPending.displayName !== pendingRequest.displayName ||
+          existingPending.avatarSeed !== pendingRequest.avatarSeed)
+      ) {
+        throw new CreateChildProfileError("creation_failed");
+      }
+
+      pendingChildCreationRef.current = pendingRequest;
+      setPendingChildCreation(pendingRequest);
+      setPendingChildCreationStatus("ready");
+      childCreationInFlight.current = true;
+      let pendingCleared = false;
+
+      try {
+        await activeMobileClient.savePendingChildCreation(pendingRequest);
+
+        if (
+          !isCurrentChildCreationContext({
+            bootstrapFamilyId: bootstrap.data.family.id,
+            bootstrapProfileId: bootstrap.data.profile.id,
+            currentSessionUserId: currentSessionUserId.current,
+            requestedFamilyId,
+            requestedUserId,
+          })
+        ) {
+          throw new CreateChildProfileError("session_changed");
+        }
+
+        const result = await createChildProfile(client, {
+          avatarSeed: normalized.avatarSeed,
+          consentGranted: normalized.consentGranted,
+          consentVersion: CHILD_PROFILE_CONSENT_VERSION,
+          creationRequestId: input.creationRequestId,
+          displayName: normalized.displayName,
+          expectedUserId: requestedUserId,
+          familyId: requestedFamilyId,
+        });
+
+        if (
+          currentSessionUserId.current !== requestedUserId ||
+          result.familyId !== requestedFamilyId ||
+          !result.isActive
+        ) {
+          throw new Error("Børneprofilen kunne ikke bekræftes sikkert.");
+        }
+
+        const requestId = bootstrapRequest.current + 1;
+        bootstrapRequest.current = requestId;
+        const refreshed = await loadParentBootstrap(client);
+
+        if (
+          !canAcceptBootstrapResult({
+            activeRequestId: bootstrapRequest.current,
+            currentUserId: currentSessionUserId.current,
+            profileId: refreshed.profile.id,
+            requestId,
+            requestedUserId,
+          })
+        ) {
+          throw new Error("Børneprofilen kunne ikke bekræftes sikkert.");
+        }
+
+        const createdChild = resolveCreatedChildFromBootstrap(refreshed, {
+          childId: result.childProfileId,
+          familyId: requestedFamilyId,
+          profileId: requestedUserId,
+        });
+
+        if (
+          createdChild.displayName !== result.displayName ||
+          createdChild.avatarSeed !== result.avatarSeed
+        ) {
+          throw new Error("Børneprofilen kunne ikke bekræftes sikkert.");
+        }
+
+        await activeMobileClient.clearPendingChildCreation(requestedUserId);
+        pendingCleared = true;
+
+        if (
+          currentSessionUserId.current !== requestedUserId ||
+          !isSamePendingChildCreation(
+            pendingChildCreationRef.current,
+            pendingRequest,
+          )
+        ) {
+          throw new CreateChildProfileError("session_changed");
+        }
+
+        setBootstrap({ status: "ready", data: refreshed });
+        setSelectedChildId(createdChild.id);
+        pendingChildCreationRef.current = null;
+        setPendingChildCreation(null);
+        return createdChild;
+      } catch (error) {
+        if (!pendingCleared && !shouldRetainPendingChildCreation(error)) {
+          try {
+            await activeMobileClient.clearPendingChildCreation(requestedUserId);
+            pendingCleared = true;
+
+            if (
+              currentSessionUserId.current === requestedUserId &&
+              isSamePendingChildCreation(
+                pendingChildCreationRef.current,
+                pendingRequest,
+              )
+            ) {
+              pendingChildCreationRef.current = null;
+              setPendingChildCreation(null);
+            }
+          } catch {
+            throw new CreateChildProfileError("creation_failed");
+          }
+        }
+
+        throw error;
+      } finally {
+        childCreationInFlight.current = false;
+      }
+    },
+    [bootstrap, getClient, mobileClient, sessionUserId],
+  );
+
   const logout = useCallback(async () => {
     setLogoutError(null);
 
@@ -493,12 +731,19 @@ export function AuthProvider({ children }: PropsWithChildren) {
       authStatus,
       bootstrap,
       clearAuthNotice: () => setAuthNotice(null),
+      createChild,
       completeMagicLink,
       completeOnboarding,
       emailFlow,
       logout,
       logoutError,
+      pendingChildCreation,
+      pendingChildCreationStatus,
       refreshParent: () => setBootstrapRevision((revision) => revision + 1),
+      retryPendingChildCreation: () => {
+        setPendingChildCreationStatus("loading");
+        setPendingChildStorageRevision((revision) => revision + 1);
+      },
       retryAuth,
       requestEmail,
       resendEmail,
@@ -517,11 +762,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
       authNotice,
       authStatus,
       bootstrap,
+      createChild,
       completeMagicLink,
       completeOnboarding,
       emailFlow,
       logout,
       logoutError,
+      pendingChildCreation,
+      pendingChildCreationStatus,
       requestEmail,
       resendEmail,
       retryAuth,

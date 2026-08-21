@@ -41,8 +41,11 @@ export type EncryptedAuthStorageDependencies = {
 };
 
 export type AuthStorage = {
+  getDurableItem(key: string): Promise<string | null>;
   getItem(key: string): Promise<string | null>;
+  removeDurableItem(key: string): Promise<void>;
   removeItem(key: string): Promise<void>;
+  setDurableItem(key: string, value: string): Promise<void>;
   setItem(key: string, value: string): Promise<void>;
 };
 
@@ -84,12 +87,16 @@ export function createEncryptedAuthStorage(
   }
 
   function readKey(): Promise<AuthEncryptionKey | null> {
-    keyPromise ??= (async () => {
+    if (keyPromise) {
+      return keyPromise;
+    }
+
+    const pendingKey = (async () => {
       // SecureStore I/O remains outside the malformed-key catch: an unavailable
       // keychain must reject instead of silently converting into a sign-out.
       const encoded = await dependencies.secureKeyStore.getItem(secureKeyName);
 
-      if (!encoded) {
+      if (encoded === null) {
         return null;
       }
 
@@ -102,6 +109,10 @@ export function createEncryptedAuthStorage(
         return null;
       }
     })();
+    keyPromise = pendingKey.catch((error) => {
+      keyPromise = null;
+      throw error;
+    });
 
     return keyPromise;
   }
@@ -122,66 +133,81 @@ export function createEncryptedAuthStorage(
     return generated;
   }
 
-  return {
-    async getItem(key) {
-      return runSerial(async () => {
-        const storedKey = dataKey(key);
-        const encrypted = await dependencies.ciphertextStore.getItem(storedKey);
+  function getItem(key: string, durable: boolean): Promise<string | null> {
+    return runSerial(async () => {
+      const storedKey = dataKey(key);
+      const encrypted = await dependencies.ciphertextStore.getItem(storedKey);
 
-        if (!encrypted) {
-          return null;
+      if (encrypted === null) {
+        return null;
+      }
+
+      const encryptionKey = await readKey();
+
+      if (!encryptionKey) {
+        if (durable) {
+          throw new Error("Det sikre lager kunne ikke læses.");
         }
 
-        const encryptionKey = await readKey();
+        await dependencies.ciphertextStore.removeItem(storedKey);
+        return null;
+      }
 
-        if (!encryptionKey) {
-          await dependencies.ciphertextStore.removeItem(storedKey);
-          return null;
-        }
-
-        try {
-          const envelope = parseEncryptedStorageEnvelope(encrypted);
-          const decrypted = await dependencies.crypto.decrypt(
-            envelope.combined,
-            encryptionKey,
-            encodeUtf8(key),
-          );
-          return decodeUtf8(decrypted);
-        } catch {
-          await dependencies.ciphertextStore.removeItem(storedKey);
-          return null;
-        }
-      });
-    },
-
-    async removeItem(key) {
-      return runSerial(async () => {
-        await dependencies.ciphertextStore.removeItem(dataKey(key));
-      });
-    },
-
-    async setItem(key, value) {
-      return runSerial(async () => {
-        const plaintext = encodeUtf8(value);
-
-        if (plaintext.byteLength > MAX_PLAINTEXT_BYTES) {
-          throw new Error(
-            "Login-sessionen er for stor til sikkert lokalt lager.",
-          );
-        }
-
-        const encryptionKey = await getOrCreateKey();
-        const combined = await dependencies.crypto.encrypt(
-          plaintext,
+      try {
+        const envelope = parseEncryptedStorageEnvelope(encrypted);
+        const decrypted = await dependencies.crypto.decrypt(
+          envelope.combined,
           encryptionKey,
           encodeUtf8(key),
         );
+        return decodeUtf8(decrypted);
+      } catch {
+        if (durable) {
+          throw new Error("Det sikre lager kunne ikke læses.");
+        }
 
-        await dependencies.ciphertextStore.setItem(
-          dataKey(key),
-          serializeEncryptedStorageEnvelope(combined),
+        await dependencies.ciphertextStore.removeItem(storedKey);
+        return null;
+      }
+    });
+  }
+
+  function removeItem(key: string): Promise<void> {
+    return runSerial(async () => {
+      await dependencies.ciphertextStore.removeItem(dataKey(key));
+    });
+  }
+
+  function setItem(key: string, value: string): Promise<void> {
+    return runSerial(async () => {
+      const plaintext = encodeUtf8(value);
+
+      if (plaintext.byteLength > MAX_PLAINTEXT_BYTES) {
+        throw new Error(
+          "Login-sessionen er for stor til sikkert lokalt lager.",
         );
-      });
-    },
+      }
+
+      const encryptionKey = await getOrCreateKey();
+      const combined = await dependencies.crypto.encrypt(
+        plaintext,
+        encryptionKey,
+        encodeUtf8(key),
+      );
+
+      await dependencies.ciphertextStore.setItem(
+        dataKey(key),
+        serializeEncryptedStorageEnvelope(combined),
+      );
+    });
+  }
+
+  return {
+    getDurableItem: (key) => getItem(key, true),
+    getItem: (key) => getItem(key, false),
+    removeDurableItem: removeItem,
+    removeItem,
+    setDurableItem: setItem,
+    setItem,
   };
 }

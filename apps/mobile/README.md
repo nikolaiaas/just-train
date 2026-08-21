@@ -1,6 +1,6 @@
 # Bare Træn mobile
 
-Expo 57 application for the Bare Træn parent/child experience. Parent authentication, profile/family onboarding, and selection of existing active child profiles are backed by Supabase. Today's mission, the goal journey, training progress, and saved results remain clearly labelled fixture content while the next persistence slices are built.
+Expo 57 application for the Bare Træn parent/child experience. Parent authentication, profile/family onboarding, owner-only child creation, and selection of active child profiles are backed by Supabase. Today's mission, the goal journey, training progress, and saved results remain clearly labelled fixture content while the next persistence slices are built.
 
 The app is linked to the Expo/EAS project [`@bare-traen/bare-traen`](https://expo.dev/accounts/bare-traen/projects/bare-traen). `app.config.ts` gives the development, preview, and production variants distinct names, URL schemes, and application identifiers.
 
@@ -28,9 +28,13 @@ The app uses the single backend configured by the two public Expo variables; the
 
 A parent enters an email address and receives both a six-digit code and a magic-link choice. The first successful login may create the parent account. A magic link must return to the same browser/app installation that requested it because the PKCE verifier stays on that device; the six-digit code is the fallback when the mail is opened elsewhere. Child profiles remain parent-owned and do not get Auth accounts in this phase.
 
-After login, the app loads only the authenticated adult's profile, first family membership, and active child profiles under Row-Level Security. A new adult can create the first family through a retry-safe authenticated database operation. Existing children can be selected, while a family without children gets an honest empty state. Consent-gated child creation is the next task and is intentionally not part of this slice.
+After login, the app loads only the authenticated adult's profile, first family membership, and active child profiles under Row-Level Security. A new adult can create the first family through a retry-safe authenticated database operation. Existing children can be selected, while a family without children gets an honest empty state.
 
-The email-to-code, session restoration, first-family onboarding, empty-family, existing-child, and logout flows have been tested in local Safari with synthetic data. Local Mailpit and all local browser/app callbacks are ready. Hosted Development already has the exact callbacks, but the parent-onboarding migration has not been deployed there. Custom hosted SMTP with the Danish template and CAPTCHA or server-side throttling remain separate gates.
+The family owner can create a child profile with only a nickname and one of four preset avatars. The child receives no Auth account, email, password, age, or photo. Creation requires acknowledgement of the current versioned guardian notice, records that acknowledgement in a private database table, and stops at 10 active children per family. The client persists a caller- and backend-scoped request identity before submission, so an interrupted or uncertain request can be retried without creating a duplicate child.
+
+This acknowledgement is an implementation safeguard for the synthetic pilot flow, not approval of the final legal basis or wording. Legal/privacy review, withdrawal, deletion, retention, and any real-child or child-photo pilot remain separate release gates.
+
+The email-to-code, session restoration, first-family onboarding, empty-family, existing-child, and logout flows have been tested in local Safari with synthetic data. Child-creation database rules and interruption-retry behavior have automated local coverage. Local Mailpit and all local browser/app callbacks are ready. Hosted Development already has the exact callbacks, but neither the parent-onboarding nor child-onboarding migration has been deployed there; both require explicit authorization, and the child migration's fail-fast preflight must pass before deployment. Custom hosted SMTP with the Danish template and CAPTCHA or server-side throttling remain separate gates.
 
 On iOS and Android, the full Supabase session is encrypted with Expo Crypto AES-256-GCM before its ciphertext is written to AsyncStorage. The encryption key is kept separately in SecureStore and is restricted to the unlocked device. Safari uses a separate origin-scoped browser adapter so native storage modules never enter its bundle.
 

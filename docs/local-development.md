@@ -12,7 +12,7 @@ Bare Træn has three parts:
 
 The **Bare Træn Dev Console** at `http://127.0.0.1:11009` starts and monitors those parts. It is a local helper rather than a deployed part of the product.
 
-Parent sign-in, profile loading, and family onboarding now use Supabase, while training goals, exercises, progress, and results still use clearly labelled synthetic fixture content. Pure visual work in Safari does not need Docker, but a complete local sign-in or family-flow test does.
+Parent sign-in, profile loading, family onboarding, and owner-only child creation now use Supabase, while training goals, exercises, progress, and results still use clearly labelled synthetic fixture content. Pure visual work in Safari does not need Docker, but a complete local sign-in, family, or child-creation test does.
 
 ## One-time setup on this Mac
 
@@ -107,7 +107,9 @@ mise exec -- pnpm supabase:stop
 
 Starting local Supabase does **not** automatically switch either app away from its configured backend. The administration login has a localhost-only **Udviklingsmiljø** choice between Local Supabase and Hosted Development. The mobile app has no runtime selector: its backend is fixed when it starts from the two public values in its ignored `.env.local`. If a task needs mobile Safari connected to Local Supabase, ask the agent to replace only those two public values temporarily and restore the hosted values before iPhone work.
 
-The local Auth callback list is ready for ports 11000/11001 and the development, preview, and production app schemes. The same exact callbacks are already registered in Hosted Development. The parent-onboarding migration is not deployed there yet, and it requires explicit authorization before deployment. Custom hosted SMTP with the Danish template and CAPTCHA or server-side throttling remain separate gates before passwordless login is exposed publicly.
+With Local Supabase selected, a synthetic adult can complete first-family onboarding and then create a child profile with only a nickname and one of four non-photo preset avatars. Only the family owner may create one, the flow records a versioned guardian acknowledgement privately, and each family is limited to 10 active children. The app saves a request identity before submission so an interrupted or uncertain request can be retried without creating a duplicate child. Do not use real child details or media: the acknowledgement does not complete the legal/privacy, withdrawal, deletion, or retention work required for a real-child or child-photo pilot.
+
+The local Auth callback list is ready for ports 11000/11001 and the development, preview, and production app schemes. The same exact callbacks are already registered in Hosted Development. The tested parent- and child-onboarding migrations are local only and have not been deployed there; both require explicit authorization, and the child migration's fail-fast preflight must pass before deployment. Custom hosted SMTP with the Danish template and CAPTCHA or server-side throttling remain separate gates before passwordless login is exposed publicly.
 
 Supabase hosts the backend, not the visible previews. The administration preview belongs on Vercel, and iPhone previews belong on Expo/EAS.
 
@@ -172,7 +174,7 @@ If the local network blocks the connection, stop the command with Control-C and 
 mise exec -- pnpm dev:iphone:tunnel
 ```
 
-The phone should normally use the hosted development Supabase project. `127.0.0.1` on an iPhone means the phone itself, not this Mac. New-parent family onboarding cannot be accepted on the phone until the tested onboarding migration has been explicitly approved and deployed to Hosted Development.
+The phone should normally use the hosted development Supabase project. `127.0.0.1` on an iPhone means the phone itself, not this Mac. New-parent family onboarding and owner-only child creation cannot be accepted on the phone until both tested onboarding migrations have been explicitly approved and deployed to Hosted Development, with the child migration's fail-fast preflight passing first.
 
 ## A standalone preview for another tester
 

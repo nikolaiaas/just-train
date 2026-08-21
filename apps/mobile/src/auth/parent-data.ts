@@ -13,7 +13,6 @@ export type ParentFamily = {
 
 export type ParentChild = {
   avatarSeed: string | null;
-  avatarUrl: string | null;
   displayName: string;
   familyId: string;
   id: string;
@@ -34,6 +33,32 @@ export class ParentBootstrapError extends Error {
 
 function fail(): never {
   throw new ParentBootstrapError();
+}
+
+export function resolveCreatedChildFromBootstrap(
+  bootstrap: ParentBootstrap,
+  expected: {
+    childId: string;
+    familyId: string;
+    profileId: string;
+  },
+): ParentChild {
+  if (
+    bootstrap.profile.id !== expected.profileId ||
+    bootstrap.family?.id !== expected.familyId
+  ) {
+    fail();
+  }
+
+  const child = bootstrap.children.find(
+    (candidate) => candidate.id === expected.childId,
+  );
+
+  if (!child || child.familyId !== expected.familyId) {
+    fail();
+  }
+
+  return child;
 }
 
 export async function loadParentBootstrap(
@@ -85,9 +110,7 @@ export async function loadParentBootstrap(
         .maybeSingle(),
       client
         .from("child_profiles")
-        .select(
-          "id, family_id, display_name, avatar_url, avatar_seed, is_active",
-        )
+        .select("id, family_id, display_name, avatar_seed, is_active")
         .eq("family_id", membership.family_id)
         .eq("is_active", true)
         .order("created_at", { ascending: true }),
@@ -104,7 +127,6 @@ export async function loadParentBootstrap(
 
   const children = (childrenResponse.data ?? []).map((child) => ({
     avatarSeed: child.avatar_seed,
-    avatarUrl: child.avatar_url,
     displayName: child.display_name,
     familyId: child.family_id,
     id: child.id,

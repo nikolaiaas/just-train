@@ -53,13 +53,14 @@ The recommended iPhone progression is:
 ## 0. Settle the pilot rules
 
 - [ ] Confirm the first pilot age range and supported devices.
-- [ ] Confirm that the first release uses parent-owned child profiles; direct child login is deferred.
-- [ ] Define the parent-consent step before creating a persistent child profile or uploading a photo.
+- [x] Confirm that the first release uses parent-owned child profiles with no child Auth account, email, password, age, or photo; direct child login is deferred.
+- [x] Require the family owner to accept a versioned guardian notice before creating a persistent child profile, and record that acknowledgement privately.
+- [ ] Approve the legal/privacy basis, guardian wording, withdrawal, deletion, and retention flow before a real-child pilot or any child-photo upload.
 - [ ] Define the first goal: `Fodbold → Lær at jonglere`, including its ordered exercises and completion thresholds.
 - [ ] Define how a result advances an exercise and when a goal is complete.
 - [ ] Define the initial point calculation and three fixed rewards.
 - [ ] Decide whether points are spent or only used as unlock thresholds.
-- [ ] Write the development-media rule: synthetic/adult test images only until the consent and retention policy is approved.
+- [x] Write the development-media rule: synthetic/adult test images only until the consent and retention policy is approved.
 - [ ] Decide how long original photos and videos may remain after transformation.
 
 Exit condition: the pilot can be described without inventing progression, reward, consent, or retention behaviour while implementing it.
@@ -100,7 +101,7 @@ Exit condition: local development does not depend on hand-created dashboard stat
 
 - [x] Create a hosted non-production Supabase project in a specific EU region.
 - [x] Apply the tested migration, without the credential-bearing local seed, to the hosted development project.
-- [ ] Deploy the tested parent-onboarding migration to Hosted Development after explicit authorization; never deploy the local seed.
+- [ ] Deploy the tested parent- and child-onboarding migrations to Hosted Development after explicit authorization; require the child migration's fail-fast preflight to pass and never deploy the local seed.
 - [ ] Add a separate safe bootstrap for shared synthetic hosted data without known-password accounts.
 - [ ] Configure separate local, development, preview, and production environment names.
 - [x] Ensure only the Supabase URL and publishable key reach client applications; never expose a service-role or secret key.
@@ -152,8 +153,10 @@ Exit condition: pilot screens can be assembled from reviewed components rather t
 
 ## 6. Implement the data and permission model
 
-- [ ] Add families, account profiles, family memberships, child profiles, and invitations.
-- [ ] Add consent records without storing more child identity data than necessary.
+- [x] Add account profiles, families, family memberships, and parent-owned child profiles.
+- [ ] Add family invitations.
+- [x] Add a private, immutable, versioned guardian-acknowledgement record for child-profile creation without adding child identity fields.
+- [ ] Define and implement the approved legal-consent, withdrawal, deletion, and retention records before a real-child pilot or child-photo storage.
 - [ ] Add topics, immutable topic releases, goals, ordered exercise steps, equipment, and safety text.
 - [ ] Add goal enrolments, training sessions, attempts, personal bests, and difficulty ratings.
 - [ ] Add an append-only point ledger, rewards, and child inventory.
@@ -163,11 +166,12 @@ Exit condition: pilot screens can be assembled from reviewed components rather t
 - [x] Implement administrator email/OTP sign-in with server-side session handling and an `is_admin` route guard.
 - [ ] Add CAPTCHA or server-side throttling before exposing passwordless login publicly.
 - [x] Implement parent email/OTP authentication, session restoration, and logout; verify the browser flow against Local Supabase.
-- [ ] Add a nullable link for future direct child authentication.
+- [x] Keep child profiles parent-owned and collect no child Auth, email, password, age, or photo in this slice; direct child authentication remains deferred.
 - [x] Add administrator roles in protected metadata and server-side route guards.
-- [ ] Write RLS policies for parent, child, content administrator, and worker access.
-- [ ] Write automated positive and negative RLS tests for every personal-data table and private bucket.
-- [ ] Ensure content administrators cannot browse child data.
+- [x] Write and test parent RLS for the current profile, family, membership, and child-profile tables, including owner-only child creation and default-deny private acknowledgement evidence.
+- [ ] Add direct-child and worker policies when those identities and data flows are introduced.
+- [ ] Add policies and positive/negative tests for each future personal-data table and private Storage bucket as it is introduced.
+- [x] Ensure the content-administrator role alone cannot browse child data.
 
 Exit condition: access is denied by the database itself when a client attempts to cross a family or role boundary.
 
@@ -175,8 +179,10 @@ Exit condition: access is denied by the database itself when a client attempts t
 
 - [x] Implement welcome and parent sign-in.
 - [x] Load the authenticated parent's profile and family, create the first family safely, and select existing active child profiles.
-- [ ] Implement consent-gated child creation under the parent's session.
-- [ ] Use a preset avatar during the pilot; keep the camera route behind a feature flag.
+- [x] Implement owner-only child creation under the parent's session, with a versioned guardian acknowledgement and a limit of 10 active children per family.
+- [x] Use four non-photo preset avatars for child profiles in this slice.
+- [ ] Keep any future child camera/photo route disabled until the legal/privacy gate is approved, then add it behind a feature flag.
+- [x] Persist a caller-scoped child-creation request identity and safely retry it after refresh or interruption without creating a duplicate child.
 - [ ] Implement topic selection, goal list, and goal detail for the seeded football content.
 - [ ] Implement goal enrolment and the child's home screen.
 - [ ] Implement the ordered goal journey with completed, current, and locked exercises.
@@ -185,7 +191,7 @@ Exit condition: access is denied by the database itself when a client attempts t
 - [ ] Support manual repetition and time results before voice input is introduced.
 - [ ] Save perceived difficulty and calculate progress/points transactionally on the backend.
 - [ ] Show the saved progress and any fixed reward unlock.
-- [ ] Add retryable error and offline states for every mutation.
+- [ ] Add retryable error and offline states for every remaining mutation.
 
 Exit condition: the complete pilot path works against local and hosted development backends.
 

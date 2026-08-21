@@ -8,7 +8,7 @@ import {
   getCurrentExercise,
   getGoalProgress,
 } from "@bare-traen/domain";
-import { useRouter } from "expo-router";
+import { type Href, useRouter } from "expo-router";
 import { useState } from "react";
 import {
   ActivityIndicator,
@@ -21,6 +21,7 @@ import {
 
 import { useAuth } from "@/auth/auth-provider";
 import type { ParentBootstrap, ParentChild } from "@/auth/parent-data";
+import { resolveChildAvatar } from "@/children/child-setup";
 
 import {
   ActionButton,
@@ -35,6 +36,7 @@ import {
 const goalProgress = getGoalProgress(demoGoal, demoProgress);
 const currentExercise = getCurrentExercise(demoExercises, demoProgress);
 const football = demoTopics.find((topic) => topic.id === demoGoal.topicId)!;
+const NEW_CHILD_ROUTE = "/child/new" as Href;
 
 export default function TodayScreen() {
   const {
@@ -233,6 +235,8 @@ function NoChildren({
   logoutError: string | null;
   onLogout(): Promise<void>;
 }) {
+  const router = useRouter();
+
   return (
     <Screen contentStyle={styles.stateScreen}>
       <View style={styles.stateIcon}>
@@ -241,15 +245,29 @@ function NoChildren({
       <Kicker>{bootstrap.family?.name}</Kicker>
       <Title style={styles.centerText}>Din familie er klar</Title>
       <Body style={styles.centerText}>
-        Der er endnu ingen aktive børneprofiler. Oprettelse af en børneprofil
-        bygges i næste trin, så vi ikke gemmer oplysninger uden den aftalte
-        samtykkeproces.
+        Der er endnu ingen aktive børneprofiler. Opret den første med et navn
+        eller kaldenavn og en foruddefineret avatar. Barnet får ikke sit eget
+        login.
       </Body>
       <View style={styles.emptyNotice}>
-        <Text style={styles.emptyNoticeTitle}>Næste trin</Text>
-        <Body>Opret barn, vælg en foruddefineret avatar, og giv samtykke.</Body>
+        <Text style={styles.emptyNoticeTitle}>
+          Kun de nødvendige oplysninger
+        </Text>
+        <Body>
+          Vi beder ikke om alder, e-mail, adgangskode eller et billede af
+          barnet.
+        </Body>
       </View>
       <View style={styles.stateActions}>
+        {bootstrap.family?.role === "owner" ? (
+          <ActionButton onPress={() => router.push(NEW_CHILD_ROUTE)}>
+            Opret barn
+          </ActionButton>
+        ) : (
+          <Body style={styles.centerText}>
+            Familiens ejer skal oprette den første børneprofil.
+          </Body>
+        )}
         <ActionButton variant="secondary" onPress={() => void onLogout()}>
           Log ud
         </ActionButton>
@@ -273,6 +291,7 @@ function FixtureToday({
   selectedChild: ParentChild;
 }) {
   const router = useRouter();
+  const avatar = resolveChildAvatar(selectedChild.avatarSeed);
 
   return (
     <Screen contentStyle={styles.screen}>
@@ -328,6 +347,23 @@ function FixtureToday({
         </View>
       )}
 
+      {bootstrap.family?.role === "owner" && bootstrap.children.length < 10 && (
+        <ActionButton
+          accessibilityLabel="Opret et barn mere i familien"
+          variant="secondary"
+          onPress={() => router.push(NEW_CHILD_ROUTE)}
+        >
+          ＋ Opret et barn mere
+        </ActionButton>
+      )}
+
+      {bootstrap.family?.role === "owner" &&
+        bootstrap.children.length >= 10 && (
+          <Body style={styles.centerText}>
+            Familien har nået grænsen på 10 aktive børneprofiler.
+          </Body>
+        )}
+
       <View style={styles.header}>
         <View>
           <Kicker>God eftermiddag</Kicker>
@@ -336,10 +372,10 @@ function FixtureToday({
         <View
           accessible
           accessibilityRole="image"
-          accessibilityLabel={`${selectedChild.displayName}s foruddefinerede træningsavatar`}
+          accessibilityLabel={`${selectedChild.displayName}s avatar: ${avatar.label}`}
           style={styles.avatar}
         >
-          <Text style={styles.avatarEmoji}>👧</Text>
+          <Text style={styles.avatarEmoji}>{avatar.symbol}</Text>
         </View>
       </View>
 

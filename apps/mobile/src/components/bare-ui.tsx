@@ -143,17 +143,25 @@ export function SurfaceCard({
 export function BackButton({
   onPress,
   label = "Tilbage",
+  disabled = false,
 }: {
   onPress: () => void;
   label?: string;
+  disabled?: boolean;
 }) {
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel="Gå tilbage"
+      accessibilityState={{ disabled }}
+      disabled={disabled}
       onPress={onPress}
       hitSlop={12}
-      style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
+      style={({ pressed }) => [
+        styles.backButton,
+        disabled && styles.actionDisabled,
+        pressed && styles.pressed,
+      ]}
     >
       <Text style={styles.backText}>‹ {label}</Text>
     </Pressable>

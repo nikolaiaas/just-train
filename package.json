@@ -20,6 +20,7 @@
     "test": "pnpm -r --if-present test && pnpm test:supabase-config && pnpm test:dev-console",
     "test:dev-console": "pnpm --dir tools/dev-console build && node --test tools/dev-console/test/*.test.mjs",
     "test:supabase-auth": "node --test supabase/tests/passwordless-auth.integration.test.mjs",
+    "test:supabase-concurrency": "node --test supabase/tests/child-profile-ownership-concurrency.test.mjs",
     "test:supabase-config": "node --test supabase/tests/passwordless-config.test.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -27,7 +28,7 @@
     "supabase:stop": "supabase stop",
     "supabase:status": "supabase status",
     "supabase:reset": "supabase db reset",
-    "supabase:test": "supabase test db",
+    "supabase:test": "supabase test db && pnpm test:supabase-concurrency",
     "supabase:lint": "supabase db lint --local --schema public,private --level warning --fail-on error",
     "supabase:types": "supabase gen types typescript --local > packages/domain/src/database.generated.ts && prettier --write packages/domain/src/database.generated.ts"
   },
