@@ -134,10 +134,10 @@ Exit condition: a pull request gets a safe administration preview without touchi
 - [ ] Optionally install Xcode later for the iOS Simulator and local USB builds.
 - [x] Document the free Personal Team limitation: provisioning expires after seven days and the app must then be rebuilt/reinstalled.
 - [x] Confirm that a paid Apple Developer Program membership is available for stable distribution and additional testers.
-- [ ] Confirm the Apple Developer Program account that will own long-lived signing credentials.
-- [ ] When enabling EAS distribution, register the owner's iPhone for ad hoc provisioning.
+- [x] Confirm the Apple Developer Program account that will own long-lived signing credentials.
+- [x] When enabling EAS distribution, register the owner's iPhone for ad hoc provisioning.
 - [ ] Build and install a fresh Expo `1.2.0` development client through EAS from the unlisted link/QR code.
-- [ ] Point the phone build at the hosted development Supabase project.
+- [x] Point the phone build at the hosted development Supabase project.
 - [ ] Confirm live local development through Metro on the same network or a tunnel.
 - [ ] Verify native OTP, cold and warm magic-link callbacks, session restoration, logout, and gallery permission in the fresh `1.2.0` build.
 - [ ] Create a production-like EAS internal-distribution preview build that runs without Metro.

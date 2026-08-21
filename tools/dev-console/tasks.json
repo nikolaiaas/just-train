@@ -1,6 +1,6 @@
 {
   "version": 3,
-  "updatedAt": "2026-08-21T17:39:50.000Z",
+  "updatedAt": "2026-08-21T18:53:41.000Z",
   "items": [
     {
       "id": "hosted-preview-safety",
@@ -14,24 +14,13 @@
       "updatedAt": "2026-08-21T09:02:49.268Z"
     },
     {
-      "id": "iphone-smoke-test",
-      "title": "Bekræft udviklingsappen på iPhone",
-      "details": "Byg og installér en frisk Bare Træn Dev 1.2.0, slå Developer Mode til, forbind Metro på port 11001, og verificér OTP, cold/warm magic-link, session efter genstart, logout og galleriadgang. Send aldrig 1.2.0-koden som update til en 1.1.0- eller ældre binary.",
-      "implementationNotes": "",
-      "evidence": [],
-      "status": "backlog",
-      "priority": 1,
-      "createdAt": "2026-08-20T18:45:00.000Z",
-      "updatedAt": "2026-08-21T10:30:00.000Z"
-    },
-    {
       "id": "pilot-goal-contract",
       "title": "Fastlæg pilotens jongleringsforløb",
       "details": "Vælg alder, de seks øvelser, mål og regler for progression, og få fixtures og database-seed til at matche.",
       "implementationNotes": "",
       "evidence": [],
       "status": "backlog",
-      "priority": 2,
+      "priority": 1,
       "createdAt": "2026-08-20T18:45:00.000Z",
       "updatedAt": "2026-08-20T19:48:09.561Z"
     },
@@ -42,7 +31,7 @@
       "implementationNotes": "Ejeren har accepteret den snævre risiko for den private familieprototype med valgt barn. GPT Image 2-ruten er teknisk verificeret med syntetiske data, men den beslutning er ikke en juridisk eller produktionsmæssig godkendelse til en bredere pilot. Se docs/ai-image-provider-review.md.",
       "evidence": [],
       "status": "backlog",
-      "priority": 3,
+      "priority": 2,
       "createdAt": "2026-08-20T23:58:25.783Z",
       "updatedAt": "2026-08-21T12:42:52.000Z"
     },
@@ -128,6 +117,17 @@
       "priority": 0,
       "createdAt": "2026-08-21T09:02:49.299Z",
       "updatedAt": "2026-08-21T09:02:49.299Z"
+    },
+    {
+      "id": "iphone-smoke-test",
+      "title": "Bekræft udviklingsappen på iPhone",
+      "details": "Byg og installér en frisk Bare Træn Dev 1.2.0, slå Developer Mode til, forbind Metro på port 11001, og verificér OTP, cold/warm magic-link, session efter genstart, logout og galleriadgang. Send aldrig 1.2.0-koden som update til en 1.1.0- eller ældre binary.",
+      "implementationNotes": "EAS development-build 1.2.0 (build 2) er færdig fra ren main med det registrerede iPhone-device i den aktive ad hoc-profil. Builden hentede kun de offentlige Supabase-klientvariabler fra EAS development-miljøet. Installationsdialogen er åbnet privat i Expo, og Metro kører på port 11001 med Hosted Development-værdier injiceret kun i processen; installation, Developer Mode og de native smoke-tests afventer ejeren.",
+      "evidence": [],
+      "status": "doing",
+      "priority": 1,
+      "createdAt": "2026-08-20T18:45:00.000Z",
+      "updatedAt": "2026-08-21T18:53:41.000Z"
     },
     {
       "id": "dev-console",
