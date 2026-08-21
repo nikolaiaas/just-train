@@ -66,8 +66,8 @@
     {
       "id": "5d2244ac-cdce-413d-9e77-67aacf070687",
       "title": "Godkend privacy-flow før rigtige børnedata",
-      "details": "Afklar juridisk grundlag, værgetekst, tilbagetrækning, sletning og retention før en pilot med rigtige børn eller upload af børnefotos. Verificér også ZDR, EU-behandling og egnethed til mindreårige for den præcise OpenRouter/OpenAI-modelrute.",
-      "implementationNotes": "",
+      "details": "Afklar juridisk grundlag, værgetekst, tilbagetrækning, sletning og retention før en pilot med rigtige børn eller upload af børnefotos. Løs også de dokumenterede ZDR-, EU-behandlings-, processoraftale-, preview-model- og mindreårigblokeringer for den præcise OpenRouter/Azure MAI-rute.",
+      "implementationNotes": "Providerreviewet 2026-08-21 vælger Azure MAI som teknisk testkandidat, men er no-go for rigtige børnefotos gennem OpenRouters standardvilkår. Se docs/ai-image-provider-review.md.",
       "evidence": [],
       "status": "backlog",
       "priority": 5,
@@ -99,7 +99,7 @@
     {
       "id": "cce5847c-7d0c-477d-87ec-82e41aced1bd",
       "title": "Opret privat lager til profilbilleder",
-      "details": "Opret privat Supabase Storage, filsti-kontrakt samt positive og negative adgangstests til voksne profilbilleder. Rigtige børnebilleder forbliver blokeret.",
+      "details": "Opret privat Supabase Storage, filsti-kontrakt samt positive og negative adgangstests til voksne profilbilleder. Rigtige børnebilleder forbliver uden for den godkendte scope.",
       "implementationNotes": "",
       "evidence": [],
       "status": "todo",
@@ -132,7 +132,7 @@
     {
       "id": "226c2fe3-d78a-487d-9a62-4682531f3cf9",
       "title": "Opret og installer OpenRouter-token",
-      "details": "Opret en særskilt begrænset udviklingsnøgle med provider-håndhævet budget, og installér den kun i lokal Function-env og senere som hosted Edge secret efter eksplicit deploymentgodkendelse. Mobilflag og databaseoperation forbliver slukket.",
+      "details": "Opret en særskilt begrænset udviklingsnøgle med budget og key-guardrail for eksakt Azure/model-allowlist og ZDR. Worker-requesten håndhæver separat Azure-only og ingen fallback. Installér nøglen kun i lokal Function-env og som hosted Edge secret efter eksplicit godkendelse. Databaseoperationen og testerlisten forbliver lukkede; nøgleinstallation deployer ikke funktionen.",
       "implementationNotes": "",
       "evidence": [],
       "status": "todo",
@@ -397,7 +397,7 @@
       "id": "f6037e94-8519-46d7-b240-e1891227424e",
       "title": "Opret server-only OpenRouter-modul",
       "details": "Tilføj et godkendt, skemavalideret servermodul med timeout, omkostningsgrænser og redigerede logs; ingen nøgle i klienterne.",
-      "implementationNotes": "Den server-only AI-foundation har nu versionslåst prompt/model-konfiguration i databasen, privat Storage, idempotente jobs, en valideret OpenRouter-adapter til OpenAI GPT Image 2, timeout, én provider-attempt, sanitiserede fejl og kendt omkostningsaudit. Ingen hemmelighed eller prompt kommer fra klienten. Migration og Edge Function er ikke deployed herfra; operationen er disabled, testerlisten er tom, mobilflaget er false, og børnebilleder afvises server-side.",
+      "implementationNotes": "Den server-only AI-foundation har nu versionslåst prompt/model-konfiguration i databasen, privat Storage, idempotente jobs, en valideret OpenRouter-adapter låst til Azure MAI Image 2.5 uden fallback, timeout, én provider-attempt, sanitiserede fejl og kendt omkostningsaudit. Ingen hemmelighed eller prompt kommer fra klienten. Migration og Edge Function er ikke deployed herfra; operationen er disabled, testerlisten er tom, og serveren afviser child-labelled eller child-profile-linked requests. Et caller-label kan ikke bevise, hvem der er på et billede, så rigtige børnefotos forbliver forbudt i testerpolitikken.",
       "evidence": [],
       "status": "done",
       "priority": 10,

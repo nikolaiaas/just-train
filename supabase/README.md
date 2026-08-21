@@ -36,24 +36,27 @@ The three local fixture users are passwordless:
 
 The local schema includes a reusable AI-operation foundation and the
 `process-ai-job` Edge Function. The first operation is
-`portrait.cartoon_3d`: it sends one validated reference image to OpenAI
-`gpt-image-2` through OpenRouter and stores the generated PNG in the private
-`ai-media-private` bucket. Its prompt is an immutable, versioned database row,
-not client code. An authenticated content administrator can publish and
-atomically activate a new prompt with `publish_ai_operation_version`; existing
-jobs keep their pinned version.
+`portrait.cartoon_3d`: it sends one validated reference image to Microsoft
+`microsoft/mai-image-2.5` through an Azure-only, no-fallback OpenRouter route
+and stores the generated PNG in the private `ai-media-private` bucket. Its
+prompt is an immutable, versioned database row, not client code. An
+authenticated content administrator can publish and atomically activate a new
+prompt with `publish_ai_operation_version`; existing jobs keep their pinned
+version.
 
-The lab fails closed in three independent places:
+The client screen has no compile-time feature toggle. The lab still fails
+closed in two independent server-owned places:
 
 - `ai_operations.is_enabled` starts `false`.
 - `private.ai_media_testers` starts empty and is writable only from trusted
   server/database administration.
-- `EXPO_PUBLIC_AI_CARTOON_LAB_ENABLED` defaults to `false` in the mobile app.
 
-The database rejects `child` media even if a client tries to forge a different
-route. Use only synthetic images or adult test material that you have the right
-to process. Never use a real child image, and never add a tester or enable the
-operation merely to bypass this gate.
+The database rejects requests with subject kind `child` or a child-profile link
+even if a client tries a different route. It cannot determine who is pictured
+when a caller labels a photo `synthetic` or `adult_test`. Use only synthetic
+images or adult test material that you have the right to process. Never use a
+real child image, and never add a tester or enable the operation merely to
+bypass this boundary.
 
 Adapter unit tests need no credential:
 
@@ -79,9 +82,14 @@ This migration must not be treated as production-ready AI media processing.
 Before activation it still needs a durable queue/sweeper, a checkpoint and
 idempotent finalizer after provider success, automatic object retention and
 deletion, a Storage-byte recovery test, an approved under-18/privacy and
-processor route, and a strict OpenRouter project-key budget. The current worker
-performs one provider POST at most; an uncertain outcome is audited and never
-regenerated automatically, avoiding accidental duplicate image charges.
+processor route, and a strict OpenRouter project-key budget plus a key-level
+guardrail for the exact model/provider allowlists and Zero Data Retention. The
+worker request separately pins Azure and disables provider fallback. The Images
+API does not expose request-level ZDR or data-collection fields, so those
+privacy controls must be verified on the OpenRouter key rather than represented
+by ignored request JSON. The current worker performs one provider POST at most;
+an uncertain outcome is audited and never regenerated automatically, avoiding
+accidental duplicate image charges.
 
 A new client request supersedes an older unclaimed reservation and closes its
 upload metadata. If input bytes had already reached private Storage before the

@@ -22,7 +22,6 @@ import {
 import { useAuth } from "@/auth/auth-provider";
 import type { ParentBootstrap, ParentChild } from "@/auth/parent-data";
 import { resolveChildAvatar } from "@/children/child-setup";
-import { isAiCartoonLabEnabled } from "@/ai/core";
 
 import {
   ActionButton,
@@ -39,9 +38,6 @@ const currentExercise = getCurrentExercise(demoExercises, demoProgress);
 const football = demoTopics.find((topic) => topic.id === demoGoal.topicId)!;
 const NEW_CHILD_ROUTE = "/child/new" as Href;
 const AI_CARTOON_ROUTE = "/ai/cartoon" as Href;
-const AI_CARTOON_LAB_ENABLED = isAiCartoonLabEnabled(
-  process.env.EXPO_PUBLIC_AI_CARTOON_LAB_ENABLED,
-);
 
 export default function TodayScreen() {
   const {
@@ -469,10 +465,6 @@ function FixtureToday({
 
 function AiCartoonLabCard() {
   const router = useRouter();
-
-  if (!AI_CARTOON_LAB_ENABLED) {
-    return null;
-  }
 
   return (
     <SurfaceCard style={styles.aiLabCard}>

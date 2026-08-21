@@ -184,7 +184,7 @@ async function processJob(jobId: string): Promise<void> {
   let usage: Record<string, number> = {};
 
   try {
-    if (claim.gateway !== "openrouter" || claim.provider !== "openai") {
+    if (claim.gateway !== "openrouter" || claim.provider !== "azure") {
       throw new OpenRouterImageError({
         attemptCode: "unsupported_gateway",
         publicCode: "server_configuration",

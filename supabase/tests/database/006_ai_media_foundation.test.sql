@@ -48,17 +48,24 @@ select results_eq(
     from public.ai_operation_versions
     where id = 'a2000000-0000-4000-8000-000000000001'
   $$,
-  $$ values ('openrouter'::text, 'openai'::text, 'openai/gpt-image-2'::text) $$,
-  'the active version routes OpenAI GPT Image 2 through OpenRouter'
+  $$ values ('openrouter'::text, 'azure'::text, 'microsoft/mai-image-2.5'::text) $$,
+  'the active version pins Microsoft MAI Image 2.5 to Azure through OpenRouter'
 );
 select is(
   (
-    select request_options ->> 'quality'
+    select request_options
     from public.ai_operation_versions
     where id = 'a2000000-0000-4000-8000-000000000001'
   ),
-  'medium',
-  'the first image operation uses the bounded medium quality tier'
+  '{
+    "n": 1,
+    "aspect_ratio": "1:1",
+    "provider": {
+      "only": ["azure"],
+      "allow_fallbacks": false
+    }
+  }'::jsonb,
+  'the first image operation permits only the Azure endpoint without fallback'
 );
 select is(
   (
@@ -449,7 +456,7 @@ select throws_ok(
   $$,
   '0A000',
   'Child photo AI processing is not enabled.',
-  'the server rejects child media independently of the mobile UI'
+  'the server rejects explicitly child-labelled requests independently of the mobile UI'
 );
 
 select lives_ok(

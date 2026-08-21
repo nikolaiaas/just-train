@@ -20,7 +20,7 @@ The App Store version of Expo Go is currently incompatible with this Expo SDK 57
 
 Copy `.env.example` to the ignored `.env.local` for local development. On a physical iPhone, use the hosted `bare-traen-development` project's public URL and publishable key. Do not use `http://127.0.0.1:54321`, because loopback on the phone does not reach the Mac.
 
-Expo configuration contains the public Supabase URL and publishable key and may contain the non-secret `EXPO_PUBLIC_AI_CARTOON_LAB_ENABLED` UI flag. Never add a Supabase secret/service-role key, `OPENROUTER_API_KEY`, prompt, or provider configuration; AI calls must go through trusted server code.
+Expo configuration contains only the public Supabase URL and publishable key. Never add a Supabase secret/service-role key, `OPENROUTER_API_KEY`, prompt, or provider configuration; AI calls must go through trusted server code.
 
 ## Parent passwordless login
 
@@ -43,17 +43,19 @@ The Auth slice added `expo-crypto`, `expo-secure-store`, and AsyncStorage. The c
 ## Closed AI cartoon lab
 
 The app contains a guarded technical route for turning one synthetic or adult
-test portrait into a 3D cartoon with OpenAI `gpt-image-2` through the server-side
-OpenRouter worker. It selects from the gallery only, downsizes the long edge to
-1536 pixels, uploads at most 8 MiB to a reserved private object, and displays
-the generated PNG through a short-lived signed URL. Camera and microphone
-permissions are disabled, and the result is never written to a child profile.
+test portrait into a 3D cartoon with Microsoft `microsoft/mai-image-2.5`
+through an Azure-only, no-fallback route in the server-side OpenRouter worker.
+It selects from the gallery only, downsizes the long edge to 1536 pixels,
+uploads at most 8 MiB to a reserved private object, and displays the generated
+PNG through a short-lived signed URL. Camera and microphone permissions are
+disabled, and the result is never written to a child profile.
 
-`EXPO_PUBLIC_AI_CARTOON_LAB_ENABLED` is strict and defaults to `false`; any
-value other than exactly `true` hides the entry point and redirects a direct
-route. That flag is only a UI gate. The database operation also starts disabled,
-the trusted tester allowlist starts empty, and the database always rejects
-child media. Never enable the client flag by itself or use a real child image.
+The entry point is present for authenticated parents without a public
+build-time feature flag. This does not activate image processing: the database
+operation starts disabled, the trusted tester allowlist starts empty, and the
+database rejects child-labelled or child-profile-linked requests. A caller's
+label cannot prove who is pictured, so the allowlisted tester remains
+responsible for never selecting a real child image.
 
 The client never receives or submits the prompt, model, provider settings, or
 OpenRouter key. It sends the stable operation key `portrait.cartoon_3d`; the

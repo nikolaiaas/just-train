@@ -14,14 +14,11 @@ const PNG_BYTES = new Uint8Array([
 ]);
 const OPTIONS = {
   aspect_ratio: "1:1",
-  background: "opaque",
   n: 1,
   provider: {
     allow_fallbacks: false,
-    only: ["openai"],
-    options: { openai: { moderation: "auto" } },
+    only: ["azure"],
   },
-  quality: "medium",
 };
 const PROMPT =
   "Create a friendly stylized 3D cartoon version of this person. Preserve their recognizable face, hairstyle, skin tone and distinctive features.";
@@ -37,32 +34,43 @@ function assertImageError(error, expected) {
 test("accepts only the bounded provider request options", () => {
   assert.deepEqual(parseOpenRouterImageOptions(OPTIONS), OPTIONS);
 
-  assert.throws(
-    () =>
-      parseOpenRouterImageOptions({
-        ...OPTIONS,
-        provider: { ...OPTIONS.provider, allow_fallbacks: true },
-      }),
-    (error) =>
-      assertImageError(error, {
-        attemptCode: "unsafe_request_options",
-        publicCode: "server_configuration",
-        retryable: false,
-      }),
-  );
+  for (const unsafeProviderOptions of [
+    { ...OPTIONS.provider, allow_fallbacks: true },
+    { ...OPTIONS.provider, only: ["openai"] },
+    { ...OPTIONS.provider, data_collection: "deny" },
+    { ...OPTIONS.provider, zdr: true },
+  ]) {
+    assert.throws(
+      () =>
+        parseOpenRouterImageOptions({
+          ...OPTIONS,
+          provider: unsafeProviderOptions,
+        }),
+      (error) =>
+        assertImageError(error, {
+          attemptCode: "unsafe_request_options",
+          publicCode: "server_configuration",
+          retryable: false,
+        }),
+    );
+  }
 });
 
 test("builds a data URL request without accepting a client-selected model", () => {
   const body = createOpenRouterImageRequest({
     inputBytes: PNG_BYTES,
     inputMimeType: "image/png",
-    model: "openai/gpt-image-2",
+    model: "microsoft/mai-image-2.5",
     options: OPTIONS,
     prompt: PROMPT,
   });
 
-  assert.equal(body.model, "openai/gpt-image-2");
+  assert.equal(body.model, "microsoft/mai-image-2.5");
   assert.equal(body.prompt, PROMPT);
+  assert.deepEqual(body.provider, {
+    allow_fallbacks: false,
+    only: ["azure"],
+  });
   assert.match(
     body.input_references[0].image_url.url,
     /^data:image\/png;base64,/,
@@ -92,7 +100,7 @@ test("rejects a declared MIME type that disagrees with the image signature", () 
       createOpenRouterImageRequest({
         inputBytes: PNG_BYTES,
         inputMimeType: "image/jpeg",
-        model: "openai/gpt-image-2",
+        model: "microsoft/mai-image-2.5",
         options: OPTIONS,
         prompt: PROMPT,
       }),
@@ -143,6 +151,7 @@ test("keeps a missing provider cost unknown instead of reporting zero", () => {
 });
 
 test("posts only to the dedicated Images endpoint and maps throttling", async () => {
+  let callCount = 0;
   let capturedUrl;
   let capturedInit;
 
@@ -150,6 +159,7 @@ test("posts only to the dedicated Images endpoint and maps throttling", async ()
     generateOpenRouterImage({
       apiKey: "sk-or-v1-test-only",
       fetchImpl: async (url, init) => {
+        callCount += 1;
         capturedUrl = url;
         capturedInit = init;
         return new Response("rate limited", {
@@ -162,7 +172,7 @@ test("posts only to the dedicated Images endpoint and maps throttling", async ()
       },
       inputBytes: PNG_BYTES,
       inputMimeType: "image/png",
-      model: "openai/gpt-image-2",
+      model: "microsoft/mai-image-2.5",
       options: OPTIONS,
       prompt: PROMPT,
       timeoutMs: 1_000,
@@ -176,8 +186,15 @@ test("posts only to the dedicated Images endpoint and maps throttling", async ()
   );
 
   assert.equal(capturedUrl, "https://openrouter.ai/api/v1/images");
+  assert.equal(callCount, 1);
   assert.equal(capturedInit.method, "POST");
   assert.equal(capturedInit.headers.Authorization, "Bearer sk-or-v1-test-only");
+  const capturedBody = JSON.parse(capturedInit.body);
+  assert.equal(capturedBody.model, "microsoft/mai-image-2.5");
+  assert.deepEqual(capturedBody.provider, {
+    allow_fallbacks: false,
+    only: ["azure"],
+  });
 });
 
 test("maps an empty provider failure from its HTTP status", async () => {
@@ -187,7 +204,7 @@ test("maps an empty provider failure from its HTTP status", async () => {
       fetchImpl: async () => new Response(null, { status: 503 }),
       inputBytes: PNG_BYTES,
       inputMimeType: "image/png",
-      model: "openai/gpt-image-2",
+      model: "microsoft/mai-image-2.5",
       options: OPTIONS,
       prompt: PROMPT,
       timeoutMs: 1_000,
@@ -217,7 +234,7 @@ test("recognizes a direct typed availability error", async () => {
         ),
       inputBytes: PNG_BYTES,
       inputMimeType: "image/png",
-      model: "openai/gpt-image-2",
+      model: "microsoft/mai-image-2.5",
       options: OPTIONS,
       prompt: PROMPT,
       timeoutMs: 1_000,
@@ -251,7 +268,7 @@ test("maps a typed content-policy response without retaining raw details", async
         ),
       inputBytes: PNG_BYTES,
       inputMimeType: "image/png",
-      model: "openai/gpt-image-2",
+      model: "microsoft/mai-image-2.5",
       options: OPTIONS,
       prompt: PROMPT,
       timeoutMs: 1_000,
@@ -267,6 +284,38 @@ test("maps a typed content-policy response without retaining raw details", async
       return true;
     },
   );
+});
+
+test("maps key guardrail denials to server configuration", async () => {
+  for (const body of [
+    { error: { error_type: "permission_denied" } },
+    { error: { message: "Synthetic untyped guardrail denial" } },
+  ]) {
+    await assert.rejects(
+      generateOpenRouterImage({
+        apiKey: "sk-or-v1-test-only",
+        fetchImpl: async () => Response.json(body, { status: 403 }),
+        inputBytes: PNG_BYTES,
+        inputMimeType: "image/png",
+        model: "microsoft/mai-image-2.5",
+        options: OPTIONS,
+        prompt: PROMPT,
+        timeoutMs: 1_000,
+      }),
+      (error) => {
+        assertImageError(error, {
+          attemptCode:
+            body.error.error_type === "permission_denied"
+              ? "openrouter_permission_denied"
+              : "openrouter_http_403",
+          publicCode: "server_configuration",
+          retryable: false,
+        });
+        assert.doesNotMatch(error.message, /synthetic/i);
+        return true;
+      },
+    );
+  }
 });
 
 test("reconciles a missing image cost from the generation record", async () => {
@@ -297,7 +346,7 @@ test("reconciles a missing image cost from the generation record", async () => {
     },
     inputBytes: PNG_BYTES,
     inputMimeType: "image/png",
-    model: "openai/gpt-image-2",
+    model: "microsoft/mai-image-2.5",
     options: OPTIONS,
     prompt: PROMPT,
     timeoutMs: 1_000,
@@ -344,7 +393,7 @@ test("polls only the idempotent generation lookup during eventual consistency", 
     },
     inputBytes: PNG_BYTES,
     inputMimeType: "image/png",
-    model: "openai/gpt-image-2",
+    model: "microsoft/mai-image-2.5",
     options: OPTIONS,
     prompt: PROMPT,
     timeoutMs: 2_000,
@@ -364,7 +413,7 @@ test("treats a network failure as an unknown non-retryable provider outcome", as
       },
       inputBytes: PNG_BYTES,
       inputMimeType: "image/png",
-      model: "openai/gpt-image-2",
+      model: "microsoft/mai-image-2.5",
       options: OPTIONS,
       prompt: PROMPT,
       timeoutMs: 1_000,

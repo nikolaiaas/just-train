@@ -18,7 +18,6 @@ import {
   getAiJobErrorMessage,
   getAiMediaErrorMessage,
   getAiPollDelay,
-  isAiCartoonLabEnabled,
   shouldReconcileAiJob,
 } from "@/ai/core";
 import {
@@ -38,10 +37,6 @@ import {
   SurfaceCard,
   Title,
 } from "@/components/bare-ui";
-
-const LAB_ENABLED = isAiCartoonLabEnabled(
-  process.env.EXPO_PUBLIC_AI_CARTOON_LAB_ENABLED,
-);
 
 type Phase = "idle" | "submitting" | "processing" | "succeeded" | "failed";
 type PrivateOutputLink = { revision: number; signedUrl: string };
@@ -85,12 +80,6 @@ function AiCartoonSessionScreen() {
   const currentJobId = useRef<string | null>(null);
   const outputRefreshInFlight = useRef<string | null>(null);
   const outputLinkRevision = useRef(0);
-
-  useEffect(() => {
-    if (!LAB_ENABLED) {
-      router.replace("/");
-    }
-  }, [router]);
 
   useEffect(() => {
     mounted.current = true;
@@ -318,10 +307,6 @@ function AiCartoonSessionScreen() {
     };
   }, [jobId, phase, refreshJob]);
 
-  if (!LAB_ENABLED) {
-    return null;
-  }
-
   const busy = picking || phase === "submitting" || phase === "processing";
   const controlsLocked = busy || phase === "succeeded";
 
@@ -529,8 +514,9 @@ function AiCartoonSessionScreen() {
           <View style={styles.processing}>
             <ActivityIndicator color={colors.primaryDeep} />
             <Body>
-              OpenAI laver billedet via OpenRouter. Det kan tage et par
-              minutter; vi genstarter aldrig billedgenereringen automatisk.
+              Microsoft MAI laver billedet på Azure via OpenRouter. Det kan tage
+              et par minutter; vi genstarter aldrig billedgenereringen
+              automatisk.
             </Body>
             <ActionButton variant="secondary" onPress={() => void refreshJob()}>
               Tjek igen

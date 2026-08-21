@@ -2,10 +2,6 @@ import { AiMediaError, type SafeAiMediaSubject } from "@bare-traen/api-client";
 
 const STALE_PROCESSING_MS = 8 * 60 * 1_000;
 
-export function isAiCartoonLabEnabled(value: unknown): boolean {
-  return value === "true";
-}
-
 export function normalizeAiMediaSubject(value: unknown): SafeAiMediaSubject {
   if (value !== "synthetic" && value !== "adult_test") {
     throw new Error("invalid_ai_media_subject");

@@ -17,18 +17,16 @@ type OpenRouterUsage = {
   total_tokens?: number;
 };
 
+// The dedicated Images API does not expose request-level ZDR or
+// data_collection fields. Those must be enforced by the OpenRouter key's
+// account/guardrail policy; rejecting extra keys prevents silent no-ops here.
 export type OpenRouterImageOptions = {
   aspect_ratio: "1:1";
-  background: "opaque";
   n: 1;
   provider: {
     allow_fallbacks: false;
-    only: ["openai"];
-    options: {
-      openai: { moderation: "auto" };
-    };
+    only: ["azure"];
   };
-  quality: "medium";
 };
 
 export type OpenRouterImageResult = {
@@ -78,28 +76,15 @@ export function parseOpenRouterImageOptions(
 ): OpenRouterImageOptions {
   if (
     !isRecord(value) ||
-    !hasOnlyKeys(value, [
-      "n",
-      "quality",
-      "aspect_ratio",
-      "background",
-      "provider",
-    ]) ||
+    !hasOnlyKeys(value, ["n", "aspect_ratio", "provider"]) ||
     value.n !== 1 ||
-    value.quality !== "medium" ||
     value.aspect_ratio !== "1:1" ||
-    value.background !== "opaque" ||
     !isRecord(value.provider) ||
-    !hasOnlyKeys(value.provider, ["only", "allow_fallbacks", "options"]) ||
+    !hasOnlyKeys(value.provider, ["only", "allow_fallbacks"]) ||
     !Array.isArray(value.provider.only) ||
     value.provider.only.length !== 1 ||
-    value.provider.only[0] !== "openai" ||
-    value.provider.allow_fallbacks !== false ||
-    !isRecord(value.provider.options) ||
-    !hasOnlyKeys(value.provider.options, ["openai"]) ||
-    !isRecord(value.provider.options.openai) ||
-    !hasOnlyKeys(value.provider.options.openai, ["moderation"]) ||
-    value.provider.options.openai.moderation !== "auto"
+    value.provider.only[0] !== "azure" ||
+    value.provider.allow_fallbacks !== false
   ) {
     throw new OpenRouterImageError({
       attemptCode: "unsafe_request_options",
@@ -118,7 +103,7 @@ export function createOpenRouterImageRequest(input: {
   options: unknown;
   prompt: string;
 }): Record<string, unknown> {
-  if (input.model !== "openai/gpt-image-2") {
+  if (input.model !== "microsoft/mai-image-2.5") {
     throw new OpenRouterImageError({
       attemptCode: "unsupported_model",
       publicCode: "server_configuration",
@@ -226,13 +211,16 @@ function mapHttpError(
   }
 
   if (
-    [401, 402, 404].includes(status) ||
+    [401, 402, 403, 404].includes(status) ||
     errorType === "authentication" ||
     errorType === "payment_required" ||
+    errorType === "permission_denied" ||
     errorType === "not_found"
   ) {
     return new OpenRouterImageError({
-      attemptCode: `openrouter_http_${status}`,
+      attemptCode: errorType
+        ? `openrouter_${errorType}`
+        : `openrouter_http_${status}`,
       providerRequestId,
       publicCode: "server_configuration",
       retryable: false,
@@ -248,7 +236,7 @@ function mapHttpError(
     });
   }
 
-  if ([400, 403, 413, 422].includes(status)) {
+  if ([400, 413, 422].includes(status)) {
     return new OpenRouterImageError({
       attemptCode: `openrouter_http_${status}`,
       providerRequestId,

@@ -4,18 +4,9 @@ import test from "node:test";
 import {
   getAiJobErrorMessage,
   getAiPollDelay,
-  isAiCartoonLabEnabled,
   normalizeAiMediaSubject,
   shouldReconcileAiJob,
 } from "../src/ai/core.ts";
-
-test("keeps the AI cartoon lab closed unless the flag is exactly true", () => {
-  assert.equal(isAiCartoonLabEnabled("true"), true);
-
-  for (const value of [undefined, null, "false", "TRUE", " true ", true]) {
-    assert.equal(isAiCartoonLabEnabled(value), false);
-  }
-});
 
 test("accepts only the two audited non-child subject labels", () => {
   assert.equal(normalizeAiMediaSubject("synthetic"), "synthetic");

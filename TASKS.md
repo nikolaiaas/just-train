@@ -194,7 +194,7 @@ Exit condition: access is denied by the database itself when a client attempts t
 - [x] Load the authenticated parent's profile and family, create the first family safely, and select existing active child profiles.
 - [x] Implement owner-only child creation under the parent's session, with a versioned guardian acknowledgement and a limit of 10 active children per family.
 - [x] Use four non-photo preset avatars for child profiles in this slice.
-- [x] Keep child-photo processing rejected in the mobile flow, shared client contract, Storage policy, preparation RPC, and worker until a separate approved privacy migration exists.
+- [x] Reject child-labelled and child-profile-linked processing in the mobile contract, Storage policy, preparation RPC, and worker; keep real child photos prohibited by the audited tester policy until a separate approved privacy migration exists.
 - [x] Add a default-off, gallery-only adult/synthetic AI portrait lab that remains separate from child profiles.
 - [x] Persist a caller-scoped child-creation request identity and safely retry it after refresh or interruption without creating a duplicate child.
 - [ ] Implement topic selection, goal list, and goal detail for the seeded football content.
@@ -243,11 +243,11 @@ Exit condition: an authorized person can edit and publish content without direct
 - [ ] Verify that no microphone recording is retained for the voice-stop feature.
 - [ ] Test camera capture, gallery selection, compression, upload progress, cancellation, and deletion using adult test material.
 - [ ] Compare at least two avatar-generation approaches for quality, latency, price, API terms, EU processing, deletion, and failure handling.
-- [x] Build and test one bounded OpenRouter/OpenAI GPT Image 2 transformation spike with private Storage, idempotent reservation, one provider attempt, sanitized audit data, and default-off activation.
+- [x] Build and unit-test one bounded OpenRouter/Azure MAI Image 2.5 transformation adapter with private Storage, idempotent reservation, one mocked provider attempt, sanitized audit data, and default-off server activation; the credentialed synthetic live test remains open below.
 - [ ] Add an autonomous stale-job sweeper and durable failure-transition retry so recovery does not depend on the mobile screen remaining open.
 - [ ] Add a durable provider-success checkpoint and idempotent finalizer so an uploaded paid output can be reconciled without regeneration.
 - [ ] Delete private Storage objects at their recorded retention deadline and prove both deletion and off-platform byte recovery.
-- [ ] Enforce a provider-side project-key budget and verify Zero Data Retention, EU processing, and under-18 suitability for the exact OpenRouter/OpenAI model route before activation.
+- [ ] Enforce a provider-side project-key budget and guardrail, and resolve the recorded Zero Data Retention, EU processing, processor-contract, preview-model, and under-18 blockers for the exact OpenRouter/Azure MAI route before activation with real child photos.
 - [ ] Test short exercise-video download size, playback, caching, and offline behaviour.
 - [ ] Prototype personalized motion/video generation separately and record quality, cost, latency, consent, and moderation blockers.
 - [ ] Prototype schema-validated AI content drafts that can only create a reviewable draft revision.
@@ -304,7 +304,9 @@ Exit condition: a failed permission test, migration, type check, or core-flow sm
 - [Expo preview updates](https://docs.expo.dev/eas-update/preview/)
 - [Apple membership and Personal Team limits](https://developer.apple.com/support/compare-memberships/)
 - [Apple TestFlight overview](https://developer.apple.com/help/app-store-connect/test-a-beta-version/testflight-overview)
-- [OpenAI GPT Image 2](https://developers.openai.com/api/docs/models/gpt-image-2)
-- [OpenAI Under 18 API Guidance](https://developers.openai.com/api/docs/guides/safety-checks/under-18-api-guidance)
+- [Microsoft MAI Image 2.5 on Azure](https://learn.microsoft.com/azure/foundry/foundry-models/how-to/use-foundry-models-mai-image)
+- [Azure model data, privacy, and abuse monitoring](https://learn.microsoft.com/azure/foundry/responsible-ai/openai/data-privacy)
 - [OpenRouter image generation](https://openrouter.ai/docs/guides/overview/multimodal/image-generation)
 - [OpenRouter Zero Data Retention](https://openrouter.ai/docs/guides/features/zdr)
+- [OpenRouter Data Processing Addendum](https://openrouter.ai/data-processing-agreement)
+- [OpenRouter terms](https://openrouter.ai/terms)

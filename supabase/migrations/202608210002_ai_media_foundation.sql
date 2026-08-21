@@ -1031,7 +1031,7 @@ comment on function public.prepare_ai_media_job(
   text,
   uuid
 ) is
-  'Reserves an idempotent family-scoped AI job and private input/output paths, superseding only older unclaimed reservations. Child media is deliberately rejected until a separate approved privacy migration.';
+  'Reserves an idempotent family-scoped AI job and private input/output paths, superseding only older unclaimed reservations. Child-labelled and child-profile-linked requests are rejected; caller labels cannot prove who appears in an image, so real child media remains prohibited until a separate approved privacy migration.';
 
 create function public.claim_ai_media_job_for_worker(p_job_id uuid)
 returns table (
@@ -1652,19 +1652,14 @@ values (
   1,
   'Create a friendly stylized 3D cartoon version of this person. Preserve their recognizable face, hairstyle, skin tone and distinctive features.',
   'openrouter',
-  'openai',
-  'openai/gpt-image-2',
+  'azure',
+  'microsoft/mai-image-2.5',
   '{
     "n": 1,
-    "quality": "medium",
     "aspect_ratio": "1:1",
-    "background": "opaque",
     "provider": {
-      "only": ["openai"],
-      "allow_fallbacks": false,
-      "options": {
-        "openai": { "moderation": "auto" }
-      }
+      "only": ["azure"],
+      "allow_fallbacks": false
     }
   }'::jsonb,
   '{
@@ -1691,7 +1686,8 @@ set active_version_id = 'a2000000-0000-4000-8000-000000000001'
 where id = 'a1000000-0000-4000-8000-000000000001';
 
 -- The operation and the server-managed tester allowlist both start empty/off.
--- A client-supplied subject label cannot identify a person, so real child media
--- remains prohibited even for an allowlisted technical tester.
+-- Child-labelled and child-profile-linked requests are rejected. A
+-- client-supplied subject label cannot identify a person, so real child media
+-- also remains prohibited by policy even for an allowlisted technical tester.
 
 commit;

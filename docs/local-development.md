@@ -116,28 +116,33 @@ With Local Supabase selected, a synthetic adult can complete first-family onboar
 The first AI image flow is a closed technical lab, not a child-profile feature.
 It accepts one gallery image of a synthetic person or an adult test person,
 prepares it locally, stores input and output in private Supabase Storage, and
-lets OpenAI `gpt-image-2` transform it through the server-only OpenRouter
-worker. The prompt, model, provider, limits, and contracts come from an
-immutable database operation version rather than the app.
+lets Microsoft `microsoft/mai-image-2.5` transform it through an Azure-only,
+no-fallback OpenRouter route in the server worker. The prompt, model, provider,
+limits, and contracts come from an immutable database operation version rather
+than the app.
 
-Three independent gates start closed:
+The screen no longer has a compile-time feature toggle. Two server-owned
+activation gates still start closed:
 
-- `EXPO_PUBLIC_AI_CARTOON_LAB_ENABLED` must be exactly `true`.
 - The database operation must be enabled.
 - The authenticated adult must be in the expiring server-managed tester
   allowlist.
 
-The database separately rejects child media regardless of the choice shown by
-the client. Do not use real child photos, and use adult material only when you
-have the right to process it. No tester or operation is enabled by the local
-seed.
+The database separately rejects requests labelled as child media or linked to a
+child profile. It cannot verify who is pictured when a caller labels a photo as
+synthetic or adult test material. Do not use real child photos, and use adult
+material only when you have the right to process it. No tester or operation is
+enabled by the local seed.
 
-Do not activate the lab until a limited OpenRouter key and provider-enforced
-budget exist, the Edge Function has been explicitly deployed, the exact model
-route has passed the privacy, EU-processing, and Zero Data Retention review,
-and durable recovery, post-provider finalization, retention deletion, and
-Storage-byte recovery are implemented. See `supabase/README.md` for the local
-adapter test and explicitly approved function-serving commands.
+Do not activate the lab until a limited OpenRouter key and key-level guardrail
+enforce the budget, exact model/provider allowlists, and Zero Data Retention;
+the worker request's Azure-only, no-fallback controls have been verified; the
+Edge Function has been explicitly deployed; and durable recovery, post-provider
+finalization, retention deletion, and Storage-byte recovery are implemented.
+The current provider review permits synthetic/adult technical tests only and
+does not approve real child photos. See
+[`ai-image-provider-review.md`](./ai-image-provider-review.md) and
+`supabase/README.md` for the decision and explicitly approved local commands.
 
 The local Auth callback list is ready for ports 11000/11001 and the development, preview, and production app schemes. The same exact callbacks are already registered in Hosted Development, and the tested parent- and child-onboarding migrations were deployed there on 2026-08-21 after the child migration's fail-fast preflight passed. Custom hosted SMTP with the Danish template and CAPTCHA or server-side throttling remain separate gates before passwordless login is exposed publicly.
 

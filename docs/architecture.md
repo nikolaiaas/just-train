@@ -75,24 +75,32 @@ job and both media metadata slots but deliberately does not mutate Storage
 tables as a substitute for object deletion. Any bytes uploaded before the crash
 remain private and make the retention/deletion worker an activation blocker.
 
-The first operation, `portrait.cartoon_3d`, uses OpenAI `gpt-image-2` through
-OpenRouter and stores this initial prompt in version 1:
+The first operation, `portrait.cartoon_3d`, pins Microsoft
+`microsoft/mai-image-2.5` to OpenRouter's Azure image endpoint with provider
+fallback disabled and stores this initial prompt in version 1:
 
 > Create a friendly stylized 3D cartoon version of this person. Preserve their recognizable face, hairstyle, skin tone and distinctive features.
 
-This is a closed technical spike, not a child feature. The database operation,
-the server-managed tester allowlist, and the mobile flag all start off. Even an
-allowlisted tester may submit only synthetic or consenting-adult test material;
-the database rejects child media independently of the client label, and the
-result is never attached to a child profile.
+This is a closed technical spike, not a child feature. The client route has no
+compile-time toggle, but the database operation starts disabled and the
+server-managed tester allowlist starts empty. Even an allowlisted tester may
+submit only synthetic or consenting-adult test material; the database rejects
+child-labelled and child-profile-linked requests, and the result is never
+attached to a child profile. A caller label cannot establish who appears in the
+image, so excluding real child photos also depends on the audited tester policy.
 
 Before the operation can be enabled, the project still needs a reviewed
 under-18/privacy and processor decision, a provider route that satisfies that
 decision, a durable queue and stale-job sweeper, a provider-success checkpoint
 and idempotent finalizer, automatic object retention/deletion, a Storage-byte
-backup and restore test, and a tightly budgeted OpenRouter project key. Until
-those gates are complete, no real-person or real-child media belongs in this
-flow.
+backup and restore test, and a tightly budgeted OpenRouter project key whose
+guardrail enforces the exact model/provider allowlists and Zero Data Retention.
+The worker request separately pins Azure and disables provider fallback. The
+current provider review is explicitly no-go for real child photos through the
+standard OpenRouter route; its prerequisites are recorded in
+[`ai-image-provider-review.md`](./ai-image-provider-review.md). Until those
+gates are complete, only synthetic people and narrowly controlled,
+consenting-adult technical tests belong in this flow.
 
 ## First vertical slice
 
