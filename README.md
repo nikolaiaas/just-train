@@ -17,7 +17,7 @@ The app currently uses synthetic fixture data while the Supabase schema and priv
 - React 19, Vite 8, Tailwind CSS 4, and a loopback-only Node controller for the local Dev Console.
 - Vercel for web previews and Expo/EAS for private iPhone previews.
 
-Supabase hosts the backend, not the visual app previews. OpenRouter is reserved for later server-side AI operations; its secret key must never be included in the mobile bundle or a `NEXT_PUBLIC_*` variable.
+Supabase hosts the backend, not the visual app previews. The first OpenRouter/OpenAI image-operation foundation now exists server-side, but its adult/synthetic lab is deliberately disabled and real child images remain prohibited. Its secret key must never be included in the mobile bundle or a `NEXT_PUBLIC_*` variable.
 
 ## Requirements
 
@@ -70,6 +70,8 @@ pnpm dev:mobile
 - The hosted fixture preview is available at [just-train-admin.vercel.app](https://just-train-admin.vercel.app). Vercel protects pull-request deployments with team login, while the app also sends no-index metadata and headers.
 
 The App Store version of Expo Go is currently incompatible with this Expo SDK 57 project. Use the Safari preview first, then install **Bare Træn Dev** through the EAS `development` profile for real-device work. Do not downgrade the project to make Expo Go work.
+
+The closed AI image lab adds native gallery and image-processing modules and advances the app/runtime version to `1.2.0`. Any installed `1.1.0` or older development/preview app must be replaced with a fresh EAS build before this branch can run natively; do not send the slice as an EAS Update to an older runtime. The lab remains hidden unless its exact public feature flag is `true`, and the server/database gates remain authoritative.
 
 ### Local Supabase
 

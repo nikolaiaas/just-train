@@ -136,14 +136,14 @@ Exit condition: a pull request gets a safe administration preview without touchi
 - [x] Confirm that a paid Apple Developer Program membership is available for stable distribution and additional testers.
 - [ ] Confirm the Apple Developer Program account that will own long-lived signing credentials.
 - [ ] When enabling EAS distribution, register the owner's iPhone for ad hoc provisioning.
-- [ ] Build and install a fresh Expo `1.1.0` development client through EAS from the unlisted link/QR code.
+- [ ] Build and install a fresh Expo `1.2.0` development client through EAS from the unlisted link/QR code.
 - [ ] Point the phone build at the hosted development Supabase project.
 - [ ] Confirm live local development through Metro on the same network or a tunnel.
-- [ ] Verify native OTP, cold and warm magic-link callbacks, session restoration, and logout in the fresh `1.1.0` build.
+- [ ] Verify native OTP, cold and warm magic-link callbacks, session restoration, logout, and gallery permission in the fresh `1.2.0` build.
 - [ ] Create a production-like EAS internal-distribution preview build that runs without Metro.
 - [ ] Disable unauthenticated EAS internal-build access, or otherwise document and enforce who may receive unlisted build URLs.
 - [x] Configure a `preview` EAS Update channel so JavaScript, styling, and asset changes usually do not require a new binary.
-- [x] Document that native-library, permission, and native-configuration changes require a new build, and that the `1.1.0` Auth slice must not be sent to an old `1.0.0` binary through EAS Update.
+- [x] Document that native-library, permission, and native-configuration changes require a new build, and that the `1.2.0` AI-media slice must not be sent to a `1.1.0` or older binary through EAS Update.
 - [ ] Keep TestFlight as the later route for a larger tester group; it is beta distribution, not a public App Store launch.
 
 Exit condition: the owner can run Bare Træn on the iPhone without App Store publication. With paid distribution enabled, the same build can be installed from a restricted or carefully shared unlisted link and receive compatible preview updates.
@@ -169,7 +169,10 @@ Exit condition: pilot screens can be assembled from reviewed components rather t
 - [ ] Add topics, immutable topic releases, goals, ordered exercise steps, equipment, and safety text.
 - [ ] Add goal enrolments, training sessions, attempts, personal bests, and difficulty ratings.
 - [ ] Add an append-only point ledger, rewards, and child inventory.
-- [ ] Add media assets and processing-job metadata without implementing generation yet.
+- [x] Add stable AI operations, immutable prompt/provider versions, generic family/admin jobs, private media metadata, named media slots, and worker-only attempt audit.
+- [x] Store the initial cartoon prompt in the database and let an administrator atomically publish a replacement while existing jobs remain pinned.
+- [ ] Build the reviewed administration UI for prompt-version publication and separately guarded operation activation.
+- [ ] Implement and test the retention worker that deletes private Storage bytes at `delete_after` and records the completed deletion.
 - [ ] Add AI draft/suggestion, review decision, publication, and audit-log structures.
 - [x] Configure six-digit passwordless email locally, remove fixture passwords, and protect magic links behind an explicit scanner-safe confirmation page.
 - [x] Implement administrator email/OTP sign-in with server-side session handling and an `is_admin` route guard.
@@ -179,7 +182,7 @@ Exit condition: pilot screens can be assembled from reviewed components rather t
 - [x] Add administrator roles in protected metadata and server-side route guards.
 - [x] Write and test parent RLS for the current profile, family, membership, and child-profile tables, including owner-only child creation and default-deny private acknowledgement evidence.
 - [ ] Resolve or explicitly document every current Supabase Database Advisor warning: review the platform `rls_auto_enable` execute grants, preserve the tested boundaries of the two intentional `SECURITY DEFINER` RPCs, and measure or consolidate overlapping read policies for topics, goals, and exercises.
-- [ ] Add direct-child and worker policies when those identities and data flows are introduced.
+- [x] Add narrow service-role worker RPCs and positive/negative RLS and Storage-policy tests for the first AI media flow; direct-child policies remain deferred.
 - [ ] Add policies and positive/negative tests for each future personal-data table and private Storage bucket as it is introduced.
 - [x] Ensure the content-administrator role alone cannot browse child data.
 
@@ -191,7 +194,8 @@ Exit condition: access is denied by the database itself when a client attempts t
 - [x] Load the authenticated parent's profile and family, create the first family safely, and select existing active child profiles.
 - [x] Implement owner-only child creation under the parent's session, with a versioned guardian acknowledgement and a limit of 10 active children per family.
 - [x] Use four non-photo preset avatars for child profiles in this slice.
-- [ ] Keep any future child camera/photo route disabled until the legal/privacy gate is approved, then add it behind a feature flag.
+- [x] Keep child-photo processing rejected in the mobile flow, shared client contract, Storage policy, preparation RPC, and worker until a separate approved privacy migration exists.
+- [x] Add a default-off, gallery-only adult/synthetic AI portrait lab that remains separate from child profiles.
 - [x] Persist a caller-scoped child-creation request identity and safely retry it after refresh or interruption without creating a duplicate child.
 - [ ] Implement topic selection, goal list, and goal detail for the seeded football content.
 - [ ] Implement goal enrolment and the child's home screen.
@@ -239,6 +243,11 @@ Exit condition: an authorized person can edit and publish content without direct
 - [ ] Verify that no microphone recording is retained for the voice-stop feature.
 - [ ] Test camera capture, gallery selection, compression, upload progress, cancellation, and deletion using adult test material.
 - [ ] Compare at least two avatar-generation approaches for quality, latency, price, API terms, EU processing, deletion, and failure handling.
+- [x] Build and test one bounded OpenRouter/OpenAI GPT Image 2 transformation spike with private Storage, idempotent reservation, one provider attempt, sanitized audit data, and default-off activation.
+- [ ] Add an autonomous stale-job sweeper and durable failure-transition retry so recovery does not depend on the mobile screen remaining open.
+- [ ] Add a durable provider-success checkpoint and idempotent finalizer so an uploaded paid output can be reconciled without regeneration.
+- [ ] Delete private Storage objects at their recorded retention deadline and prove both deletion and off-platform byte recovery.
+- [ ] Enforce a provider-side project-key budget and verify Zero Data Retention, EU processing, and under-18 suitability for the exact OpenRouter/OpenAI model route before activation.
 - [ ] Test short exercise-video download size, playback, caching, and offline behaviour.
 - [ ] Prototype personalized motion/video generation separately and record quality, cost, latency, consent, and moderation blockers.
 - [ ] Prototype schema-validated AI content drafts that can only create a reviewable draft revision.
@@ -255,6 +264,7 @@ Exit condition: each risky feature has a written go/defer decision and does not 
 - [ ] Add error reporting with personal-data scrubbing and no session replay on child screens.
 - [ ] Add an audit for logs, analytics, crash reports, backups, and third-party processors.
 - [ ] Verify account deletion/export and media deletion can be implemented from the chosen data model.
+- [ ] Run an end-to-end AI-media integration test with synthetic/adult material only; keep all input and output bytes out of Git and task evidence.
 - [ ] Write a repeatable internal-preview release checklist.
 
 Exit condition: a failed permission test, migration, type check, or core-flow smoke test prevents a preview release.
@@ -294,3 +304,7 @@ Exit condition: a failed permission test, migration, type check, or core-flow sm
 - [Expo preview updates](https://docs.expo.dev/eas-update/preview/)
 - [Apple membership and Personal Team limits](https://developer.apple.com/support/compare-memberships/)
 - [Apple TestFlight overview](https://developer.apple.com/help/app-store-connect/test-a-beta-version/testflight-overview)
+- [OpenAI GPT Image 2](https://developers.openai.com/api/docs/models/gpt-image-2)
+- [OpenAI Under 18 API Guidance](https://developers.openai.com/api/docs/guides/safety-checks/under-18-api-guidance)
+- [OpenRouter image generation](https://openrouter.ai/docs/guides/overview/multimodal/image-generation)
+- [OpenRouter Zero Data Retention](https://openrouter.ai/docs/guides/features/zdr)

@@ -1,0 +1,34 @@
+import { AI_MEDIA_MAX_INPUT_BYTES } from "@bare-traen/api-client";
+
+export async function loadPrivateWebPng(
+  signedUrl: string,
+  signal: AbortSignal,
+): Promise<string> {
+  const response = await fetch(signedUrl, {
+    cache: "no-store",
+    headers: { "Cache-Control": "no-store" },
+    signal,
+  });
+
+  if (!response.ok) {
+    throw new Error("private_output_unavailable");
+  }
+
+  const blob = await response.blob();
+
+  if (
+    blob.size <= 0 ||
+    blob.size > AI_MEDIA_MAX_INPUT_BYTES ||
+    blob.type !== "image/png"
+  ) {
+    throw new Error("invalid_private_output");
+  }
+
+  return URL.createObjectURL(blob);
+}
+
+export function revokePrivateWebImage(uri: string | null): void {
+  if (uri?.startsWith("blob:")) {
+    URL.revokeObjectURL(uri);
+  }
+}

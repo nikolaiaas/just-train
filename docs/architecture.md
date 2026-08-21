@@ -47,8 +47,52 @@ The Dev Console at `127.0.0.1:11009` is a development tool only. Its React 19 in
 - Content administration is restricted by an explicit profile role and is separated from family data.
 - Browser and mobile clients receive only a Supabase URL and publishable key. Elevated database keys remain in trusted server or worker environments.
 - Native Auth sessions are encrypted with AES-256-GCM before their ciphertext reaches AsyncStorage, with the encryption key stored separately in the platform key store through SecureStore. Web PKCE state uses separate origin-scoped browser storage.
-- OpenRouter will be called only from a server route, Edge Function, or worker. `OPENROUTER_API_KEY` must never use `EXPO_PUBLIC_*` or `NEXT_PUBLIC_*` prefixes.
+- OpenRouter is called only from a server route, Edge Function, or worker. `OPENROUTER_API_KEY` must never use `EXPO_PUBLIC_*` or `NEXT_PUBLIC_*` prefixes.
 - Development and previews contain synthetic people and media. Real child profiles and media are blocked until the legal/privacy basis, guardian wording, withdrawal, retention, deletion, processor, and threat-model work is approved.
+
+## AI operation foundation
+
+AI features share one server-owned operation model instead of letting clients
+send prompts, model names, providers, or arbitrary options. `ai_operations`
+contains stable capability keys and a kill switch. Each active configuration is
+an immutable `ai_operation_versions` row containing the prompt, provider route,
+request and input/output contracts, timeout, attempt limit, and cost ceiling.
+An administrator can publish a new prompt version through a guarded RPC; jobs
+already created remain pinned to their original version, so prompt changes do
+not require a mobile release and cannot silently alter in-flight work.
+
+`ai_jobs` is the generic family/admin work record and leaves room for future
+text and structured-output operations. Media capabilities attach named,
+ordered private assets through `ai_job_media`, while provider attempts remain
+in the non-exposed `private` schema. A client supplies only an operation key and
+validated input. The Edge worker claims the pinned configuration, downloads the
+exact reserved private object, calls OpenRouter server-side, and exposes only a
+ready generated output through a short-lived signed URL.
+
+A new validated client request safely supersedes an older unclaimed upload
+reservation, so a crash cannot lock the tester out forever. This closes the old
+job and both media metadata slots but deliberately does not mutate Storage
+tables as a substitute for object deletion. Any bytes uploaded before the crash
+remain private and make the retention/deletion worker an activation blocker.
+
+The first operation, `portrait.cartoon_3d`, uses OpenAI `gpt-image-2` through
+OpenRouter and stores this initial prompt in version 1:
+
+> Create a friendly stylized 3D cartoon version of this person. Preserve their recognizable face, hairstyle, skin tone and distinctive features.
+
+This is a closed technical spike, not a child feature. The database operation,
+the server-managed tester allowlist, and the mobile flag all start off. Even an
+allowlisted tester may submit only synthetic or consenting-adult test material;
+the database rejects child media independently of the client label, and the
+result is never attached to a child profile.
+
+Before the operation can be enabled, the project still needs a reviewed
+under-18/privacy and processor decision, a provider route that satisfies that
+decision, a durable queue and stale-job sweeper, a provider-success checkpoint
+and idempotent finalizer, automatic object retention/deletion, a Storage-byte
+backup and restore test, and a tightly budgeted OpenRouter project key. Until
+those gates are complete, no real-person or real-child media belongs in this
+flow.
 
 ## First vertical slice
 
@@ -61,4 +105,4 @@ The first backend-connected implementation should prove:
 5. Progress remains after the app restarts.
 6. Automated RLS tests prove that another family cannot read or modify the records.
 
-AI generation, camera/avatar work, personalized video, speech recognition, rewards, notifications, and full offline support remain outside this slice.
+The closed adult/synthetic AI spike is separate from this slice. Child AI generation, production camera/avatar work, personalized video, speech recognition, rewards, notifications, and full offline support remain outside it.

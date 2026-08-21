@@ -20,7 +20,7 @@ The App Store version of Expo Go is currently incompatible with this Expo SDK 57
 
 Copy `.env.example` to the ignored `.env.local` for local development. On a physical iPhone, use the hosted `bare-traen-development` project's public URL and publishable key. Do not use `http://127.0.0.1:54321`, because loopback on the phone does not reach the Mac.
 
-Only `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` belong in the Expo client. Never add a Supabase secret/service-role key or `OPENROUTER_API_KEY`; AI calls must go through trusted server code.
+Expo configuration contains the public Supabase URL and publishable key and may contain the non-secret `EXPO_PUBLIC_AI_CARTOON_LAB_ENABLED` UI flag. Never add a Supabase secret/service-role key, `OPENROUTER_API_KEY`, prompt, or provider configuration; AI calls must go through trusted server code.
 
 ## Parent passwordless login
 
@@ -34,11 +34,38 @@ The family owner can create a child profile with only a nickname and one of four
 
 This acknowledgement is an implementation safeguard for the synthetic pilot flow, not approval of the final legal basis or wording. Legal/privacy review, withdrawal, deletion, retention, and any real-child or child-photo pilot remain separate release gates.
 
-The email-to-code, session restoration, first-family onboarding, empty-family, existing-child, and logout flows have been tested in local Safari with synthetic data. Child-creation database rules and interruption-retry behavior have automated local coverage. Local Mailpit and all local browser/app callbacks are ready. Hosted Development already has the exact callbacks, but neither the parent-onboarding nor child-onboarding migration has been deployed there; both require explicit authorization, and the child migration's fail-fast preflight must pass before deployment. Custom hosted SMTP with the Danish template and CAPTCHA or server-side throttling remain separate gates.
+The email-to-code, session restoration, first-family onboarding, empty-family, existing-child, and logout flows have been tested in local Safari with synthetic data. Child-creation database rules and interruption-retry behavior have automated local coverage. Local Mailpit and all local browser/app callbacks are ready. The tested parent- and child-onboarding migrations are deployed to Hosted Development. Custom hosted SMTP with the Danish template and CAPTCHA or server-side throttling remain separate gates.
 
 On iOS and Android, the full Supabase session is encrypted with Expo Crypto AES-256-GCM before its ciphertext is written to AsyncStorage. The encryption key is kept separately in SecureStore and is restricted to the unlocked device. Safari uses a separate origin-scoped browser adapter so native storage modules never enter its bundle.
 
-This slice adds `expo-crypto`, `expo-secure-store`, and AsyncStorage plus the SecureStore config plugin. It therefore requires a fresh EAS development/preview binary; it cannot be delivered to an older binary as a JavaScript-only update. The app and runtime version were advanced to `1.1.0` so an update containing these imports cannot target the previous `1.0.0` native runtime. Native OTP, cold and warm magic-link callbacks, session restoration, and logout remain acceptance checks for that fresh build.
+The Auth slice added `expo-crypto`, `expo-secure-store`, and AsyncStorage. The closed AI lab also adds `expo-image-picker`, `expo-image-manipulator`, and `expo-file-system`, plus a gallery permission. The app and runtime version are therefore `1.2.0`; an installed `1.1.0` or older development/preview binary must be replaced with a fresh EAS build, not updated over the air. Native OTP, cold and warm magic-link callbacks, session restoration, logout, and gallery permission remain acceptance checks for that fresh build.
+
+## Closed AI cartoon lab
+
+The app contains a guarded technical route for turning one synthetic or adult
+test portrait into a 3D cartoon with OpenAI `gpt-image-2` through the server-side
+OpenRouter worker. It selects from the gallery only, downsizes the long edge to
+1536 pixels, uploads at most 8 MiB to a reserved private object, and displays
+the generated PNG through a short-lived signed URL. Camera and microphone
+permissions are disabled, and the result is never written to a child profile.
+
+`EXPO_PUBLIC_AI_CARTOON_LAB_ENABLED` is strict and defaults to `false`; any
+value other than exactly `true` hides the entry point and redirects a direct
+route. That flag is only a UI gate. The database operation also starts disabled,
+the trusted tester allowlist starts empty, and the database always rejects
+child media. Never enable the client flag by itself or use a real child image.
+
+The client never receives or submits the prompt, model, provider settings, or
+OpenRouter key. It sends the stable operation key `portrait.cartoon_3d`; the
+server pins the current immutable database version. This lets an administrator
+publish a new prompt without a mobile release while preserving the exact
+configuration used by existing jobs.
+
+The screen polls the same idempotent job and may ask the worker to reconcile a
+stale lease, but it never repeats the paid image-generation POST automatically.
+The operation remains off until the documented privacy, provider-routing,
+durable-queue, finalization, retention/deletion, recovery, and budget gates are
+complete.
 
 ## EAS builds for an iPhone
 

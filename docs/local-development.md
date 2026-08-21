@@ -111,6 +111,34 @@ Starting local Supabase does **not** automatically switch either app away from i
 
 With Local Supabase selected, a synthetic adult can complete first-family onboarding and then create a child profile with only a nickname and one of four non-photo preset avatars. Only the family owner may create one, the flow records a versioned guardian acknowledgement privately, and each family is limited to 10 active children. The app saves a request identity before submission so an interrupted or uncertain request can be retried without creating a duplicate child. Do not use real child details or media: the acknowledgement does not complete the legal/privacy, withdrawal, deletion, or retention work required for a real-child or child-photo pilot.
 
+## Closed AI image lab
+
+The first AI image flow is a closed technical lab, not a child-profile feature.
+It accepts one gallery image of a synthetic person or an adult test person,
+prepares it locally, stores input and output in private Supabase Storage, and
+lets OpenAI `gpt-image-2` transform it through the server-only OpenRouter
+worker. The prompt, model, provider, limits, and contracts come from an
+immutable database operation version rather than the app.
+
+Three independent gates start closed:
+
+- `EXPO_PUBLIC_AI_CARTOON_LAB_ENABLED` must be exactly `true`.
+- The database operation must be enabled.
+- The authenticated adult must be in the expiring server-managed tester
+  allowlist.
+
+The database separately rejects child media regardless of the choice shown by
+the client. Do not use real child photos, and use adult material only when you
+have the right to process it. No tester or operation is enabled by the local
+seed.
+
+Do not activate the lab until a limited OpenRouter key and provider-enforced
+budget exist, the Edge Function has been explicitly deployed, the exact model
+route has passed the privacy, EU-processing, and Zero Data Retention review,
+and durable recovery, post-provider finalization, retention deletion, and
+Storage-byte recovery are implemented. See `supabase/README.md` for the local
+adapter test and explicitly approved function-serving commands.
+
 The local Auth callback list is ready for ports 11000/11001 and the development, preview, and production app schemes. The same exact callbacks are already registered in Hosted Development, and the tested parent- and child-onboarding migrations were deployed there on 2026-08-21 after the child migration's fail-fast preflight passed. Custom hosted SMTP with the Danish template and CAPTCHA or server-side throttling remain separate gates before passwordless login is exposed publicly.
 
 Supabase hosts the backend, not the visible previews. The administration preview belongs on Vercel, and iPhone previews belong on Expo/EAS.
@@ -138,7 +166,7 @@ The owning organization is now on Supabase Pro with Spend Cap enabled. Hosted De
 
 The project uses Expo SDK 57. The App Store version of Expo Go does not currently support this SDK, even when Expo Go is freshly installed. Keep SDK 57 and install the project's own **Bare Træn Dev** app instead.
 
-Parent login adds native storage and cryptography modules and advances the app/runtime version to `1.1.0`. An installed `1.0.0` development or preview app must therefore be replaced with a fresh EAS build. Do not publish this slice as an EAS Update to the old native runtime.
+Parent login added native storage and cryptography modules, and the closed AI lab now adds gallery and image-processing modules. The app/runtime version is `1.2.0`. An installed `1.1.0` or older development or preview app must therefore be replaced with a fresh EAS build. Do not publish this slice as an EAS Update to an older native runtime.
 
 Your paid Apple Developer membership lets EAS build and sign this app in the cloud. Full Xcode is not required for this route.
 
@@ -209,7 +237,7 @@ mise exec -- pnpm dlx eas-cli@latest build --platform ios --profile preview
 
 Register the tester's phone first, then share the unlisted EAS installation link only with that tester. Apple still restricts installation to registered devices, but the build page itself may be reachable by anyone who has its URL unless unauthenticated build access is disabled in the Expo project settings. This is ad-hoc distribution; it does not publish the app in the App Store.
 
-JavaScript, styling, and image updates can often be sent to a compatible installed preview build through EAS Update. Native libraries, permissions, Expo SDK changes, and other native configuration require a new build. In particular, never send the `1.1.0` parent-login slice to an installed `1.0.0` binary.
+JavaScript, styling, and image updates can often be sent to a compatible installed preview build through EAS Update. Native libraries, permissions, Expo SDK changes, and other native configuration require a new build. In particular, never send the `1.2.0` AI-media slice to an installed `1.1.0` or older binary.
 
 ## Accounts: individual, not shared
 

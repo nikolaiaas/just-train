@@ -22,6 +22,7 @@ import {
 import { useAuth } from "@/auth/auth-provider";
 import type { ParentBootstrap, ParentChild } from "@/auth/parent-data";
 import { resolveChildAvatar } from "@/children/child-setup";
+import { isAiCartoonLabEnabled } from "@/ai/core";
 
 import {
   ActionButton,
@@ -37,6 +38,10 @@ const goalProgress = getGoalProgress(demoGoal, demoProgress);
 const currentExercise = getCurrentExercise(demoExercises, demoProgress);
 const football = demoTopics.find((topic) => topic.id === demoGoal.topicId)!;
 const NEW_CHILD_ROUTE = "/child/new" as Href;
+const AI_CARTOON_ROUTE = "/ai/cartoon" as Href;
+const AI_CARTOON_LAB_ENABLED = isAiCartoonLabEnabled(
+  process.env.EXPO_PUBLIC_AI_CARTOON_LAB_ENABLED,
+);
 
 export default function TodayScreen() {
   const {
@@ -258,6 +263,7 @@ function NoChildren({
           barnet.
         </Body>
       </View>
+      <AiCartoonLabCard />
       <View style={styles.stateActions}>
         {bootstrap.family?.role === "owner" ? (
           <ActionButton onPress={() => router.push(NEW_CHILD_ROUTE)}>
@@ -449,6 +455,8 @@ function FixtureToday({
         </View>
       </View>
 
+      <AiCartoonLabCard />
+
       <View style={styles.previewNote}>
         <Text style={styles.previewNoteText}>
           Valgt barn kommer fra Supabase · mål, øvelser og point er stadig
@@ -456,6 +464,30 @@ function FixtureToday({
         </Text>
       </View>
     </Screen>
+  );
+}
+
+function AiCartoonLabCard() {
+  const router = useRouter();
+
+  if (!AI_CARTOON_LAB_ENABLED) {
+    return null;
+  }
+
+  return (
+    <SurfaceCard style={styles.aiLabCard}>
+      <View style={styles.aiLabCopy}>
+        <Kicker>Lukket voksen/syntetisk test</Kicker>
+        <Text style={styles.weekTitle}>Prøv 3D-tegneserieportrættet</Text>
+        <Body>
+          Testen er adskilt fra børneprofiler og må ikke bruges med billeder af
+          børn.
+        </Body>
+      </View>
+      <ActionButton onPress={() => router.push(AI_CARTOON_ROUTE)}>
+        Åbn AI-billedlab
+      </ActionButton>
+    </SurfaceCard>
   );
 }
 
@@ -717,6 +749,8 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.body,
     fontWeight: typography.weights.bold,
   },
+  aiLabCard: { gap: spacing.md },
+  aiLabCopy: { gap: spacing.xs },
   previewNote: { alignItems: "center", marginTop: spacing.sm },
   previewNoteText: {
     color: colors.muted,

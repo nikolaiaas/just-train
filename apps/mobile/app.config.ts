@@ -59,6 +59,15 @@ export default ({ config }: ConfigContext): ExpoConfig => {
           configureAndroidBackup: true,
         },
       ],
+      [
+        "expo-image-picker",
+        {
+          photosPermission:
+            "Vælg kun et billede af en voksen testperson eller en syntetisk person til den lukkede AI-billedlab.",
+          cameraPermission: false,
+          microphonePermission: false,
+        },
+      ],
     ],
     extra: {
       ...config.extra,
