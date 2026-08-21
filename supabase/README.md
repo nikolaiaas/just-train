@@ -129,6 +129,17 @@ independent backup process for Storage object bytes. Until then, destructive or
 data-rewriting hosted migrations require a fresh private backup and a recorded
 recovery plan before merge.
 
+The 2026-08-21 recovery rehearsal verified the private files and checksums,
+roles, application schema and data, migration history, all 11 RLS-enabled app
+tables, 38 policies, 19 functions, and indexes in an isolated environment. The
+entire hosted dump is not yet restore-rehearsed: its Storage metadata expects a
+`storage.buckets.versioning_status` column that the current local Supabase
+baseline does not have. The backup contains zero Storage metadata rows, but the
+statement still cannot be parsed against that older target schema. Keep the
+backup unchanged and repeat the final rehearsal against a matching hosted or
+local Supabase platform baseline before treating it as a complete recovery
+path. Supabase Storage object bytes always require a separate backup.
+
 ### Child-creation migration preflight
 
 `202608210001_child_profile_creation.sql` deliberately fails before adding its

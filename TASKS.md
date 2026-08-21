@@ -108,7 +108,7 @@ Exit condition: local development does not depend on hand-created dashboard stat
 - [x] Limit automatic hosted database delivery to immutable files in `supabase/migrations`; never deploy the local seed or push local `config.toml`.
 - [x] Require expand/contract database changes so shared pull-request previews, the stable web preview, and installed mobile builds remain compatible while releases overlap.
 - [ ] Before any real-data pilot, separately approve Supabase Pro billing, verify automatic database backup and recovery, and implement a separate backup for Storage object bytes; Free has no automatic backups or uptime guarantee.
-- [ ] Document and rehearse restoration from a private logical backup using synthetic data without exposing backup contents or credentials.
+- [ ] Finish and document a full private logical-backup restoration rehearsal against a matching Supabase platform baseline. The 2026-08-21 rehearsal verified checksums, permissions, roles, app schema/data, RLS, functions, indexes, and migration history, but the final Storage metadata step is blocked because the current local baseline lacks the hosted `storage.buckets.versioning_status` column; never rewrite the backup to hide that mismatch.
 - [ ] Add a separate safe bootstrap for shared synthetic hosted data without known-password accounts.
 - [ ] Configure separate local, development, preview, and production environment names.
 - [x] Ensure only the Supabase URL and publishable key reach client applications; never expose a service-role or secret key.
