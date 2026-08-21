@@ -1,12 +1,11 @@
 # Supabase Advisor review
 
-Reviewed on 2026-08-21 against the migration-backed local schema and the
-Hosted Development Advisor items recorded in the task board. Migration
-`202608210004_database_advisor_hardening.sql` is intentionally
-backward-compatible. It does not change hosted state until it reaches `main`
-through the protected migration flow.
+Reviewed on 2026-08-21 against the migration-backed local schema and Hosted
+Development. Migration `202608210004_database_advisor_hardening.sql` reached
+Hosted Development through protected PR #6. Local and hosted migration history
+align, and both hosted Advisors were rerun after deployment.
 
-## Current Security Advisor warnings
+## Security Advisor review
 
 | Advisor check                                             | Object                                                                          | Disposition                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | --------------------------------------------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -18,12 +17,13 @@ through the protected migration flow.
 | `0029 authenticated_security_definer_function_executable` | `public.publish_ai_operation_version(text,text,uuid)`                           | Accepted and tested. It has an empty fixed `search_path`, binds authority to `auth.uid()`, requires `private.is_admin()`, and uses expected-version concurrency control. `PUBLIC` and `anon` cannot execute it.                                                                                                                                                                                                                                                                             |
 | Auth leaked-password protection disabled                  | Hosted Auth                                                                     | Accepted for the current passwordless-only preview flow, with the conditions recorded below. It must be enabled before a password flow is introduced.                                                                                                                                                                                                                                                                                                                                       |
 
-The Security Advisor snapshot therefore contains zero errors and seven warnings:
+Before the migration, Security Advisor contained zero errors and seven warnings:
 two removable grants on the platform auto-RLS helper, four intentional
-authenticated product RPCs, and one password-setting warning that does not
-apply to the current passwordless credentials.
+authenticated product RPCs, and one password-setting warning. After the hosted
+rerun it contains zero errors and five warnings. Only the four reviewed product
+RPCs and the password-setting warning remain.
 
-## Current Performance Advisor warnings
+## Performance Advisor review
 
 | Advisor check                       | Object                                     | Disposition                                                                                                                                                 |
 | ----------------------------------- | ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -36,6 +36,7 @@ permissive `SELECT` policies per table to one. There are now exactly three
 anonymous and three authenticated content-read policies across the three
 tables. `008_database_advisor_hardening.test.sql` asserts those counts and the
 same anonymous, parent, and administrator row visibility as before.
+The hosted rerun contains zero errors and zero warnings.
 
 ## Security-definer RPC implementation notes
 
@@ -61,8 +62,8 @@ review before merge.
 
 ## Leaked-password protection
 
-The seventh current Security Advisor warning reports that leaked-password
-protection is not enabled. Bare Træn's current product authentication is
+The remaining Auth warning reports that leaked-password protection is not
+enabled. Bare Træn's current product authentication is
 passwordless email OTP or a one-use magic link: neither the administration nor
 mobile client asks for, creates, stores, or submits a user password, and
 children have no Auth accounts. The warning therefore does not weaken a
@@ -77,12 +78,11 @@ this decision.
 
 ## Verification and follow-up
 
-Local verification consists of a complete database reset, all pgTAP and
-database-concurrency tests, and `supabase db lint`. After the migration reaches
-Hosted Development through a reviewed merge, rerun both the Security and
-Performance Advisors. The three multiple-policy warnings and the two
-`rls_auto_enable` execute warnings should disappear. The authenticated product
-RPC notices remain documented, intentional exceptions; do not suppress them by
+Local verification consisted of a complete database reset, all pgTAP and
+database-concurrency tests, and `supabase db lint`. After protected PR #6, the
+hosted rerun confirmed that the three multiple-policy warnings and two
+`rls_auto_enable` execute warnings disappeared. The authenticated product RPC
+notices remain documented, intentional exceptions; do not suppress them by
 granting direct writes to the underlying protected tables.
 
 ## References

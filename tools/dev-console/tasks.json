@@ -1,6 +1,6 @@
 {
   "version": 3,
-  "updatedAt": "2026-08-21T17:28:33.000Z",
+  "updatedAt": "2026-08-21T17:39:50.000Z",
   "items": [
     {
       "id": "hosted-preview-safety",
@@ -128,23 +128,6 @@
       "priority": 0,
       "createdAt": "2026-08-21T09:02:49.299Z",
       "updatedAt": "2026-08-21T09:02:49.299Z"
-    },
-    {
-      "id": "f7f114f4-e2bb-4ac2-a8bf-1cec4032f9b2",
-      "title": "Ryd Supabase Advisor-advarsler",
-      "details": "Gennemgå de syv nuværende database-advarsler: begræns platformens rls_auto_enable-execute-rettigheder hvis sikkert, dokumentér de fire tilsigtede SECURITY DEFINER-produkt-RPCer, og mål eller foren de overlappende læsepolitikker for topics, goals og exercises.",
-      "implementationNotes": "Migration 202608210004 fjerner klienters execute-ret til den valgfrie rls_auto_enable-hjælper og samler læsepolitikkerne for topics, goals og exercises uden at ændre synligheden for anonymous, forældre eller administratorer. De fire tilsigtede authenticated SECURITY DEFINER-produkt-RPCer og den passwordfri leaked-password-undtagelse er eksplicit dokumenteret. Den fulde lokale databasepakke og Advisor-specifikke pgTAP-tests er grønne; kortet forbliver Doing, indtil migrationen er deployet gennem protected main og begge Hosted Development Advisors er kørt igen.",
-      "evidence": [
-        {
-          "kind": "link",
-          "label": "Supabase database advisors (login kræves)",
-          "url": "https://supabase.com/dashboard/project/wxhshsouhrjtlxdagwmh/advisors/security"
-        }
-      ],
-      "status": "doing",
-      "priority": 1,
-      "createdAt": "2026-08-21T09:08:00.832Z",
-      "updatedAt": "2026-08-21T17:28:33.000Z"
     },
     {
       "id": "dev-console",
@@ -403,6 +386,23 @@
       "priority": 13,
       "createdAt": "2026-08-21T10:30:00.000Z",
       "updatedAt": "2026-08-21T17:28:33.000Z"
+    },
+    {
+      "id": "f7f114f4-e2bb-4ac2-a8bf-1cec4032f9b2",
+      "title": "Ryd Supabase Advisor-advarsler",
+      "details": "Gennemgå de syv nuværende database-advarsler: begræns platformens rls_auto_enable-execute-rettigheder hvis sikkert, dokumentér de fire tilsigtede SECURITY DEFINER-produkt-RPCer, og mål eller foren de overlappende læsepolitikker for topics, goals og exercises.",
+      "implementationNotes": "Migration 202608210004 er deployet til Hosted Development gennem protected PR #6. Den fjernede de to rls_auto_enable-grants og alle tre overlappende policy-advarsler uden at ændre synligheden for anonymous, forældre eller administratorer. Den efterfølgende hosted rerun viser Security Advisor med 0 fejl og 5 dokumenterede advarsler samt Performance Advisor med 0 fejl og 0 advarsler. De fem resterende er de fire tilsigtede authenticated produkt-RPCer og passwordbeskyttelsen, som er en eksplicit undtagelse for det nuværende passwordfri flow.",
+      "evidence": [
+        {
+          "kind": "link",
+          "label": "Supabase database advisors (login kræves)",
+          "url": "https://supabase.com/dashboard/project/wxhshsouhrjtlxdagwmh/advisors/security"
+        }
+      ],
+      "status": "done",
+      "priority": 14,
+      "createdAt": "2026-08-21T09:08:00.832Z",
+      "updatedAt": "2026-08-21T17:39:50.000Z"
     }
   ]
 }
