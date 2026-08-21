@@ -1,6 +1,6 @@
 {
   "version": 3,
-  "updatedAt": "2026-08-21T10:30:00.000Z",
+  "updatedAt": "2026-08-21T11:59:42.000Z",
   "items": [
     {
       "id": "auth-environment-slice",
@@ -130,37 +130,26 @@
       "updatedAt": "2026-08-20T19:56:04.066Z"
     },
     {
-      "id": "226c2fe3-d78a-487d-9a62-4682531f3cf9",
-      "title": "Opret og installer OpenRouter-token",
-      "details": "Opret en særskilt begrænset udviklingsnøgle med budget og key-guardrail for eksakt Azure/model-allowlist og ZDR. Worker-requesten håndhæver separat Azure-only og ingen fallback. Installér nøglen kun i lokal Function-env og som hosted Edge secret efter eksplicit godkendelse. Databaseoperationen og testerlisten forbliver lukkede; nøgleinstallation deployer ikke funktionen.",
-      "implementationNotes": "",
-      "evidence": [],
-      "status": "todo",
-      "priority": 4,
-      "createdAt": "2026-08-20T19:52:36.409Z",
-      "updatedAt": "2026-08-21T10:30:00.000Z"
-    },
-    {
       "id": "d97167f0-083f-4801-88ca-e4a83006a4b7",
       "title": "Beskyt offentligt login mod misbrug",
       "details": "Tilføj CAPTCHA eller server-side throttling til email- og kodehandlinger, før den stabile admin- og forældrelogin-side åbnes offentligt; bevar samme generiske svar for kendte og ukendte adresser.",
       "implementationNotes": "",
       "evidence": [],
       "status": "todo",
-      "priority": 5,
+      "priority": 4,
       "createdAt": "2026-08-20T21:43:38.513Z",
       "updatedAt": "2026-08-20T21:43:38.513Z"
     },
     {
       "id": "ai-reliability-gates",
       "title": "Luk AI-driftens aktiveringshuller",
-      "details": "Tilføj autonom stale-job-sweeper, holdbart checkpoint og reconciliation efter betalt provider-resultat, fysisk retention-sletning samt et provider-håndhævet budget før aktivering.",
-      "implementationNotes": "Den nuværende spike udfører højst ét provider-POST og forbliver default-off. delete_after er kun metadata, og mobil polling er ikke en autonom kø.",
+      "details": "Tilføj autonom stale-job-sweeper, holdbart checkpoint og reconciliation efter betalt provider-resultat samt fysisk retention-sletning før aktivering.",
+      "implementationNotes": "Den begrænsede provider-nøgle og guardrail er på plads. Den nuværende spike udfører højst ét provider-POST og forbliver default-off; delete_after er kun metadata, og mobil polling er ikke en autonom kø.",
       "evidence": [],
       "status": "todo",
-      "priority": 6,
+      "priority": 5,
       "createdAt": "2026-08-21T10:30:00.000Z",
-      "updatedAt": "2026-08-21T10:30:00.000Z"
+      "updatedAt": "2026-08-21T11:59:42.000Z"
     },
     {
       "id": "a5ed6926-00b7-49c4-ad6b-41a4974b6728",
@@ -403,6 +392,17 @@
       "priority": 10,
       "createdAt": "2026-08-20T19:52:36.403Z",
       "updatedAt": "2026-08-21T10:30:00.000Z"
+    },
+    {
+      "id": "226c2fe3-d78a-487d-9a62-4682531f3cf9",
+      "title": "Opret og installer OpenRouter-token",
+      "details": "Opret en særskilt begrænset udviklingsnøgle med budget og key-guardrail for eksakt Azure/model-allowlist og ZDR. Worker-requesten håndhæver separat Azure-only og ingen fallback. Installér nøglen kun i lokal Function-env og som hosted Edge secret efter eksplicit godkendelse. Databaseoperationen og testerlisten forbliver lukkede; nøgleinstallation deployer ikke funktionen.",
+      "implementationNotes": "Nøglen udløber efter 90 dage og har USD 5 totalgrænse. Den tildelte guardrail har USD 5 daglig grænse, tillader kun Azure og microsoft/mai-image-2.5 og har non-frontier ZDR slået til; OpenRouter viser ZDR som Partially Enforced. Hemmeligheden er installeret i den ignorerede lokale Function-env og som Hosted Development Edge secret uden at blive vist eller committed. Ingen Function eller migration blev deployet, operationen er fortsat disabled, og testerlisten er tom. To tests med et fuldt syntetisk barneportræt gav HTTP 400 og USD 0 i forbrug; Azure-ruten er derfor ikke verificeret til aktivering.",
+      "evidence": [],
+      "status": "done",
+      "priority": 11,
+      "createdAt": "2026-08-20T19:52:36.409Z",
+      "updatedAt": "2026-08-21T11:59:42.000Z"
     }
   ]
 }

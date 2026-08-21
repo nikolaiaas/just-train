@@ -123,6 +123,17 @@ export function createOpenRouterImageRequest(input: {
     });
   }
 
+  // Microsoft's MAI image-edit contract documents JPEG and PNG references.
+  // Keep the shared detector broader for future operations, but fail closed for
+  // this exact provider route until OpenRouter documents a WebP conversion.
+  if (input.inputMimeType === "image/webp") {
+    throw new OpenRouterImageError({
+      attemptCode: "unsupported_input_mime_type",
+      publicCode: "invalid_input_image",
+      retryable: false,
+    });
+  }
+
   const detectedMimeType = detectSupportedImageMimeType(input.inputBytes);
 
   if (detectedMimeType !== input.inputMimeType) {

@@ -134,13 +134,18 @@ synthetic or adult test material. Do not use real child photos, and use adult
 material only when you have the right to process it. No tester or operation is
 enabled by the local seed.
 
-Do not activate the lab until a limited OpenRouter key and key-level guardrail
-enforce the budget, exact model/provider allowlists, and Zero Data Retention;
-the worker request's Azure-only, no-fallback controls have been verified; the
-Edge Function has been explicitly deployed; and durable recovery, post-provider
-finalization, retention deletion, and Storage-byte recovery are implemented.
-The current provider review permits synthetic/adult technical tests only and
-does not approve real child photos. See
+A limited 90-day OpenRouter development key is installed in the ignored local
+Function environment and Hosted Development's Edge secrets. The key has a USD 5
+total limit; its assigned guardrail has a USD 5 daily ceiling, an exact
+Azure/MAI allowlist, and non-frontier ZDR enabled. Two synthetic Azure MAI
+requests still failed with HTTP 400 and no billed usage, so the route is not
+verified.
+Do not activate the lab until a successful provider route and the remaining
+under-18/privacy, durable recovery, post-provider finalization, retention
+deletion, and Storage-byte recovery gates are resolved. The Edge Function has
+not been deployed, the operation remains disabled, and the tester allowlist
+remains empty. The current provider review permits synthetic/adult technical
+tests only and does not approve real child photos. See
 [`ai-image-provider-review.md`](./ai-image-provider-review.md) and
 `supabase/README.md` for the decision and explicitly approved local commands.
 

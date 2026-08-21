@@ -113,6 +113,29 @@ test("rejects a declared MIME type that disagrees with the image signature", () 
   );
 });
 
+test("rejects WebP because the pinned MAI edit route documents JPEG and PNG only", () => {
+  const webpBytes = new Uint8Array([
+    0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50,
+  ]);
+
+  assert.throws(
+    () =>
+      createOpenRouterImageRequest({
+        inputBytes: webpBytes,
+        inputMimeType: "image/webp",
+        model: "microsoft/mai-image-2.5",
+        options: OPTIONS,
+        prompt: PROMPT,
+      }),
+    (error) =>
+      assertImageError(error, {
+        attemptCode: "unsupported_input_mime_type",
+        publicCode: "invalid_input_image",
+        retryable: false,
+      }),
+  );
+});
+
 test("parses exactly one PNG and normalizes cost to microdollars", () => {
   const result = parseOpenRouterImageResponse({
     body: {

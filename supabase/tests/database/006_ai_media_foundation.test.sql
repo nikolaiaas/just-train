@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(85);
+select plan(86);
 
 select has_table('public', 'ai_operations', 'AI operations exist');
 select has_table(
@@ -261,6 +261,24 @@ values (
   now() + interval '1 day'
 );
 set local role authenticated;
+
+select throws_ok(
+  $$
+    select *
+    from public.prepare_ai_media_job(
+      'portrait.cartoon_3d',
+      '20000000-0000-4000-8000-000000000001',
+      '10000000-0000-4000-8000-000000000001',
+      'a3000000-0000-4000-8000-000000000097',
+      'adult_test',
+      'image/webp',
+      null
+    )
+  $$,
+  '22023',
+  'The input image type is not supported by this operation.',
+  'the MAI operation rejects WebP before reserving an upload'
+);
 
 select results_eq(
   $$

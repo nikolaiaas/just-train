@@ -243,11 +243,12 @@ Exit condition: an authorized person can edit and publish content without direct
 - [ ] Verify that no microphone recording is retained for the voice-stop feature.
 - [ ] Test camera capture, gallery selection, compression, upload progress, cancellation, and deletion using adult test material.
 - [ ] Compare at least two avatar-generation approaches for quality, latency, price, API terms, EU processing, deletion, and failure handling.
-- [x] Build and unit-test one bounded OpenRouter/Azure MAI Image 2.5 transformation adapter with private Storage, idempotent reservation, one mocked provider attempt, sanitized audit data, and default-off server activation; the credentialed synthetic live test remains open below.
+- [x] Build and unit-test one bounded OpenRouter/Azure MAI Image 2.5 transformation adapter with private Storage, idempotent reservation, one mocked provider attempt, sanitized audit data, and default-off server activation; two credentialed synthetic requests were later rejected with HTTP 400 and no billed usage, so the route remains unverified and disabled.
+- [x] Create a separate 90-day OpenRouter development key with a USD 5 total limit, apply a key guardrail for Azure/MAI-only routing, non-frontier ZDR, and a USD 5 daily ceiling, then install it only in the ignored local Function environment and Hosted Development's Edge secrets without deploying or activating the operation.
 - [ ] Add an autonomous stale-job sweeper and durable failure-transition retry so recovery does not depend on the mobile screen remaining open.
 - [ ] Add a durable provider-success checkpoint and idempotent finalizer so an uploaded paid output can be reconciled without regeneration.
 - [ ] Delete private Storage objects at their recorded retention deadline and prove both deletion and off-platform byte recovery.
-- [ ] Enforce a provider-side project-key budget and guardrail, and resolve the recorded Zero Data Retention, EU processing, processor-contract, preview-model, and under-18 blockers for the exact OpenRouter/Azure MAI route before activation with real child photos.
+- [ ] Resolve the recorded Zero Data Retention enforcement, EU processing, processor-contract, preview-model, successful-live-route, and under-18 blockers for the exact provider route before activation with real child photos.
 - [ ] Test short exercise-video download size, playback, caching, and offline behaviour.
 - [ ] Prototype personalized motion/video generation separately and record quality, cost, latency, consent, and moderation blockers.
 - [ ] Prototype schema-validated AI content drafts that can only create a reviewable draft revision.

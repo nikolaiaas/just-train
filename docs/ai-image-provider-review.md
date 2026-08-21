@@ -14,6 +14,12 @@ technical and product-risk decision record, not legal advice.
   operation remains disabled, and the tester allowlist remains empty. Because
   a caller label cannot prove who appears in a photo, trusted-tester policy is
   also part of this temporary boundary.
+- **Live route status:** **not verified**. The pinned OpenRouter Azure/MAI route
+  returned HTTP 400 for two requests using the same fully synthetic
+  fictional-child reference, including a 1024 by 1024 PNG. OpenRouter reported
+  no billed usage for either request. The generic response does not identify
+  the failing layer or prove that the depicted age caused the rejection, but it
+  is sufficient reason not to activate the route.
 
 Azure MAI is the closest current technical candidate because it accepts one
 reference image, generates one image, and OpenRouter lists the Azure endpoint
@@ -23,6 +29,26 @@ its image-specific request schema does not provide request-level `zdr` or
 `data_collection` controls. ZDR therefore has to be enforced and verified with
 an OpenRouter key guardrail and the live endpoint route. The request itself
 separately enforces Azure-only routing with fallback disabled.
+
+## Development key and live verification
+
+On 2026-08-21 a separate 90-day development key was created with a USD 5
+total limit. Its assigned guardrail has a USD 5 daily ceiling, allows only the
+Azure provider and `microsoft/mai-image-2.5`, and enables non-frontier Zero Data
+Retention. OpenRouter displays that ZDR mode as partially enforced because it
+does not cover frontier models. This records the selected configuration and UI
+status; it is not proof of end-to-end ZDR for a request. The key was installed
+only in the ignored local Function environment and Hosted Development's Edge
+secrets. No migration or Function was deployed, no tester was added, and the
+operation remains disabled.
+
+The first synthetic request used a 1254 by 1254 PNG and the second used a
+freshly encoded 1024 by 1024 PNG. Both were submitted with Azure-only routing
+and fallback disabled, returned HTTP 400, and consumed no OpenRouter credit;
+OpenRouter's upstream log explicitly recorded one Azure attempt for the first.
+A separate OpenAI ImageGen edit of the same synthetic reference successfully
+produced the requested friendly 3D cartoon. That demonstrates the product
+interaction, not an approved production processor route.
 
 ## Why child-photo production is blocked
 
@@ -54,10 +80,25 @@ separately enforces Azure-only routing with fallback disabled.
 - **Google Vertex image models:** rejected for this product route. Google's
   current Service Specific Terms prohibit using Generative AI Services in an
   application directed to, or likely to be accessed by, people under 18.
-- **Krea and Seed/ByteDance image routes:** not selected because no adequate
-  public DPA and route-specific child-use, retention, or transfer documentation
-  was located beyond their public [Krea use policy](https://www.krea.ai/krea-2-use-policy)
-  and [BytePlus acceptable-use policy](https://docs.byteplus.com/en/docs/legal/docs-acceptable-use-policy).
+- **OpenAI GPT Image 2 through OpenRouter:** the closest capability match in
+  current endpoint metadata. The separate successful ImageGen edit did not test
+  this exact model or OpenRouter route and is only a product-interaction proof.
+  OpenAI's under-18 API guidance requires extra safeguards and Zero Data
+  Retention when processing personal data of children below the applicable age
+  of digital consent. OpenRouter's current ZDR endpoint list does not include
+  GPT Image, so this route is not acceptable for real child photos.
+- **Krea image routes:** support reference editing, but route-specific ZDR,
+  child-directed use, and processor terms could not all be verified from
+  primary sources. Do not use without written confirmation.
+- **Seed/ByteDance image routes:** current Seedream models appear on
+  OpenRouter's ZDR list and BytePlus publishes a DPA, but the contractual link
+  between that DPA and OpenRouter's exact `seed` endpoint, its processing
+  region, and child-portrait use has not been established. Do not use real
+  child photos without that written chain.
+- **Black Forest Labs and xAI image routes:** technically support reference
+  edits, but OpenRouter currently reports retention rather than ZDR for these
+  routes. Black Forest Labs also states that its services are not directed to
+  people under 18.
 - **Direct Azure:** worth a separate processor and abuse-monitoring assessment,
   but it does not currently solve EU-only inference. MAI Image 2.5 is documented
   as a Global Standard deployment, for which Microsoft may process inference
@@ -71,9 +112,9 @@ separately enforces Azure-only routing with fallback disabled.
 - approved processor/DPA and subprocessor chain, including sensitive-data
   classification;
 - verified EU-region processing and international-transfer position;
-- a key guardrail enforcing ZDR, the exact model/provider allowlists, and a
-  strict spend ceiling, plus verified request-level Azure-only/no-fallback
-  controls, all tested without exposing a secret;
+- a production-approved key guardrail enforcing ZDR, the exact model/provider
+  allowlists, and a strict spend ceiling, plus verified request-level
+  provider-only/no-fallback controls, all tested without exposing a secret;
 - production-ready model status or an explicitly accepted preview-model risk;
 - guardian/child notice and legal-basis flow, DPIA/risk review, retention,
   deletion, export, incident, and off-platform Storage recovery tests;
@@ -89,6 +130,15 @@ separately enforces Azure-only routing with fallback disabled.
 - [OpenRouter Data Processing Addendum](https://openrouter.ai/data-processing-agreement)
 - [OpenRouter terms](https://openrouter.ai/terms)
 - [OpenRouter sovereign and EU routing](https://openrouter.ai/docs/guides/features/sovereign-ai)
+- [OpenRouter current ZDR endpoints](https://openrouter.ai/api/v1/endpoints/zdr)
+- [OpenRouter provider policies](https://openrouter.ai/providers)
+- [OpenRouter image endpoint metadata](https://openrouter.ai/api/v1/images/models/openai/gpt-image-2/endpoints)
+- [Krea image endpoint metadata](https://openrouter.ai/api/v1/images/models/krea/krea-2-large/endpoints)
+- [Seedream image endpoint metadata](https://openrouter.ai/api/v1/images/models/bytedance-seed/seedream-5-0-pro/endpoints)
+- [BytePlus Data Processing Addendum](https://docs.byteplus.com/en/docs/legal/docs-data-processing-addendum)
+- [Black Forest Labs privacy policy](https://bfl.ai/legal/privacy-policy)
+- [xAI image endpoint metadata](https://openrouter.ai/api/v1/images/models/x-ai/grok-imagine-image-2.0/endpoints)
+- [OpenAI under-18 API guidance](https://developers.openai.com/api/docs/guides/safety-checks/under-18-api-guidance)
 - [Azure model data, privacy, and abuse monitoring](https://learn.microsoft.com/azure/foundry/responsible-ai/openai/data-privacy)
 - [Microsoft MAI Image on Azure](https://learn.microsoft.com/azure/foundry/foundry-models/how-to/use-foundry-models-mai-image)
 - [Google Cloud Service Specific Terms](https://cloud.google.com/terms/service-terms)

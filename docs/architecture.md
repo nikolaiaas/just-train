@@ -89,15 +89,16 @@ child-labelled and child-profile-linked requests, and the result is never
 attached to a child profile. A caller label cannot establish who appears in the
 image, so excluding real child photos also depends on the audited tester policy.
 
-Before the operation can be enabled, the project still needs a reviewed
-under-18/privacy and processor decision, a provider route that satisfies that
-decision, a durable queue and stale-job sweeper, a provider-success checkpoint
-and idempotent finalizer, automatic object retention/deletion, a Storage-byte
-backup and restore test, and a tightly budgeted OpenRouter project key whose
-guardrail enforces the exact model/provider allowlists and Zero Data Retention.
-The worker request separately pins Azure and disables provider fallback. The
-current provider review is explicitly no-go for real child photos through the
-standard OpenRouter route; its prerequisites are recorded in
+The tightly limited development key and its exact Azure/MAI guardrail are now
+installed server-side, but both credentialed synthetic requests returned HTTP
+400 with no billed usage. Before the operation can be enabled, the project
+still needs a successful provider route plus a reviewed under-18/privacy and
+processor decision, a durable queue and stale-job sweeper, a provider-success
+checkpoint and idempotent finalizer, automatic object retention/deletion, and
+a Storage-byte backup and restore test. The worker request separately pins
+Azure and disables provider fallback. The current provider review found no
+OpenRouter route that is approved for real child photos; its prerequisites and
+the failed live verification are recorded in
 [`ai-image-provider-review.md`](./ai-image-provider-review.md). Until those
 gates are complete, only synthetic people and narrowly controlled,
 consenting-adult technical tests belong in this flow.

@@ -78,17 +78,21 @@ logs. A key and a locally running function are intentionally insufficient to
 open the lab: tester authorization and operation activation require a separate
 reviewed trusted-server change.
 
-This migration must not be treated as production-ready AI media processing.
-Before activation it still needs a durable queue/sweeper, a checkpoint and
-idempotent finalizer after provider success, automatic object retention and
-deletion, a Storage-byte recovery test, an approved under-18/privacy and
-processor route, and a strict OpenRouter project-key budget plus a key-level
-guardrail for the exact model/provider allowlists and Zero Data Retention. The
-worker request separately pins Azure and disables provider fallback. The Images
-API does not expose request-level ZDR or data-collection fields, so those
-privacy controls must be verified on the OpenRouter key rather than represented
-by ignored request JSON. The current worker performs one provider POST at most;
-an uncertain outcome is audited and never regenerated automatically, avoiding
+This migration must not be treated as production-ready AI media processing. A
+separate 90-day development key now has a USD 5 total limit and an assigned
+guardrail with a USD 5 daily ceiling, exact Azure/MAI allowlists, and
+non-frontier ZDR. It is installed only in the ignored local Function environment
+and Hosted Development's Edge secrets. Two credentialed synthetic requests
+returned HTTP 400 with no billed usage, so the route remains unverified and the
+operation remains disabled. Before activation it still needs a successful and
+approved under-18/privacy and processor route, a durable queue/sweeper, a
+checkpoint and idempotent finalizer after provider success, automatic object
+retention and deletion, and a Storage-byte recovery test. The worker request
+separately pins Azure and disables provider fallback. The Images API does not
+expose request-level ZDR or data-collection fields, so those privacy controls
+must be verified on the OpenRouter key rather than represented by ignored
+request JSON. The current worker performs one provider POST at most; an
+uncertain outcome is audited and never regenerated automatically, avoiding
 accidental duplicate image charges.
 
 A new client request supersedes an older unclaimed reservation and closes its

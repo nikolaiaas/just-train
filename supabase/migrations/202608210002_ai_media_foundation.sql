@@ -660,6 +660,7 @@ declare
   caller_id uuid := (select auth.uid());
   selected_operation_id uuid;
   selected_operation_version_id uuid;
+  selected_input_contract jsonb;
   selected_max_attempts smallint;
   selected_max_cost_microusd bigint;
   existing_job_id uuid;
@@ -818,10 +819,12 @@ begin
 
   select
     operation.active_version_id,
+    active_version.input_contract,
     active_version.max_attempts,
     active_version.max_cost_microusd
   into
     selected_operation_version_id,
+    selected_input_contract,
     selected_max_attempts,
     selected_max_cost_microusd
   from public.ai_operations as operation
@@ -834,6 +837,17 @@ begin
   if selected_operation_version_id is null then
     raise exception 'The requested AI operation is unavailable.'
       using errcode = 'P0002';
+  end if;
+
+  if not exists (
+    select 1
+    from jsonb_array_elements_text(
+      selected_input_contract #> '{reference_image,mime_types}'
+    ) as allowed_mime_type(value)
+    where allowed_mime_type.value = p_input_mime_type
+  ) then
+    raise exception 'The input image type is not supported by this operation.'
+      using errcode = '22023';
   end if;
 
   if (
@@ -1665,7 +1679,7 @@ values (
   '{
     "reference_image": {
       "count": 1,
-      "mime_types": ["image/jpeg", "image/png", "image/webp"],
+      "mime_types": ["image/jpeg", "image/png"],
       "max_bytes": 8388608,
       "allowed_subject_kinds": ["synthetic", "adult_test"]
     }
