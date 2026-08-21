@@ -104,9 +104,14 @@ deletion. The physical retention worker and a Storage-byte recovery test remain
 required before a broader rollout.
 
 Merging a migration through the existing integration does not deploy Edge
-Functions or their secrets. The GPT Image 2 migration and `process-ai-job`
-function have not been deployed to Hosted Development. Deploying them or
-changing `OPENROUTER_API_KEY` remains a separate hosted mutation requiring
+Functions or their secrets. Protected PR #4 deployed the GPT Image 2
+migrations to Hosted Development on 2026-08-21, and `process-ai-job` was then
+deployed separately with JWT verification enabled after explicit authorization.
+The hosted endpoint returned HTTP 401 without authentication and HTTP 200 for
+its CORS preflight. One authenticated Hosted Development test then completed a
+synthetic upload, deployed provider job, private output read, and rendered GPT
+Image 2 result for the selected synthetic child. Future Function deployments or
+changes to `OPENROUTER_API_KEY` remain separate hosted mutations requiring
 explicit authorization.
 
 Request a sign-in email from the application, then open local Mailpit at

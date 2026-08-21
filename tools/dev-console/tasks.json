@@ -1,6 +1,6 @@
 {
   "version": 3,
-  "updatedAt": "2026-08-21T12:42:52.000Z",
+  "updatedAt": "2026-08-21T15:48:27.000Z",
   "items": [
     {
       "id": "auth-environment-slice",
@@ -144,12 +144,12 @@
       "id": "ai-reliability-gates",
       "title": "Luk AI-driftens pålidelighedshuller",
       "details": "Tilføj autonom stale-job-sweeper, holdbart checkpoint og reconciliation efter betalt provider-resultat samt fysisk retention-sletning før en bredere udrulning.",
-      "implementationNotes": "Den begrænsede provider-nøgle og budget-guardrail er på plads. Prototypen udfører højst ét provider-POST; delete_after er kun metadata, og mobil polling er ikke en autonom kø. Funktionen og migrationen er ikke deployed til Hosted Development.",
+      "implementationNotes": "Den begrænsede provider-nøgle, budget-guardrail, de to AI-migrationer og process-ai-job er på plads i Hosted Development. Et autentificeret hosted end-to-end-forløb er gennemført med syntetisk upload, valgt-barn-link, ét provider-job, privat output og renderet GPT Image 2-resultat. Prototypen udfører højst ét provider-POST; delete_after er kun metadata, og mobil polling er ikke en autonom kø. De resterende stale-job-, checkpoint-, reconciliation- og fysiske slettehuller er fortsat åbne.",
       "evidence": [],
       "status": "todo",
       "priority": 5,
       "createdAt": "2026-08-21T10:30:00.000Z",
-      "updatedAt": "2026-08-21T12:42:52.000Z"
+      "updatedAt": "2026-08-21T15:48:27.000Z"
     },
     {
       "id": "a5ed6926-00b7-49c4-ad6b-41a4974b6728",
@@ -386,23 +386,23 @@
       "id": "f6037e94-8519-46d7-b240-e1891227424e",
       "title": "Opret server-only OpenRouter-modul",
       "details": "Tilføj et godkendt, skemavalideret servermodul med timeout, omkostningsgrænser og redigerede logs; ingen nøgle i klienterne.",
-      "implementationNotes": "Den server-only AI-foundation har versionslåst prompt/model-konfiguration i databasen, privat Storage, valgt-barn-linkede og idempotente jobs samt en valideret OpenRouter-adapter låst til OpenAI GPT Image 2 uden fallback. Timeout, én provider-attempt, sanitiserede fejl og BYOK-aware omkostningsaudit bevares; ingen hemmelighed eller prompt kommer fra klienten. Der er ingen feature- eller tester-toggle. Migration og Edge Function er ikke deployed til Hosted Development.",
+      "implementationNotes": "Den server-only AI-foundation har versionslåst prompt/model-konfiguration i databasen, privat Storage, valgt-barn-linkede og idempotente jobs samt en valideret OpenRouter-adapter låst til OpenAI GPT Image 2 uden fallback. Timeout, én provider-attempt, sanitiserede fejl og BYOK-aware omkostningsaudit bevares; ingen hemmelighed eller prompt kommer fra klienten. Der er ingen feature- eller tester-toggle. De to AI-migrationer og process-ai-job er deployed til Hosted Development; migration alignment, aktiv Function, JWT-verifikation, HTTP 401 uden login og CORS HTTP 200 er kontrolleret. Et autentificeret hosted end-to-end-forløb med syntetisk input og privat resultat er gennemført.",
       "evidence": [],
       "status": "done",
       "priority": 10,
       "createdAt": "2026-08-20T19:52:36.403Z",
-      "updatedAt": "2026-08-21T12:42:52.000Z"
+      "updatedAt": "2026-08-21T15:48:27.000Z"
     },
     {
       "id": "226c2fe3-d78a-487d-9a62-4682531f3cf9",
       "title": "Opret og installer OpenRouter-token",
-      "details": "Brug en særskilt begrænset udviklingsnøgle med totalbudget og daglig budget-guardrail. Worker-requesten håndhæver OpenAI GPT Image 2, OpenAI-only og ingen fallback. Nøglen må kun ligge i lokal Function-env og som hosted Edge secret; installation deployer ikke funktionen.",
-      "implementationNotes": "Nøglen udløber efter 90 dage og har USD 5 totalgrænse; guardrailen har USD 5 daglig grænse og ingen provider-, model- eller ZDR-restriktioner. Hemmeligheden er installeret uden at blive vist eller committed. En eksakt test med et syntetisk 1024 x 1024-portræt gav HTTP 200, en gyldig PNG på cirka 19 sekunder, USD 0 faktureret af OpenRouter og USD 0.014237 rapporteret upstream BYOK-omkostning. Ingen Function eller migration blev deployet; de to tidligere Azure/MAI-tests med HTTP 400 bevares som historik.",
+      "details": "Brug en særskilt begrænset udviklingsnøgle med totalbudget og daglig budget-guardrail. Worker-requesten håndhæver OpenAI GPT Image 2, OpenAI-only og ingen fallback. Nøglen må kun ligge i lokal Function-env og som hosted Edge secret; Function-deploy og secret-installation er separate handlinger.",
+      "implementationNotes": "Nøglen udløber efter 90 dage og har USD 5 totalgrænse; guardrailen har USD 5 daglig grænse og ingen provider-, model- eller ZDR-restriktioner. Hemmeligheden er installeret uden at blive vist eller committed. En eksakt lokal test med et syntetisk 1024 x 1024-portræt gav HTTP 200, en gyldig PNG på cirka 19 sekunder, USD 0 faktureret af OpenRouter og USD 0.014237 rapporteret upstream BYOK-omkostning. De to AI-migrationer og process-ai-job er efterfølgende deployed til Hosted Development, hvor et autentificeret end-to-end-forløb med syntetisk input og privat resultat er gennemført; de to tidligere Azure/MAI-tests med HTTP 400 bevares som historik.",
       "evidence": [],
       "status": "done",
       "priority": 11,
       "createdAt": "2026-08-20T19:52:36.409Z",
-      "updatedAt": "2026-08-21T12:42:52.000Z"
+      "updatedAt": "2026-08-21T15:48:27.000Z"
     }
   ]
 }
