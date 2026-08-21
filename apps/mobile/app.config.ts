@@ -68,6 +68,16 @@ export default ({ config }: ConfigContext): ExpoConfig => {
           microphonePermission: false,
         },
       ],
+      [
+        "expo-localization",
+        {
+          supportedLocales: {
+            ios: ["da"],
+            android: ["da"],
+          },
+          supportsRTL: false,
+        },
+      ],
     ],
     extra: {
       ...config.extra,

@@ -36,7 +36,11 @@ type ScreenProps = PropsWithChildren<{
 
 export function Screen({ children, contentStyle, footer }: ScreenProps) {
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
+    <SafeAreaView
+      accessibilityLanguage="da-DK"
+      style={styles.safeArea}
+      edges={["top", "left", "right"]}
+    >
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={[styles.screen, contentStyle]}

@@ -141,10 +141,10 @@ Exit condition: a pull request gets a safe administration preview without touchi
 - [ ] Confirm live local development through Metro on the same network or a tunnel.
 - [ ] Verify native OTP, cold and warm magic-link callbacks, session restoration, logout, and gallery permission in the fresh `1.2.0` build.
 - [ ] Create a production-like EAS internal-distribution preview build that runs without Metro.
-- [ ] Disable unauthenticated EAS internal-build access, or otherwise document and enforce who may receive unlisted build URLs.
+- [x] Disable unauthenticated EAS internal-build access, or otherwise document and enforce who may receive unlisted build URLs.
 - [x] Configure a `preview` EAS Update channel so JavaScript, styling, and asset changes usually do not require a new binary.
 - [x] Document that native-library, permission, and native-configuration changes require a new build, and that the `1.2.0` AI-media slice must not be sent to a `1.1.0` or older binary through EAS Update.
-- [ ] Keep TestFlight as the later route for a larger tester group; it is beta distribution, not a public App Store launch.
+- [x] Keep TestFlight as the later route for a larger tester group; it is beta distribution, not a public App Store launch.
 
 Exit condition: the owner can run Bare Træn on the iPhone without App Store publication. With paid distribution enabled, the same build can be installed from a restricted or carefully shared unlisted link and receive compatible preview updates.
 
@@ -155,7 +155,7 @@ Exit condition: the owner can run Bare Træn on the iPhone without App Store pub
 - [ ] Implement mobile primitives: screen shell, header, card, primary/secondary button, input, list row, progress, badge, timer, and empty/error state.
 - [ ] Implement administration primitives: shell, sidebar, toolbar, form field, table/list, status badge, panel, dialog, and media placeholder.
 - [ ] Make touch targets, text scaling, colour contrast, focus states, and reduced motion part of the component definitions.
-- [ ] Set the application language and accessibility metadata to Danish.
+- [x] Set the application language and accessibility metadata to Danish.
 - [ ] Add representative loading, empty, offline, permission-denied, processing, and failure states to the screen gallery.
 
 Exit condition: pilot screens can be assembled from reviewed components rather than one-off markup.
@@ -167,11 +167,11 @@ Exit condition: pilot screens can be assembled from reviewed components rather t
 - [x] Add a private, immutable, versioned guardian-acknowledgement record for child-profile creation without adding child identity fields.
 - [ ] Define and implement the approved legal-consent, withdrawal, deletion, and retention records before a broader real-child pilot; the private family prototype is an explicitly accepted narrow exception.
 - [ ] Add topics, immutable topic releases, goals, ordered exercise steps, equipment, and safety text.
-- [ ] Add goal enrolments, training sessions, attempts, personal bests, and difficulty ratings.
+- [x] Add goal enrolments, training sessions, attempts, personal bests, and difficulty ratings.
 - [ ] Add an append-only point ledger, rewards, and child inventory.
 - [x] Add stable AI operations, immutable prompt/provider versions, generic family/admin jobs, private media metadata, named media slots, and worker-only attempt audit.
 - [x] Store the initial cartoon prompt in the database and let an administrator atomically publish a replacement while existing jobs remain pinned.
-- [ ] Build the reviewed administration UI for prompt-version publication and active-version history.
+- [x] Build the reviewed administration UI for prompt-version publication and active-version history.
 - [ ] Implement and test the retention worker that deletes private Storage bytes at `delete_after` and records the completed deletion.
 - [ ] Add AI draft/suggestion, review decision, publication, and audit-log structures.
 - [x] Configure six-digit passwordless email locally, remove fixture passwords, and protect magic links behind an explicit scanner-safe confirmation page.
@@ -181,7 +181,7 @@ Exit condition: pilot screens can be assembled from reviewed components rather t
 - [x] Keep child profiles parent-owned and collect no child Auth, email, password, age, or photo in this slice; direct child authentication remains deferred.
 - [x] Add administrator roles in protected metadata and server-side route guards.
 - [x] Write and test parent RLS for the current profile, family, membership, and child-profile tables, including owner-only child creation and default-deny private acknowledgement evidence.
-- [ ] Resolve or explicitly document every current Supabase Database Advisor warning: review the platform `rls_auto_enable` execute grants, preserve the tested boundaries of the two intentional `SECURITY DEFINER` RPCs, and measure or consolidate overlapping read policies for topics, goals, and exercises.
+- [ ] Resolve or explicitly document every current Supabase Database Advisor warning: review the platform `rls_auto_enable` execute grants, preserve the tested boundaries of the four intentional `SECURITY DEFINER` product RPCs, and measure or consolidate overlapping read policies for topics, goals, and exercises.
 - [x] Add narrow service-role worker RPCs and positive/negative RLS and Storage-policy tests for the first AI media flow, including parent-session family isolation and selected-child linkage; direct child authentication remains deferred.
 - [ ] Add policies and positive/negative tests for each future personal-data table and private Storage bucket as it is introduced.
 - [x] Ensure the content-administrator role alone cannot browse child data.
@@ -266,8 +266,8 @@ Exit condition: each risky feature has a written go/defer decision and does not 
 - [ ] Add error reporting with personal-data scrubbing and no session replay on child screens.
 - [ ] Add an audit for logs, analytics, crash reports, backups, and third-party processors.
 - [ ] Verify account deletion/export and media deletion can be implemented from the chosen data model.
-- [ ] Run an end-to-end AI-media integration test with synthetic material only; keep all input and output bytes out of Git and task evidence.
-- [ ] Write a repeatable internal-preview release checklist.
+- [x] Run an end-to-end AI-media integration test with synthetic material only; keep all input and output bytes out of Git and task evidence.
+- [x] Write a repeatable internal-preview release checklist.
 
 Exit condition: a failed permission test, migration, type check, or core-flow smoke test prevents a preview release.
 
@@ -279,7 +279,7 @@ Exit condition: a failed permission test, migration, type check, or core-flow sm
 - [ ] The functional parent-to-completed-exercise pilot works locally and on the iPhone.
 - [ ] The administration pilot can publish versioned content consumed by the mobile app.
 - [ ] Timers and pending results survive interruption and reconnect safely.
-- [ ] RLS tests prove family and administrator isolation.
+- [x] RLS tests prove family and administrator isolation.
 - [ ] All development and preview data is synthetic.
 - [ ] Avatar, voice, and personalized video each have an evidence-based go/defer decision.
 

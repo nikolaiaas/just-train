@@ -4,6 +4,11 @@ Expo 57 application for the Bare Træn parent/child experience. Parent authentic
 
 The app is linked to the Expo/EAS project [`@bare-traen/bare-traen`](https://expo.dev/accounts/bare-traen/projects/bare-traen). `app.config.ts` gives the development, preview, and production variants distinct names, URL schemes, and application identifiers.
 
+The native configuration declares Danish as the supported application language
+on iOS and Android. The shared screen shell also supplies `da-DK`
+accessibility-language metadata so Danish screen content is announced with the
+correct language on supported assistive technology.
+
 ## Local development
 
 Install from the repository root, then use the existing workspace scripts:
