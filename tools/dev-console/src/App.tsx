@@ -15,6 +15,7 @@ import type {
   ActionResponse,
   ConsoleSnapshot,
   ConsoleTask,
+  IphonePreviewState,
   LogEntry,
   ServiceId,
   ServiceOwnership,
@@ -169,7 +170,8 @@ const QUICK_LINKS: Array<{
 ];
 
 type RoutePath = "/" | "/services" | "/tasks" | "/not-found";
-type AggregateAction = "start-local-web" | "stop-my-apps";
+type AggregateAction =
+  "start-local-web" | "stop-my-apps" | "prepare-iphone-preview";
 type ServiceAction = "start" | "stop";
 type ToastKind = "success" | "error";
 
@@ -604,10 +606,122 @@ function EmptyServiceCard({ serviceId }: { serviceId: ServiceId }) {
   );
 }
 
+function IphonePreviewPanel({
+  preview,
+  pending,
+  prepare,
+}: {
+  preview: IphonePreviewState | null | undefined;
+  pending: boolean;
+  prepare: () => Promise<void>;
+}) {
+  const status = preview?.status ?? "checking";
+  const buildInProgress = status === "queued" || status === "building";
+  const checking = status === "checking";
+  const ready = status === "ready";
+  const hasError = status === "error";
+  const buttonLabel = buildInProgress
+    ? "Bygger iPhone-version…"
+    : checking
+      ? "Kontrollerer version…"
+      : hasError
+        ? "Prøv igen"
+        : "Installér på iPhone";
+  const statusLabel = ready
+    ? "Klar til installation"
+    : buildInProgress
+      ? "Bygger"
+      : status === "needs-build"
+        ? "Ny build nødvendig"
+        : hasError
+          ? "Kræver opmærksomhed"
+          : "Kontrollerer";
+  const statusClasses = ready
+    ? "border-[#bcded0] bg-[#e7f6ec] text-[#23764c]"
+    : hasError
+      ? "border-[#e9c5be] bg-[#fff0ed] text-danger"
+      : "border-[#ebd89c] bg-[#fff5d8] text-warning";
+
+  const handlePrepare = () => {
+    if (
+      status === "needs-build" &&
+      !window.confirm(
+        "Der findes ikke en aktuel iPhone-version af mobilkoden. Start et nyt privat EAS Preview-build? Det tager normalt nogle minutter.",
+      )
+    ) {
+      return;
+    }
+    void prepare();
+  };
+
+  return (
+    <section
+      aria-labelledby="iphone-preview-title"
+      className="mt-5 grid gap-5 overflow-hidden rounded-[22px] border border-[#c9dce3] bg-[#f3f8fa] p-5 shadow-[0_4px_14px_rgba(22,50,79,0.035)] sm:p-6 lg:grid-cols-[auto_minmax(0,1fr)_auto] lg:items-center"
+    >
+      <span className="grid size-12 shrink-0 place-items-center rounded-[15px] bg-[#dcecf1] text-brand-deep">
+        <Icon className="size-6" name="phone" />
+      </span>
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-2">
+          <h2
+            className="text-[16px] font-[760] tracking-[-0.015em] text-ink"
+            id="iphone-preview-title"
+          >
+            Bare Træn Preview på iPhone
+          </h2>
+          <span
+            aria-live="polite"
+            className={`inline-flex min-h-6 items-center gap-1.5 rounded-full border px-2 py-1 text-[9px] font-extrabold ${statusClasses}`}
+          >
+            <span
+              aria-hidden="true"
+              className={`size-1.5 rounded-full bg-current ${buildInProgress || checking ? "animate-pulse" : ""}`}
+            />
+            {statusLabel}
+          </span>
+        </div>
+        <p className="mt-2 max-w-3xl text-[12px] leading-5 text-muted">
+          {preview?.message ??
+            "Kontrollerer, om den nyeste mobilkode allerede findes som et standalone-preview."}
+        </p>
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {preview?.version ? (
+            <span className="rounded-full border border-[#c9dce3] bg-white/75 px-2 py-1 font-mono text-[9px] text-muted">
+              Version {preview.version}
+            </span>
+          ) : null}
+          <span className="rounded-full border border-[#c9dce3] bg-white/75 px-2 py-1 text-[9px] font-bold text-muted">
+            Preview · uden Metro
+          </span>
+          <span className="rounded-full border border-[#c9dce3] bg-white/75 px-2 py-1 text-[9px] font-bold text-muted">
+            Hosted Development
+          </span>
+        </div>
+        <p className="mt-1 text-[10px] leading-4 text-muted">
+          Bruger Hosted Development og virker uden Metro eller en lokal server.
+          Hvis mobilkoden er nyere, laver knappen automatisk ét nyt build først.
+        </p>
+      </div>
+      <Button
+        aria-busy={pending || buildInProgress || checking}
+        disabled={pending || buildInProgress || checking}
+        icon={buildInProgress || checking ? "refresh" : "phone"}
+        onClick={handlePrepare}
+        size="large"
+        variant={ready ? "primary" : "secondary"}
+      >
+        {buttonLabel}
+      </Button>
+    </section>
+  );
+}
+
 function OverviewPage({
   snapshot,
   navigate,
   pendingActions,
+  prepareIphonePreview,
   runAggregateAction,
   refresh,
   refreshing,
@@ -615,6 +729,7 @@ function OverviewPage({
   snapshot: ConsoleSnapshot | null;
   navigate: (to: string) => void;
   pendingActions: Set<string>;
+  prepareIphonePreview: () => Promise<void>;
   runAggregateAction: (action: AggregateAction) => Promise<void>;
   refresh: (manual?: boolean) => Promise<void>;
   refreshing: boolean;
@@ -695,6 +810,12 @@ function OverviewPage({
           </p>
         </div>
       </div>
+
+      <IphonePreviewPanel
+        pending={pendingActions.has("prepare-iphone-preview")}
+        prepare={prepareIphonePreview}
+        preview={snapshot?.iphonePreview}
+      />
 
       <section className="mt-11" aria-labelledby="overview-services-title">
         <SectionHeading
@@ -2243,6 +2364,7 @@ export function App() {
   const refreshGeneration = useRef(0);
   const csrfToken = useRef("");
   const toastId = useRef(0);
+  const previousIphonePreviewStatus = useRef<string | null>(null);
 
   const pushToast = useCallback(
     (message: string, kind: ToastKind = "success") => {
@@ -2256,6 +2378,18 @@ export function App() {
     },
     [],
   );
+
+  useEffect(() => {
+    const nextStatus = snapshot?.iphonePreview?.status ?? null;
+    const previousStatus = previousIphonePreviewStatus.current;
+    previousIphonePreviewStatus.current = nextStatus;
+    if (
+      nextStatus === "ready" &&
+      (previousStatus === "queued" || previousStatus === "building")
+    ) {
+      pushToast("iPhone-previewet er klar til installation.");
+    }
+  }, [pushToast, snapshot?.iphonePreview?.status]);
 
   const refresh = useCallback(
     async (manual = false) => {
@@ -2414,7 +2548,11 @@ export function App() {
             ? "De lokale tjenester starter."
             : action === "stop-my-apps"
               ? "De lokale tjenester stopper."
-              : `${serviceId ? SERVICE_META[serviceId].title : "Tjenesten"} ${action === "start" ? "starter" : "stopper"}.`;
+              : action === "prepare-iphone-preview"
+                ? payload.state.iphonePreview.status === "ready"
+                  ? "Installationssiden åbnes."
+                  : "iPhone-previewet klargøres. Du kan følge status på overblikket."
+                : `${serviceId ? SERVICE_META[serviceId].title : "Tjenesten"} ${action === "start" ? "starter" : "stopper"}.`;
         pushToast(message);
       } catch (error) {
         pushToast(
@@ -2557,6 +2695,7 @@ export function App() {
       <OverviewPage
         navigate={navigate}
         pendingActions={pendingActions}
+        prepareIphonePreview={() => runAction("prepare-iphone-preview")}
         refresh={refreshBackend}
         refreshing={refreshing}
         runAggregateAction={(action) => runAction(action)}

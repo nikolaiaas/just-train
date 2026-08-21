@@ -96,6 +96,9 @@ mise exec -- pnpm dlx eas-cli@latest update --channel preview --environment prev
       run `mise exec -- pnpm dlx eas-cli@latest device:create` and then one of
       `mise exec -- pnpm dlx eas-cli@latest build --platform ios --profile development`
       or `mise exec -- pnpm dlx eas-cli@latest build --platform ios --profile preview`.
+      For the owner's already registered phone, the Dev Console's **Installér
+      på iPhone** button performs the current-build check and starts only the
+      missing `preview` build; it never starts Metro or a production build.
 
 - [ ] Treat the enabled EAS device registry and the build's ad hoc provisioning
       profile as the installation allowlist. Share an unlisted installation URL

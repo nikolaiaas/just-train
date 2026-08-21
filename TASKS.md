@@ -90,7 +90,7 @@ Exit condition: a clean clone can install dependencies and start both empty appl
 - [x] Generate shared TypeScript database types from the local schema.
 - [x] Add `pnpm dev:admin`, `pnpm dev:mobile`, and a documented combined development command.
 - [x] Add beginner-friendly `pnpm dev:web` and `pnpm dev:iphone` commands.
-- [x] Add a one-click local Dev Console with an overview, verified service controls, redacted logs, and an editable four-column task board.
+- [x] Add a one-click local Dev Console with an overview, verified service controls, redacted logs, an editable four-column task board, and a guarded standalone-iPhone preview action that reuses or builds the current mobile version.
 - [x] Add a development-only screen gallery for reviewing reusable components and fixture states.
 - [x] Verify local previews in desktop and narrow browser viewports.
 - [ ] Verify the mobile preview in the iOS Simulator after full Xcode is installed.
@@ -275,7 +275,7 @@ Exit condition: a failed permission test, migration, type check, or core-flow sm
 
 - [ ] A new developer can start the complete local stack from the README.
 - [x] The administration app has a shareable preview URL.
-- [ ] A private Bare Træn build is installed on the owner's iPhone without public App Store release.
+- [x] A private Bare Træn build is installed on the owner's iPhone without public App Store release.
 - [ ] The functional parent-to-completed-exercise pilot works locally and on the iPhone.
 - [ ] The administration pilot can publish versioned content consumed by the mobile app.
 - [ ] Timers and pending results survive interruption and reconnect safely.

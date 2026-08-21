@@ -1,6 +1,6 @@
 {
   "version": 3,
-  "updatedAt": "2026-08-21T19:14:02.000Z",
+  "updatedAt": "2026-08-21T19:35:03.000Z",
   "items": [
     {
       "id": "hosted-preview-safety",
@@ -122,23 +122,23 @@
       "id": "iphone-smoke-test",
       "title": "Bekræft standalone-previewet på iPhone",
       "details": "Installér Bare Træn Preview 1.2.0 uden Metro, og verificér OTP, cold/warm magic-link, session efter genstart, logout og galleriadgang. Send aldrig 1.2.0-koden som update til en 1.1.0- eller ældre binary.",
-      "implementationNotes": "EAS internal-distribution preview 1.2.0 (build 3) er færdig med det registrerede iPhone-device i den aktive ad hoc-profil. Builden bruger preview-kanalen og hentede kun de offentlige Supabase-klientvariabler fra EAS preview-miljøet. JavaScript-bundlen er indlejret, den lokale Metro-server er stoppet, og installationsdialogen er åbnet privat i Expo; installation og de native smoke-tests afventer ejeren.",
+      "implementationNotes": "EAS internal-distribution preview 1.2.0 (build 3) er færdig og installeret på ejerens registrerede iPhone. Builden bruger preview-kanalen og hentede kun de offentlige Supabase-klientvariabler fra EAS preview-miljøet. JavaScript-bundlen er indlejret, og den lokale Metro-server er stoppet. De native OTP-, link-, sessions-, logout- og galleritests mangler stadig, så opgaven forbliver Doing.",
       "evidence": [],
       "status": "doing",
       "priority": 1,
       "createdAt": "2026-08-20T18:45:00.000Z",
-      "updatedAt": "2026-08-21T19:14:02.000Z"
+      "updatedAt": "2026-08-21T19:23:40.000Z"
     },
     {
       "id": "dev-console",
       "title": "Gør lokal udvikling klikbar",
-      "details": "Dev Console, sikre start/stop-knapper, status, logs og en lille opgavetavle.",
-      "implementationNotes": "",
+      "details": "Dev Console, sikre start/stop-knapper, status, logs, opgavetavle og en iPhone-handling til det standalone Preview-build.",
+      "implementationNotes": "Overblikket har nu en separat Installér på iPhone-sektion, som aldrig starter Metro. Serveren validerer den faste EAS preview-profil og Expo-projektidentitet, genbruger et ikke-udløbet build når mobilens buildfiler matcher, følger et allerede aktivt build eller starter præcis ét manglende build efter bekræftelse. Rå artifact-, log- og installationslinks gemmes eller returneres ikke. 48 Dev Console-tests, typecheck, lint, build, formattering og en lokal browserkontrol består; den aktuelle 1.2.0-preview blev korrekt vist som klar og åbnede installationshandlingen.",
       "evidence": [],
       "status": "done",
       "priority": 0,
       "createdAt": "2026-08-20T18:45:00.000Z",
-      "updatedAt": "2026-08-20T19:40:27.000Z"
+      "updatedAt": "2026-08-21T19:35:03.000Z"
     },
     {
       "id": "096baff8-77fe-4522-8c9a-6a99aae2f74e",
