@@ -1,14 +1,6 @@
-import { AiMediaError, type SafeAiMediaSubject } from "@bare-traen/api-client";
+import { AiMediaError } from "@bare-traen/api-client";
 
 const STALE_PROCESSING_MS = 8 * 60 * 1_000;
-
-export function normalizeAiMediaSubject(value: unknown): SafeAiMediaSubject {
-  if (value !== "synthetic" && value !== "adult_test") {
-    throw new Error("invalid_ai_media_subject");
-  }
-
-  return value;
-}
 
 export function getAiPollDelay(pollCount: number): number {
   return pollCount < 3 ? 2_000 : 5_000;
@@ -42,6 +34,10 @@ export function getAiMediaErrorMessage(error: unknown): string {
       return "Din adgang ændrede sig. Gå tilbage og prøv igen efter nyt login.";
     }
 
+    if (error.code === "invalid_child_profile_id") {
+      return "Det valgte barn er ikke tilgængeligt. Gå tilbage, vælg barnet igen, og prøv derefter.";
+    }
+
     if (
       error.code === "input_too_large" ||
       error.code === "invalid_image_bytes"
@@ -54,12 +50,8 @@ export function getAiMediaErrorMessage(error: unknown): string {
 }
 
 export function getAiJobErrorMessage(code: string | null): string {
-  if (code === "operation_disabled") {
-    return "AI-billedlabben blev lukket, før billedet blev behandlet.";
-  }
-
   if (code === "provider_rejected_input" || code === "invalid_input_image") {
-    return "Billedet blev afvist. Vælg et tydeligt billede af en voksen testperson eller en syntetisk person.";
+    return "Billedet blev afvist. Vælg et andet, tydeligt billede af barnet.";
   }
 
   if (code === "provider_rate_limited" || code === "provider_unavailable") {

@@ -13,20 +13,25 @@ type FetchLike = typeof fetch;
 type OpenRouterUsage = {
   completion_tokens?: number;
   cost?: number;
+  cost_details?: {
+    upstream_inference_cost?: number;
+  };
+  is_byok?: boolean;
   prompt_tokens?: number;
   total_tokens?: number;
 };
 
-// The dedicated Images API does not expose request-level ZDR or
-// data_collection fields. Those must be enforced by the OpenRouter key's
-// account/guardrail policy; rejecting extra keys prevents silent no-ops here.
+// Keep provider routing and quality server-owned so clients cannot silently
+// select a different model, increase the bill, or enable fallbacks.
 export type OpenRouterImageOptions = {
   aspect_ratio: "1:1";
+  background: "opaque";
   n: 1;
   provider: {
     allow_fallbacks: false;
-    only: ["azure"];
+    only: ["openai"];
   };
+  quality: "low";
 };
 
 export type OpenRouterImageResult = {
@@ -76,14 +81,22 @@ export function parseOpenRouterImageOptions(
 ): OpenRouterImageOptions {
   if (
     !isRecord(value) ||
-    !hasOnlyKeys(value, ["n", "aspect_ratio", "provider"]) ||
+    !hasOnlyKeys(value, [
+      "n",
+      "aspect_ratio",
+      "background",
+      "quality",
+      "provider",
+    ]) ||
     value.n !== 1 ||
     value.aspect_ratio !== "1:1" ||
+    value.background !== "opaque" ||
+    value.quality !== "low" ||
     !isRecord(value.provider) ||
     !hasOnlyKeys(value.provider, ["only", "allow_fallbacks"]) ||
     !Array.isArray(value.provider.only) ||
     value.provider.only.length !== 1 ||
-    value.provider.only[0] !== "azure" ||
+    value.provider.only[0] !== "openai" ||
     value.provider.allow_fallbacks !== false
   ) {
     throw new OpenRouterImageError({
@@ -103,7 +116,7 @@ export function createOpenRouterImageRequest(input: {
   options: unknown;
   prompt: string;
 }): Record<string, unknown> {
-  if (input.model !== "microsoft/mai-image-2.5") {
+  if (input.model !== "openai/gpt-image-2") {
     throw new OpenRouterImageError({
       attemptCode: "unsupported_model",
       publicCode: "server_configuration",
@@ -123,9 +136,9 @@ export function createOpenRouterImageRequest(input: {
     });
   }
 
-  // Microsoft's MAI image-edit contract documents JPEG and PNG references.
-  // Keep the shared detector broader for future operations, but fail closed for
-  // this exact provider route until OpenRouter documents a WebP conversion.
+  // This operation has been live-verified with PNG and the native client emits
+  // JPEG. Keep the shared detector broader for future operations, but accept
+  // only the formats declared by this operation version.
   if (input.inputMimeType === "image/webp") {
     throw new OpenRouterImageError({
       attemptCode: "unsupported_input_mime_type",
@@ -291,7 +304,23 @@ function normalizeUsage(value: unknown): {
     }
   }
 
-  const cost = (value as OpenRouterUsage).cost;
+  const openRouterUsage = value as OpenRouterUsage;
+  const directCost = openRouterUsage.cost;
+  const upstreamCost = openRouterUsage.cost_details?.upstream_inference_cost;
+  const hasValidUpstreamCost =
+    typeof upstreamCost === "number" &&
+    Number.isFinite(upstreamCost) &&
+    upstreamCost >= 0;
+  // OpenRouter reports cost=0 for BYOK calls because the upstream provider
+  // bills the connected account directly. Preserve that real provider cost in
+  // the job audit and cost ceiling when it is supplied; otherwise leave the
+  // cost unknown instead of recording OpenRouter's zero as the provider bill.
+  const cost =
+    openRouterUsage.is_byok === true
+      ? hasValidUpstreamCost
+        ? upstreamCost
+        : undefined
+      : directCost;
   const normalizedCost =
     typeof cost === "number" && Number.isFinite(cost) && cost >= 0
       ? Math.round(cost * 1_000_000)
@@ -611,7 +640,10 @@ export async function generateOpenRouterImage(input: {
 
     const result = parseOpenRouterImageResponse({ body, providerRequestId });
 
-    if (result.costMicrousd === null && providerRequestId) {
+    const isByok =
+      isRecord(body) && isRecord(body.usage) && body.usage.is_byok === true;
+
+    if (result.costMicrousd === null && providerRequestId && !isByok) {
       result.costMicrousd = await reconcileGenerationCost({
         apiKey: input.apiKey,
         fetchImpl,

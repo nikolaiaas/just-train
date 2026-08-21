@@ -15,6 +15,7 @@ import {
 
 const familyId = "20000000-0000-4000-8000-000000000001";
 const expectedUserId = "10000000-0000-4000-8000-000000000001";
+const childProfileId = "30000000-0000-4000-8000-000000000001";
 const clientRequestId = "d1000000-0000-4000-8000-000000000001";
 const jobId = "a3000000-0000-4000-8000-000000000001";
 const inputAssetId = "a4000000-0000-4000-8000-000000000001";
@@ -25,12 +26,13 @@ const PNG_BYTES = new Uint8Array([
 ]);
 
 const validInput = Object.freeze({
+  childProfileId,
   clientRequestId,
   expectedUserId,
   familyId,
   inputMimeType: "image/png",
   operationKey: AI_CARTOON_OPERATION_KEY,
-  subjectKind: "adult_test",
+  subjectKind: "child",
 });
 
 const preparedRow = Object.freeze({
@@ -73,7 +75,7 @@ function queryReturning(response) {
   return query;
 }
 
-test("prepares a generalized job without sending prompt, model, or provider", async () => {
+test("prepares a child-linked job without sending prompt, model, or provider", async () => {
   const calls = [];
   const client = {
     async rpc(name, input) {
@@ -94,13 +96,13 @@ test("prepares a generalized job without sending prompt, model, or provider", as
     {
       name: "prepare_ai_media_job",
       input: {
-        p_child_profile_id: undefined,
+        p_child_profile_id: childProfileId,
         p_client_request_id: clientRequestId,
         p_expected_user_id: expectedUserId,
         p_family_id: familyId,
         p_input_mime_type: "image/png",
         p_operation_key: "portrait.cartoon_3d",
-        p_subject_kind: "adult_test",
+        p_subject_kind: "child",
       },
     },
   ]);
@@ -109,7 +111,29 @@ test("prepares a generalized job without sending prompt, model, or provider", as
   assert.equal("provider" in calls[0].input, false);
 });
 
-test("rejects child media and invalid preparation input before the RPC", async () => {
+test("keeps generalized non-child jobs available without child linkage", async () => {
+  const calls = [];
+  const client = {
+    async rpc(name, input) {
+      calls.push({ name, input });
+      return { data: [preparedRow], error: null };
+    },
+  };
+
+  assert.deepEqual(
+    await prepareAiMediaJob(client, {
+      ...validInput,
+      childProfileId: null,
+      subjectKind: "synthetic",
+    }),
+    prepared,
+  );
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].input.p_child_profile_id, undefined);
+  assert.equal(calls[0].input.p_subject_kind, "synthetic");
+});
+
+test("rejects invalid child linkage and preparation input before the RPC", async () => {
   let calls = 0;
   const client = {
     async rpc() {
@@ -119,7 +143,10 @@ test("rejects child media and invalid preparation input before the RPC", async (
   };
 
   for (const [patch, code] of [
-    [{ subjectKind: "child" }, "invalid_subject_kind"],
+    [{ childProfileId: null }, "invalid_child_profile_id"],
+    [{ childProfileId: "not-a-uuid" }, "invalid_child_profile_id"],
+    [{ subjectKind: "adult_test", childProfileId }, "invalid_child_profile_id"],
+    [{ subjectKind: "unknown" }, "invalid_subject_kind"],
     [{ familyId: "not-a-uuid" }, "invalid_family_id"],
     [{ expectedUserId: "not-a-uuid" }, "invalid_expected_user_id"],
     [{ clientRequestId: "not-a-uuid" }, "invalid_client_request_id"],

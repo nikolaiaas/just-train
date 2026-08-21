@@ -259,7 +259,6 @@ function NoChildren({
           barnet.
         </Body>
       </View>
-      <AiCartoonLabCard />
       <View style={styles.stateActions}>
         {bootstrap.family?.role === "owner" ? (
           <ActionButton onPress={() => router.push(NEW_CHILD_ROUTE)}>
@@ -451,7 +450,7 @@ function FixtureToday({
         </View>
       </View>
 
-      <AiCartoonLabCard />
+      <AiCartoonLabCard child={selectedChild} />
 
       <View style={styles.previewNote}>
         <Text style={styles.previewNoteText}>
@@ -463,21 +462,23 @@ function FixtureToday({
   );
 }
 
-function AiCartoonLabCard() {
+function AiCartoonLabCard({ child }: { child: ParentChild }) {
   const router = useRouter();
 
   return (
     <SurfaceCard style={styles.aiLabCard}>
       <View style={styles.aiLabCopy}>
-        <Kicker>Lukket voksen/syntetisk test</Kicker>
-        <Text style={styles.weekTitle}>Prøv 3D-tegneserieportrættet</Text>
+        <Kicker>Privat AI-portræt</Kicker>
+        <Text style={styles.weekTitle}>
+          Lav {child.displayName} som tegneseriefigur
+        </Text>
         <Body>
-          Testen er adskilt fra børneprofiler og må ikke bruges med billeder af
-          børn.
+          Vælg et billede. Portrættet gemmes privat og knyttes til{" "}
+          {child.displayName}.
         </Body>
       </View>
       <ActionButton onPress={() => router.push(AI_CARTOON_ROUTE)}>
-        Åbn AI-billedlab
+        Lav tegneserieportræt
       </ActionButton>
     </SurfaceCard>
   );

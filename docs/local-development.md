@@ -55,7 +55,7 @@ The service page can also stop a Bare Træn preview that was started from anothe
 
 The console is intentionally limited. It runs only on this Mac, cannot execute arbitrary commands, cannot connect to Production, and does not offer a database reset. The full project roadmap remains in `TASKS.md`; the smaller editable board is plain JSON saved in `tools/dev-console/tasks.json`.
 
-Task edits and evidence screenshots are real repository changes and therefore appear in Git. Keep the JSON board and screenshot folder small and reviewable. Never put passwords, API keys, one-time codes, magic-link URLs, real email addresses, real child information, or other personal data in either place. Use only synthetic or adult test screenshots, crop them to the relevant result, and keep each image below 1 MiB when practical. `TASKS.md` remains the durable roadmap, and an overlapping item should be updated deliberately in both places when it is completed.
+Task edits and evidence screenshots are real repository changes and therefore appear in Git. Keep the JSON board and screenshot folder small and reviewable. Never put passwords, API keys, one-time codes, magic-link URLs, real email addresses, real child information, or other personal data in either place. Use only synthetic screenshots, crop them to the relevant result, and keep each image below 1 MiB when practical. `TASKS.md` remains the durable roadmap, and an overlapping item should be updated deliberately in both places when it is completed.
 
 Mobile web and the iPhone development server both use port `11001`, so only one of those modes can run at a time. The console explains this instead of moving either service to an unexpected port.
 
@@ -109,43 +109,45 @@ The local CLI may show a warning that `[inbucket]` is deprecated when it starts 
 
 Starting local Supabase does **not** automatically switch either app away from its configured backend. The administration login has a localhost-only **Udviklingsmiljø** choice between Local Supabase and Hosted Development. The mobile app has no runtime selector: its backend is fixed when it starts from the two public values in its ignored `.env.local`. If a task needs mobile Safari connected to Local Supabase, ask the agent to replace only those two public values temporarily and restore the hosted values before iPhone work.
 
-With Local Supabase selected, a synthetic adult can complete first-family onboarding and then create a child profile with only a nickname and one of four non-photo preset avatars. Only the family owner may create one, the flow records a versioned guardian acknowledgement privately, and each family is limited to 10 active children. The app saves a request identity before submission so an interrupted or uncertain request can be retried without creating a duplicate child. Do not use real child details or media: the acknowledgement does not complete the legal/privacy, withdrawal, deletion, or retention work required for a real-child or child-photo pilot.
+With Local Supabase selected, a synthetic adult can complete first-family onboarding and then create a child profile with only a nickname and one of four non-photo preset avatars. Only the family owner may create one, the flow records a versioned guardian acknowledgement privately, and each family is limited to 10 active children. The app saves a request identity before submission so an interrupted or uncertain request can be retried without creating a duplicate child. Keep local development, automated tests, previews, and task evidence synthetic. The product's private family cartoon contract can accept a selected-child photo, but that does not turn real family data into acceptable development fixtures.
 
-## Closed AI image lab
+## Private family AI cartoon prototype
 
-The first AI image flow is a closed technical lab, not a child-profile feature.
-It accepts one gallery image of a synthetic person or an adult test person,
-prepares it locally, stores input and output in private Supabase Storage, and
-lets Microsoft `microsoft/mai-image-2.5` transform it through an Azure-only,
-no-fallback OpenRouter route in the server worker. The prompt, model, provider,
-limits, and contracts come from an immutable database operation version rather
-than the app.
+The first AI image flow accepts one gallery image for the authenticated
+parent's currently selected active child, prepares it locally, stores input and
+output in private Supabase Storage, and lets OpenAI `openai/gpt-image-2`
+transform it through OpenRouter. The server request allows only provider
+`openai` and disables fallback. The prompt, model, provider, limits, and
+contracts come from an immutable database operation version rather than the
+app, so a prompt can change without a mobile release and an existing job stays
+pinned to its original version.
 
-The screen no longer has a compile-time feature toggle. Two server-owned
-activation gates still start closed:
-
-- The database operation must be enabled.
-- The authenticated adult must be in the expiring server-managed tester
-  allowlist.
-
-The database separately rejects requests labelled as child media or linked to a
-child profile. It cannot verify who is pictured when a caller labels a photo as
-synthetic or adult test material. Do not use real child photos, and use adult
-material only when you have the right to process it. No tester or operation is
-enabled by the local seed.
+There is no feature or tester toggle. The database verifies the signed-in
+family and selected-child link; private bucket policies, server-only provider
+credentials, idempotency, one provider attempt, a timeout, and request/cost
+ceilings remain. Development and verification in this repository must still
+use synthetic people and media only, even though the private family product
+flow permits a family member to choose a real photo of the selected child.
 
 A limited 90-day OpenRouter development key is installed in the ignored local
 Function environment and Hosted Development's Edge secrets. The key has a USD 5
-total limit; its assigned guardrail has a USD 5 daily ceiling, an exact
-Azure/MAI allowlist, and non-frontier ZDR enabled. Two synthetic Azure MAI
-requests still failed with HTTP 400 and no billed usage, so the route is not
-verified.
-Do not activate the lab until a successful provider route and the remaining
-under-18/privacy, durable recovery, post-provider finalization, retention
-deletion, and Storage-byte recovery gates are resolved. The Edge Function has
-not been deployed, the operation remains disabled, and the tester allowlist
-remains empty. The current provider review permits synthetic/adult technical
-tests only and does not approve real child photos. See
+total limit; its assigned guardrail now retains only a USD 5 daily budget.
+Earlier Azure/model allowlists and the non-frontier ZDR requirement were
+removed. The worker independently enforces `openai/gpt-image-2`, OpenAI-only,
+and no fallback.
+
+An exact live test on 2026-08-21 used a synthetic 1024 by 1024 PNG and returned
+HTTP 200 with a valid PNG in about 19 seconds. OpenRouter marked the request as
+BYOK and billed USD 0; its response reported USD 0.014237 in upstream inference
+cost. No real family photo was used. The earlier immutable version 1 Azure/MAI
+route and its two HTTP 400 tests remain part of the decision history.
+
+The migration and Edge Function have not been deployed to Hosted Development,
+so the hosted secret alone does not make this flow live. The owner has accepted
+the remaining under-18/provider risk for this private family prototype. Durable
+recovery, post-provider finalization, physical retention deletion, Storage-byte
+recovery, and broader privacy/legal work remain open. `delete_after` is metadata
+only until a deletion worker actually removes the private object. See
 [`ai-image-provider-review.md`](./ai-image-provider-review.md) and
 `supabase/README.md` for the decision and explicitly approved local commands.
 
@@ -176,7 +178,7 @@ The owning organization is now on Supabase Pro with Spend Cap enabled. Hosted De
 
 The project uses Expo SDK 57. The App Store version of Expo Go does not currently support this SDK, even when Expo Go is freshly installed. Keep SDK 57 and install the project's own **Bare Træn Dev** app instead.
 
-Parent login added native storage and cryptography modules, and the closed AI lab now adds gallery and image-processing modules. The app/runtime version is `1.2.0`. An installed `1.1.0` or older development or preview app must therefore be replaced with a fresh EAS build. Do not publish this slice as an EAS Update to an older native runtime.
+Parent login added native storage and cryptography modules, and the private family AI cartoon prototype now adds gallery and image-processing modules. The app/runtime version is `1.2.0`. An installed `1.1.0` or older development or preview app must therefore be replaced with a fresh EAS build. Do not publish this slice as an EAS Update to an older native runtime.
 
 Your paid Apple Developer membership lets EAS build and sign this app in the cloud. Full Xcode is not required for this route.
 
@@ -233,7 +235,7 @@ If the local network blocks the connection, stop the command with Control-C and 
 mise exec -- pnpm dev:iphone:tunnel
 ```
 
-The phone should normally use the hosted development Supabase project. `127.0.0.1` on an iPhone means the phone itself, not this Mac. New-parent family onboarding and owner-only child creation are now available there for synthetic or adult testing. Real child data remains blocked by the unresolved privacy, retention, backup, and paid-hosting gates.
+The phone should normally use the hosted development Supabase project. `127.0.0.1` on an iPhone means the phone itself, not this Mac. New-parent family onboarding and owner-only child creation are now available there for synthetic testing. The GPT Image 2 migration and Edge Function are not deployed there yet, so the private family cartoon flow is not currently available from that hosted backend. A deliberate later deployment may make the private family prototype available to authenticated family members; broader real-data testing still depends on the privacy, retention, and backup roadmap.
 
 ## A standalone preview for another tester
 

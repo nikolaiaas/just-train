@@ -1,5 +1,4 @@
 import { colors, radii, spacing, typography } from "@bare-traen/design";
-import type { SafeAiMediaSubject } from "@bare-traen/api-client";
 import { Image } from "expo-image";
 import { randomUUID } from "expo-crypto";
 import { useRouter } from "expo-router";
@@ -8,7 +7,6 @@ import {
   ActivityIndicator,
   AppState,
   Platform,
-  Pressable,
   StyleSheet,
   Text,
   View,
@@ -43,10 +41,12 @@ type PrivateOutputLink = { revision: number; signedUrl: string };
 type PrivateWebOutput = { revision: number; uri: string };
 
 export default function AiCartoonScreen() {
-  const { session } = useAuth();
+  const { selectedChild, session } = useAuth();
 
   return (
-    <AiCartoonSessionScreen key={session?.user.id ?? "signed-out-session"} />
+    <AiCartoonSessionScreen
+      key={`${session?.user.id ?? "signed-out-session"}:${selectedChild?.id ?? "no-child"}`}
+    />
   );
 }
 
@@ -56,13 +56,10 @@ function AiCartoonSessionScreen() {
     getAiCartoonJob,
     getAiCartoonOutput,
     reconcileAiCartoonJob,
+    selectedChild,
     submitAiCartoon,
   } = useAuth();
   const [image, setImage] = useState<PreparedAiImage | null>(null);
-  const [subjectKind, setSubjectKind] = useState<SafeAiMediaSubject | null>(
-    null,
-  );
-  const [confirmed, setConfirmed] = useState(false);
   const [picking, setPicking] = useState(false);
   const [phase, setPhase] = useState<Phase>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -323,8 +320,6 @@ function AiCartoonSessionScreen() {
 
   function resetForNewTest() {
     replaceImage(null);
-    setSubjectKind(null);
-    setConfirmed(false);
     setError(null);
     updateJobId(null);
     clearOutputLink();
@@ -332,21 +327,6 @@ function AiCartoonSessionScreen() {
     setRefreshingOutput(false);
     setPhase("idle");
     requestId.current = null;
-    pollCount.current = 0;
-  }
-
-  function selectSubject(nextSubject: SafeAiMediaSubject) {
-    if (subjectKind === nextSubject) {
-      return;
-    }
-
-    setSubjectKind(nextSubject);
-    setConfirmed(false);
-    setError(null);
-    updateJobId(null);
-    clearOutputLink();
-    setPhase("idle");
-    requestId.current = randomUUID();
     pollCount.current = 0;
   }
 
@@ -366,8 +346,6 @@ function AiCartoonSessionScreen() {
         }
 
         replaceImage(prepared);
-        setSubjectKind(null);
-        setConfirmed(false);
         updateJobId(null);
         clearOutputLink();
         setPhase("idle");
@@ -380,9 +358,7 @@ function AiCartoonSessionScreen() {
       }
 
       if (caught instanceof AiImageInputError && caught.code === "permission") {
-        setError(
-          "Giv adgang til billedbiblioteket for at vælge et testbillede.",
-        );
+        setError("Giv adgang til billedbiblioteket for at vælge et billede.");
       } else {
         setError("Billedet kunne ikke klargøres. Vælg et andet billede.");
       }
@@ -394,7 +370,7 @@ function AiCartoonSessionScreen() {
   }
 
   async function submit() {
-    if (!image || !subjectKind || !confirmed || !requestId.current) {
+    if (!image || !selectedChild || !requestId.current) {
       return;
     }
 
@@ -406,9 +382,9 @@ function AiCartoonSessionScreen() {
     try {
       const prepared = await submitAiCartoon({
         bytes: image.bytes,
+        childProfileId: selectedChild.id,
         clientRequestId: requestId.current,
         mimeType: image.mimeType,
-        subjectKind,
       });
 
       if (!mounted.current) {
@@ -425,39 +401,41 @@ function AiCartoonSessionScreen() {
     }
   }
 
+  if (!selectedChild) {
+    return (
+      <Screen contentStyle={styles.screen}>
+        <BackButton onPress={() => router.back()} />
+        <SurfaceCard style={styles.card}>
+          <Kicker>Vælg et barn først</Kicker>
+          <Title>Portrættet skal knyttes til en børneprofil</Title>
+          <Body>
+            Gå tilbage, opret eller vælg et barn, og åbn derefter
+            tegneserieportrættet igen.
+          </Body>
+        </SurfaceCard>
+      </Screen>
+    );
+  }
+
   return (
     <Screen contentStyle={styles.screen}>
       <BackButton disabled={busy} onPress={() => router.back()} />
       <View style={styles.heading}>
-        <Kicker>Lukket teknisk test</Kicker>
-        <Title>Lav et 3D-tegneserieportræt</Title>
+        <Kicker>Privat familieprototype</Kicker>
+        <Title>Lav {selectedChild.displayName} som tegneseriefigur</Title>
         <Body>
-          Vælg kun en voksen testperson eller en syntetisk person. Resultatet
-          gemmes privat og bliver ikke sat på en børneprofil.
+          Vælg et billede af {selectedChild.displayName}. Billedet og resultatet
+          gemmes privat for jeres familie.
         </Body>
       </View>
 
       <SurfaceCard style={styles.card}>
-        <Text style={styles.stepTitle}>1. Hvem viser billedet?</Text>
-        <View accessibilityRole="radiogroup" style={styles.choiceRow}>
-          <SubjectChoice
-            disabled={controlsLocked}
-            label="Syntetisk person"
-            selected={subjectKind === "synthetic"}
-            onPress={() => selectSubject("synthetic")}
-          />
-          <SubjectChoice
-            disabled={controlsLocked}
-            label="Voksen testperson"
-            selected={subjectKind === "adult_test"}
-            onPress={() => selectSubject("adult_test")}
-          />
-        </View>
-
-        <Text style={styles.stepTitle}>2. Vælg ét billede</Text>
+        <Text style={styles.stepTitle}>
+          Vælg ét billede af {selectedChild.displayName}
+        </Text>
         {image && (
           <Image
-            accessibilityLabel="Valgt lokalt testbillede"
+            accessibilityLabel={`Valgt billede af ${selectedChild.displayName}`}
             contentFit="cover"
             source={{ uri: image.previewUri }}
             style={styles.image}
@@ -475,24 +453,6 @@ function AiCartoonSessionScreen() {
               : "Vælg fra bibliotek"}
         </ActionButton>
 
-        <Pressable
-          accessibilityRole="checkbox"
-          accessibilityState={{ checked: confirmed, disabled: controlsLocked }}
-          disabled={controlsLocked}
-          onPress={() => setConfirmed((value) => !value)}
-          style={({ pressed }) => [
-            styles.confirmation,
-            confirmed && styles.confirmationSelected,
-            pressed && styles.pressed,
-          ]}
-        >
-          <Text style={styles.checkbox}>{confirmed ? "✓" : ""}</Text>
-          <Text style={styles.confirmationText}>
-            Jeg bekræfter, at billedet ikke viser et barn, og at jeg må bruge
-            det til denne tekniske test.
-          </Text>
-        </Pressable>
-
         {error && (
           <View accessibilityRole="alert" style={styles.errorBox}>
             <Text style={styles.errorText}>{error}</Text>
@@ -500,7 +460,7 @@ function AiCartoonSessionScreen() {
         )}
 
         <ActionButton
-          disabled={controlsLocked || !image || !subjectKind || !confirmed}
+          disabled={controlsLocked || !image}
           onPress={() => void submit()}
         >
           {phase === "submitting"
@@ -514,9 +474,8 @@ function AiCartoonSessionScreen() {
           <View style={styles.processing}>
             <ActivityIndicator color={colors.primaryDeep} />
             <Body>
-              Microsoft MAI laver billedet på Azure via OpenRouter. Det kan tage
-              et par minutter; vi genstarter aldrig billedgenereringen
-              automatisk.
+              OpenAI GPT Image 2 laver billedet via OpenRouter. Det kan tage et
+              par minutter; vi starter ikke en ny betalt generering automatisk.
             </Body>
             <ActionButton variant="secondary" onPress={() => void refreshJob()}>
               Tjek igen
@@ -551,8 +510,8 @@ function AiCartoonSessionScreen() {
             <ActivityIndicator color={colors.primaryDeep} />
           )}
           <Body>
-            Resultatet er kun en separat testfil. Det ændrer ikke barnets avatar
-            eller profil.
+            Resultatet er knyttet privat til {selectedChild.displayName}, men
+            det ændrer ikke automatisk barnets avatar eller profilbillede.
           </Body>
           {outputLoadFailed && (
             <ActionButton
@@ -564,46 +523,11 @@ function AiCartoonSessionScreen() {
             </ActionButton>
           )}
           <ActionButton variant="secondary" onPress={resetForNewTest}>
-            Start en ny test
+            Lav et nyt portræt
           </ActionButton>
         </SurfaceCard>
       )}
     </Screen>
-  );
-}
-
-function SubjectChoice({
-  disabled,
-  label,
-  onPress,
-  selected,
-}: {
-  disabled: boolean;
-  label: string;
-  onPress(): void;
-  selected: boolean;
-}) {
-  return (
-    <Pressable
-      accessibilityRole="radio"
-      accessibilityState={{ disabled, selected }}
-      disabled={disabled}
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.subjectChoice,
-        selected && styles.subjectChoiceSelected,
-        pressed && styles.pressed,
-      ]}
-    >
-      <Text
-        style={[
-          styles.subjectChoiceText,
-          selected && styles.subjectChoiceTextSelected,
-        ]}
-      >
-        {label}
-      </Text>
-    </Pressable>
   );
 }
 
@@ -617,63 +541,11 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.body,
     fontWeight: typography.weights.bold,
   },
-  choiceRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
-  subjectChoice: {
-    minHeight: 48,
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.full,
-    paddingHorizontal: spacing.md,
-  },
-  subjectChoiceSelected: {
-    borderColor: colors.primary,
-    backgroundColor: colors.soft,
-  },
-  subjectChoiceText: {
-    color: colors.muted,
-    fontFamily: typography.families.systemRounded,
-    fontSize: typography.sizes.label,
-    fontWeight: typography.weights.semibold,
-  },
-  subjectChoiceTextSelected: { color: colors.primaryDeep },
   image: {
     width: "100%",
     aspectRatio: 1,
     borderRadius: radii.xl,
     backgroundColor: colors.soft,
-  },
-  confirmation: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.lg,
-    padding: spacing.md,
-  },
-  confirmationSelected: {
-    borderColor: colors.primary,
-    backgroundColor: colors.soft,
-  },
-  checkbox: {
-    width: 24,
-    height: 24,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: colors.primaryDeep,
-    borderRadius: radii.sm,
-    color: colors.primaryDeep,
-    fontWeight: typography.weights.bold,
-    textAlign: "center",
-    lineHeight: 22,
-  },
-  confirmationText: {
-    flex: 1,
-    color: colors.ink,
-    fontFamily: typography.families.systemRounded,
-    fontSize: typography.sizes.label,
-    lineHeight: 18,
   },
   processing: { gap: spacing.md, alignItems: "stretch" },
   errorBox: {
@@ -687,5 +559,4 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.body,
     fontWeight: typography.weights.semibold,
   },
-  pressed: { opacity: 0.72 },
 });

@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(86);
+select plan(77);
 
 select has_table('public', 'ai_operations', 'AI operations exist');
 select has_table(
@@ -23,17 +23,11 @@ select has_table(
   'ai_job_attempts',
   'worker-only AI attempt audit exists'
 );
-select has_table(
-  'private',
-  'ai_media_testers',
-  'the audited media tester allowlist exists outside the public API'
-);
-
 select results_eq(
   $$
     select prompt_template
     from public.ai_operation_versions
-    where id = 'a2000000-0000-4000-8000-000000000001'
+    where id = 'a2000000-0000-4000-8000-000000000002'
   $$,
   $$
     values (
@@ -46,32 +40,34 @@ select results_eq(
   $$
     select gateway, provider, model
     from public.ai_operation_versions
-    where id = 'a2000000-0000-4000-8000-000000000001'
+    where id = 'a2000000-0000-4000-8000-000000000002'
   $$,
-  $$ values ('openrouter'::text, 'azure'::text, 'microsoft/mai-image-2.5'::text) $$,
-  'the active version pins Microsoft MAI Image 2.5 to Azure through OpenRouter'
+  $$ values ('openrouter'::text, 'openai'::text, 'openai/gpt-image-2'::text) $$,
+  'the active version pins GPT Image 2 to OpenAI through OpenRouter'
 );
 select is(
   (
     select request_options
     from public.ai_operation_versions
-    where id = 'a2000000-0000-4000-8000-000000000001'
+    where id = 'a2000000-0000-4000-8000-000000000002'
   ),
   '{
     "n": 1,
     "aspect_ratio": "1:1",
+    "background": "opaque",
+    "quality": "low",
     "provider": {
-      "only": ["azure"],
+      "only": ["openai"],
       "allow_fallbacks": false
     }
   }'::jsonb,
-  'the first image operation permits only the Azure endpoint without fallback'
+  'the active image operation uses low-quality OpenAI generation without fallback'
 );
 select is(
   (
     select (request_options ->> 'n')::integer
     from public.ai_operation_versions
-    where id = 'a2000000-0000-4000-8000-000000000001'
+    where id = 'a2000000-0000-4000-8000-000000000002'
   ),
   1,
   'the first image operation can create only one output per request'
@@ -80,21 +76,11 @@ select is(
   (
     select max_attempts
     from public.ai_operation_versions
-    where id = 'a2000000-0000-4000-8000-000000000001'
+    where id = 'a2000000-0000-4000-8000-000000000002'
   ),
   1::smallint,
   'the first spike never retries a provider generation automatically'
 );
-select is(
-  (
-    select is_enabled
-    from public.ai_operations
-    where operation_key = 'portrait.cartoon_3d'
-  ),
-  false,
-  'the billable operation starts disabled until its server secret and controls are reviewed'
-);
-
 select is(
   (
     select public
@@ -179,11 +165,6 @@ select is(
   'family clients cannot read worker attempt details'
 );
 select is(
-  has_table_privilege('authenticated', 'private.ai_media_testers', 'select'),
-  false,
-  'clients cannot inspect or self-enrol in the audited tester allowlist'
-);
-select is(
   has_function_privilege(
     'authenticated',
     'public.claim_ai_media_job_for_worker(uuid)',
@@ -221,7 +202,7 @@ select is(
 );
 
 update public.ai_operations
-set is_enabled = true
+set active_version_id = 'a2000000-0000-4000-8000-000000000001'
 where operation_key = 'portrait.cartoon_3d';
 
 select set_config(
@@ -238,27 +219,26 @@ select throws_ok(
       'portrait.cartoon_3d',
       '20000000-0000-4000-8000-000000000001',
       '10000000-0000-4000-8000-000000000001',
-      'a3000000-0000-4000-8000-000000000099',
-      'adult_test',
+      'a3000000-0000-4000-8000-000000000096',
+      'child',
       'image/jpeg',
-      null
+      '30000000-0000-4000-8000-000000000001'
     )
   $$,
-  '0A000',
-  'AI media testing is not enabled for this account.',
-  'an ordinary family member cannot activate gallery AI by relabelling a photo'
+  '22023',
+  'The media subject type is not supported by this operation.',
+  'each immutable operation version enforces its declared subject contract'
 );
 
 reset role;
-insert into private.ai_media_testers (
-  user_id,
-  authorized_by,
-  expires_at
-)
-values (
-  '10000000-0000-4000-8000-000000000001',
-  '10000000-0000-4000-8000-000000000003',
-  now() + interval '1 day'
+update public.ai_operations
+set active_version_id = 'a2000000-0000-4000-8000-000000000002'
+where operation_key = 'portrait.cartoon_3d';
+
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"10000000-0000-4000-8000-000000000001","role":"authenticated"}',
+  true
 );
 set local role authenticated;
 
@@ -277,7 +257,7 @@ select throws_ok(
   $$,
   '22023',
   'The input image type is not supported by this operation.',
-  'the MAI operation rejects WebP before reserving an upload'
+  'the GPT Image 2 operation rejects unverified WebP before reserving an upload'
 );
 
 select results_eq(
@@ -325,13 +305,27 @@ select results_eq(
       '20000000-0000-4000-8000-000000000001',
       '10000000-0000-4000-8000-000000000001',
       'a3000000-0000-4000-8000-000000000001',
-      'adult_test',
+      'child',
       'image/jpeg',
-      null
+      '30000000-0000-4000-8000-000000000001'
     )
   $$,
   $$ values (true) $$,
-  'a new request can reserve an adult-test AI job after the interrupted flow'
+  'a new request can reserve a child-linked AI job after the interrupted flow'
+);
+select results_eq(
+  $$
+    select subject_kind::text, child_profile_id
+    from public.ai_jobs
+    where client_request_id = 'a3000000-0000-4000-8000-000000000001'
+  $$,
+  $$
+    values (
+      'child'::text,
+      '30000000-0000-4000-8000-000000000001'::uuid
+    )
+  $$,
+  'the family job is linked to the selected child profile'
 );
 select results_eq(
   $$
@@ -345,6 +339,20 @@ select results_eq(
 
 reset role;
 set local role service_role;
+
+select is(
+  (
+    select count(*)::integer
+    from public.ai_jobs as job
+    join public.ai_job_media as link on link.job_id = job.id
+    join public.media_assets as asset on asset.id = link.media_asset_id
+    where job.client_request_id = 'a3000000-0000-4000-8000-000000000001'
+      and asset.subject_kind = job.subject_kind
+      and asset.child_profile_id is not distinct from job.child_profile_id
+  ),
+  2,
+  'both private media slots inherit the selected child linkage'
+);
 
 select results_eq(
   $$
@@ -403,13 +411,13 @@ select results_eq(
       '20000000-0000-4000-8000-000000000001',
       '10000000-0000-4000-8000-000000000001',
       'a3000000-0000-4000-8000-000000000001',
-      'adult_test',
+      'child',
       'image/jpeg',
-      null
+      '30000000-0000-4000-8000-000000000001'
     )
   $$,
   $$ values (false) $$,
-  'an exact retry returns the existing AI job'
+  'an exact child-linked retry returns the existing AI job'
 );
 select is(
   (
@@ -469,12 +477,46 @@ select throws_ok(
       'a3000000-0000-4000-8000-000000000002',
       'child',
       'image/jpeg',
+      null
+    )
+  $$,
+  '22023',
+  'A child photo must be linked to a child profile.',
+  'a child-labelled request must identify its family child profile'
+);
+select throws_ok(
+  $$
+    select *
+    from public.prepare_ai_media_job(
+      'portrait.cartoon_3d',
+      '20000000-0000-4000-8000-000000000001',
+      '10000000-0000-4000-8000-000000000001',
+      'a3000000-0000-4000-8000-000000000003',
+      'adult_test',
+      'image/jpeg',
       '30000000-0000-4000-8000-000000000001'
     )
   $$,
-  '0A000',
-  'Child photo AI processing is not enabled.',
-  'the server rejects explicitly child-labelled requests independently of the mobile UI'
+  '22023',
+  'Only child media can be linked to a child profile.',
+  'adult and synthetic requests cannot be attached to a child profile'
+);
+select throws_ok(
+  $$
+    select *
+    from public.prepare_ai_media_job(
+      'portrait.cartoon_3d',
+      '20000000-0000-4000-8000-000000000001',
+      '10000000-0000-4000-8000-000000000001',
+      'a3000000-0000-4000-8000-000000000004',
+      'child',
+      'image/jpeg',
+      '30000000-0000-4000-8000-000000000099'
+    )
+  $$,
+  '42501',
+  'The active child profile is unavailable to this family.',
+  'a family cannot link media to an unavailable child profile'
 );
 
 select lives_ok(
@@ -496,7 +538,7 @@ select lives_ok(
     from public.ai_jobs as job
     where job.client_request_id = 'a3000000-0000-4000-8000-000000000001'
   $$,
-  'the requester can upload only the pre-reserved adult-test input path'
+  'the requester can upload the exact pre-reserved child input path'
 );
 select throws_ok(
   $$
@@ -566,10 +608,10 @@ select results_eq(
     from public.publish_ai_operation_version(
       'portrait.cartoon_3d',
       'A reviewed replacement prompt.',
-      'a2000000-0000-4000-8000-000000000001'
+      'a2000000-0000-4000-8000-000000000002'
     )
   $$,
-  $$ values (2) $$,
+  $$ values (3) $$,
   'an admin can atomically publish a replacement prompt without an app release'
 );
 select is(
@@ -580,7 +622,7 @@ select is(
       on operation.active_version_id = version.id
     where operation.operation_key = 'portrait.cartoon_3d'
   ),
-  2,
+  3,
   'the operation points to the newly published prompt version'
 );
 select throws_ok(
@@ -589,7 +631,7 @@ select throws_ok(
     from public.publish_ai_operation_version(
       'portrait.cartoon_3d',
       'A stale concurrent prompt.',
-      'a2000000-0000-4000-8000-000000000001'
+      'a2000000-0000-4000-8000-000000000002'
     )
   $$,
   '40001',
@@ -620,7 +662,7 @@ select is(
     from public.ai_jobs
     where client_request_id = 'a3000000-0000-4000-8000-000000000001'
   ),
-  'a2000000-0000-4000-8000-000000000001'::uuid,
+  'a2000000-0000-4000-8000-000000000002'::uuid,
   'an existing job remains pinned to the original prompt version'
 );
 
@@ -661,7 +703,7 @@ select throws_ok(
     )
   $$,
   '55000',
-  'Only one AI media test can be active at a time.',
+  'Only one AI media job for this operation can be active at a time.',
   'a claimed provider job cannot be superseded by a new request'
 );
 
@@ -846,227 +888,6 @@ select results_eq(
 );
 
 reset role;
-select set_config(
-  'request.jwt.claims',
-  '{"sub":"10000000-0000-4000-8000-000000000001","role":"authenticated"}',
-  true
-);
-set local role authenticated;
-
-select results_eq(
-  $$
-    select created
-    from public.prepare_ai_media_job(
-      'portrait.cartoon_3d',
-      '20000000-0000-4000-8000-000000000001',
-      '10000000-0000-4000-8000-000000000001',
-      'a3000000-0000-4000-8000-000000000002',
-      'adult_test',
-      'image/jpeg',
-      null
-    )
-  $$,
-  $$ values (true) $$,
-  'a second job can exercise the active-lease kill switch'
-);
-select lives_ok(
-  $$
-    insert into storage.objects (bucket_id, name, owner_id, metadata)
-    select
-      'ai-media-private',
-      format(
-        '20000000-0000-4000-8000-000000000001/10000000-0000-4000-8000-000000000001/%s/input.jpg',
-        job.id
-      ),
-      '10000000-0000-4000-8000-000000000001',
-      '{"size": 1024, "mimetype": "image/jpeg"}'::jsonb
-    from public.ai_jobs as job
-    where job.client_request_id = 'a3000000-0000-4000-8000-000000000002'
-  $$,
-  'the kill-switch regression job receives its exact reserved input'
-);
-
-reset role;
-set local role service_role;
-
-select is(
-  (
-    select count(*)::integer
-    from public.claim_ai_media_job_for_worker(
-      (
-        select id
-        from public.ai_jobs
-        where client_request_id = 'a3000000-0000-4000-8000-000000000002'
-      )
-    )
-  ),
-  1,
-  'the kill-switch regression job has an active worker lease'
-);
-select lives_ok(
-  $$
-    insert into storage.objects (bucket_id, name, metadata)
-    select
-      output_asset.storage_bucket,
-      output_asset.storage_object_path,
-      '{"size": 2048, "mimetype": "image/png"}'::jsonb
-    from public.ai_jobs as job
-    join public.ai_job_media as output_link
-      on output_link.job_id = job.id
-      and output_link.slot = 'generated_image'
-    join public.media_assets as output_asset
-      on output_asset.id = output_link.media_asset_id
-    where job.client_request_id = 'a3000000-0000-4000-8000-000000000002'
-  $$,
-  'the kill-switch regression covers a provider output already uploaded privately'
-);
-
-reset role;
-update public.ai_operations
-set is_enabled = false
-where operation_key = 'portrait.cartoon_3d';
-set local role service_role;
-
-select throws_ok(
-  $$
-    select public.complete_ai_media_job_for_worker(
-      (
-        select id
-        from public.ai_jobs
-        where client_request_id = 'a3000000-0000-4000-8000-000000000002'
-      ),
-      1::smallint,
-      (
-        select link.media_asset_id
-        from public.ai_jobs as job
-        join public.ai_job_media as link
-          on link.job_id = job.id
-          and link.slot = 'generated_image'
-        where job.client_request_id = 'a3000000-0000-4000-8000-000000000002'
-      ),
-      2048::bigint,
-      repeat('b', 64),
-      'generation-test-disabled',
-      '{"total_tokens": 100}'::jsonb,
-      40000::bigint
-    )
-  $$,
-  '55000',
-  'The AI operation was disabled before completion.',
-  'a committed operation disable blocks an active worker from publishing output'
-);
-select is(
-  (
-    select count(*)::integer
-    from public.claim_ai_media_job_for_worker(
-      (
-        select id
-        from public.ai_jobs
-        where client_request_id = 'a3000000-0000-4000-8000-000000000002'
-      )
-    )
-  ),
-  0,
-  'a repeated invocation closes the disabled active lease without another provider call'
-);
-select throws_ok(
-  $$
-    select public.complete_ai_media_job_for_worker(
-      (
-        select id
-        from public.ai_jobs
-        where client_request_id = 'a3000000-0000-4000-8000-000000000002'
-      ),
-      1::smallint,
-      (
-        select link.media_asset_id
-        from public.ai_jobs as job
-        join public.ai_job_media as link
-          on link.job_id = job.id
-          and link.slot = 'generated_image'
-        where job.client_request_id = 'a3000000-0000-4000-8000-000000000002'
-      ),
-      2048::bigint,
-      repeat('b', 64),
-      'generation-test-disabled',
-      '{"total_tokens": 100}'::jsonb,
-      40000::bigint
-    )
-  $$,
-  '40001',
-  'The AI job is no longer owned by this worker attempt.',
-  'a worker finishing after kill-switch cancellation cannot reopen the job'
-);
-select lives_ok(
-  $$
-    select public.fail_ai_media_job_for_worker(
-      (
-        select id
-        from public.ai_jobs
-        where client_request_id = 'a3000000-0000-4000-8000-000000000002'
-      ),
-      1::smallint,
-      'worker_interrupted',
-      'worker_failed',
-      'generation-test-disabled',
-      '{"total_tokens": 100}'::jsonb,
-      40000::bigint
-    )
-  $$,
-  'a cancelled attempt can retain late provider identity, usage, and billing audit'
-);
-select lives_ok(
-  $$
-    select public.fail_ai_media_job_for_worker(
-      (
-        select id
-        from public.ai_jobs
-        where client_request_id = 'a3000000-0000-4000-8000-000000000002'
-      ),
-      1::smallint,
-      'worker_interrupted',
-      'worker_failed',
-      'generation-test-disabled',
-      '{"total_tokens": 100}'::jsonb,
-      40000::bigint
-    )
-  $$,
-  'a repeated late audit report cannot double-count the cancelled attempt cost'
-);
-select results_eq(
-  $$
-    select
-      job.status::text,
-      job.public_error_code,
-      job.actual_cost_microusd,
-      attempt.status,
-      attempt.error_code,
-      attempt.provider_request_id,
-      attempt.cost_microusd,
-      (attempt.usage ->> 'total_tokens')::integer
-    from public.ai_jobs as job
-    join private.ai_job_attempts as attempt on attempt.job_id = job.id
-    where job.client_request_id = 'a3000000-0000-4000-8000-000000000002'
-  $$,
-  $$
-    values (
-      'cancelled'::text,
-      'operation_disabled'::text,
-      40000::bigint,
-      'failed'::text,
-      'operation_disabled'::text,
-      'generation-test-disabled'::text,
-      40000::bigint,
-      100::integer
-    )
-  $$,
-  'the strict kill switch stays closed while retaining idempotent late billing audit'
-);
-
-reset role;
-update public.ai_operations
-set is_enabled = true
-where operation_key = 'portrait.cartoon_3d';
 select set_config(
   'request.jwt.claims',
   '{"sub":"10000000-0000-4000-8000-000000000001","role":"authenticated"}',

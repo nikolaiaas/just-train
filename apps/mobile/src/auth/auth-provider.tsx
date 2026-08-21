@@ -20,7 +20,6 @@ import {
   type AiMediaOutput,
   type BareTraenAuthSession,
   type PreparedAiMediaJob,
-  type SafeAiMediaSubject,
 } from "@bare-traen/api-client";
 import {
   createContext,
@@ -82,9 +81,9 @@ type CreateChildInput = {
 
 type SubmitAiCartoonInput = {
   bytes: Uint8Array;
+  childProfileId: string;
   clientRequestId: string;
   mimeType: AiMediaMimeType;
-  subjectKind: SafeAiMediaSubject;
 };
 
 type AuthContextValue = {
@@ -405,20 +404,31 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const submitAiCartoon = useCallback(
     async (input: SubmitAiCartoonInput): Promise<PreparedAiMediaJob> => {
       const context = getAiRequestContext();
+
+      if (
+        bootstrap.status !== "ready" ||
+        !bootstrap.data.children.some(
+          (child) => child.id === input.childProfileId,
+        )
+      ) {
+        throw new Error("Det valgte barn er ikke tilgængeligt i familien.");
+      }
+
       const prepared = await prepareAiMediaJob(context.client, {
+        childProfileId: input.childProfileId,
         clientRequestId: input.clientRequestId,
         expectedUserId: context.userId,
         familyId: context.familyId,
         inputMimeType: input.mimeType,
         operationKey: AI_CARTOON_OPERATION_KEY,
-        subjectKind: input.subjectKind,
+        subjectKind: "child",
       });
 
       await uploadAiMediaInput(context.client, prepared, input.bytes);
       await startAiMediaJob(context.client, prepared.jobId);
       return prepared;
     },
-    [getAiRequestContext],
+    [bootstrap, getAiRequestContext],
   );
 
   const getAiCartoonJob = useCallback(

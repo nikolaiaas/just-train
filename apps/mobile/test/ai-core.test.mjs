@@ -4,18 +4,8 @@ import test from "node:test";
 import {
   getAiJobErrorMessage,
   getAiPollDelay,
-  normalizeAiMediaSubject,
   shouldReconcileAiJob,
 } from "../src/ai/core.ts";
-
-test("accepts only the two audited non-child subject labels", () => {
-  assert.equal(normalizeAiMediaSubject("synthetic"), "synthetic");
-  assert.equal(normalizeAiMediaSubject("adult_test"), "adult_test");
-  assert.throws(
-    () => normalizeAiMediaSubject("child"),
-    /invalid_ai_media_subject/,
-  );
-});
 
 test("backs polling off and explicitly reconciles a stale worker lease", () => {
   assert.equal(getAiPollDelay(0), 2_000);

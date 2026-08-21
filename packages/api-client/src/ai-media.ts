@@ -3,18 +3,19 @@ import type { BareTraenClient } from "./index.ts";
 export const AI_CARTOON_OPERATION_KEY = "portrait.cartoon_3d" as const;
 export const AI_MEDIA_MAX_INPUT_BYTES = 8 * 1024 * 1024;
 
-export type SafeAiMediaSubject = "synthetic" | "adult_test";
+export type AiMediaSubject = "synthetic" | "adult_test" | "child";
 export type AiMediaMimeType = "image/jpeg" | "image/png" | "image/webp";
 export type AiMediaJobStatus =
   "awaiting_upload" | "processing" | "succeeded" | "failed" | "cancelled";
 
 export type PrepareAiMediaJobInput = {
   clientRequestId: string;
+  childProfileId: string | null;
   expectedUserId: string;
   familyId: string;
   inputMimeType: AiMediaMimeType;
   operationKey: string;
-  subjectKind: SafeAiMediaSubject;
+  subjectKind: AiMediaSubject;
 };
 
 export type PreparedAiMediaJob = {
@@ -45,6 +46,7 @@ export type AiMediaOutput = {
 export type AiMediaErrorCode =
   | "family_access_denied"
   | "input_too_large"
+  | "invalid_child_profile_id"
   | "invalid_client_request_id"
   | "invalid_expected_user_id"
   | "invalid_family_id"
@@ -65,6 +67,7 @@ export type AiMediaErrorCode =
 const ERROR_MESSAGES: Record<AiMediaErrorCode, string> = {
   family_access_denied: "The family cannot create this AI media job.",
   input_too_large: "The input image is too large.",
+  invalid_child_profile_id: "The child profile for this image is invalid.",
   invalid_client_request_id: "The AI media request id is invalid.",
   invalid_expected_user_id: "The expected adult account id is invalid.",
   invalid_family_id: "The family id is invalid.",
@@ -72,7 +75,7 @@ const ERROR_MESSAGES: Record<AiMediaErrorCode, string> = {
   invalid_mime_type: "The input image type is invalid.",
   invalid_operation_key: "The AI operation key is invalid.",
   invalid_preparation_result: "The AI media preparation result is invalid.",
-  invalid_subject_kind: "Only synthetic or adult test media is allowed.",
+  invalid_subject_kind: "The AI media subject type is invalid.",
   job_not_found: "The AI media job could not be found.",
   job_status_failed: "The AI media job status could not be loaded.",
   operation_unavailable: "The AI operation is not available.",
@@ -120,6 +123,7 @@ function validateUuid(
   value: unknown,
   code:
     | "invalid_client_request_id"
+    | "invalid_child_profile_id"
     | "invalid_expected_user_id"
     | "invalid_family_id",
 ): string {
@@ -151,12 +155,27 @@ function validateOperationKey(value: unknown): string {
   return value;
 }
 
-function validateSubject(value: unknown): SafeAiMediaSubject {
-  if (value !== "synthetic" && value !== "adult_test") {
+function validateSubject(value: unknown): AiMediaSubject {
+  if (value !== "synthetic" && value !== "adult_test" && value !== "child") {
     throw new AiMediaError("invalid_subject_kind");
   }
 
   return value;
+}
+
+function validateChildProfileId(
+  value: unknown,
+  subjectKind: AiMediaSubject,
+): string | null {
+  if (subjectKind === "child") {
+    return validateUuid(value, "invalid_child_profile_id");
+  }
+
+  if (value !== null && value !== undefined) {
+    throw new AiMediaError("invalid_child_profile_id");
+  }
+
+  return null;
 }
 
 function validateMimeType(value: unknown): AiMediaMimeType {
@@ -241,11 +260,15 @@ export async function prepareAiMediaJob(
   const inputMimeType = validateMimeType(input.inputMimeType);
   const operationKey = validateOperationKey(input.operationKey);
   const subjectKind = validateSubject(input.subjectKind);
+  const childProfileId = validateChildProfileId(
+    input.childProfileId,
+    subjectKind,
+  );
   let response: Awaited<ReturnType<typeof client.rpc<"prepare_ai_media_job">>>;
 
   try {
     response = await client.rpc("prepare_ai_media_job", {
-      p_child_profile_id: undefined,
+      p_child_profile_id: childProfileId ?? undefined,
       p_client_request_id: clientRequestId,
       p_expected_user_id: expectedUserId,
       p_family_id: familyId,

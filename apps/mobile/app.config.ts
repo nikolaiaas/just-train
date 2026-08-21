@@ -63,7 +63,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         "expo-image-picker",
         {
           photosPermission:
-            "Vælg kun et billede af en voksen testperson eller en syntetisk person til den lukkede AI-billedlab.",
+            "Vælg et billede af dit barn for at lave et privat tegneserieportræt i Bare Træn.",
           cameraPermission: false,
           microphonePermission: false,
         },

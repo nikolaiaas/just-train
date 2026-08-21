@@ -6,7 +6,6 @@ import test from "node:test";
 const execFile = promisify(execFileCallback);
 const databaseContainer = "supabase_db_bare-traen";
 const callerId = "10000000-0000-4000-8000-000000000001";
-const adminId = "10000000-0000-4000-8000-000000000003";
 const familyId = "20000000-0000-4000-8000-000000000001";
 const operationKey = "portrait.cartoon_3d";
 
@@ -90,15 +89,6 @@ async function waitForSleep(applicationName) {
 async function prepareFixture(clientRequestId) {
   await runSql(`
     begin;
-    update public.ai_operations
-    set is_enabled = true
-    where operation_key = '${operationKey}';
-    insert into private.ai_media_testers (user_id, authorized_by, expires_at)
-    values ('${callerId}', '${adminId}', now() + interval '1 day')
-    on conflict (user_id) do update
-    set authorized_by = excluded.authorized_by,
-        authorized_at = now(),
-        expires_at = excluded.expires_at;
     select set_config(
       'request.jwt.claims',
       '{"sub":"${callerId}","role":"authenticated"}',
@@ -174,10 +164,6 @@ async function cleanupFixture(clientRequestIds) {
       and client_request_id in (${ids});
     delete from public.media_assets
     where id in (select id from ai_test_assets);
-    delete from private.ai_media_testers where user_id = '${callerId}';
-    update public.ai_operations
-    set is_enabled = false
-    where operation_key = '${operationKey}';
     commit;
   `);
 }
@@ -298,7 +284,7 @@ test(
       assert.ok(prepareFailure, "the racing prepare must fail closed");
       assert.match(
         `${prepareFailure.stderr ?? ""}`,
-        /Only one AI media test can be active at a time\./,
+        /Only one AI media job for this operation can be active at a time\./,
       );
       assert.equal(claimResult.stdout.trim().split("\n")[0], "1");
       assert.ok(

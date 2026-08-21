@@ -267,7 +267,6 @@ export type Database = {
           created_by: string | null;
           description: string;
           id: string;
-          is_enabled: boolean;
           operation_key: string;
           updated_at: string;
         };
@@ -278,7 +277,6 @@ export type Database = {
           created_by?: string | null;
           description?: string;
           id?: string;
-          is_enabled?: boolean;
           operation_key: string;
           updated_at?: string;
         };
@@ -289,7 +287,6 @@ export type Database = {
           created_by?: string | null;
           description?: string;
           id?: string;
-          is_enabled?: boolean;
           operation_key?: string;
           updated_at?: string;
         };

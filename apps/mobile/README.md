@@ -32,30 +32,31 @@ After login, the app loads only the authenticated adult's profile, first family 
 
 The family owner can create a child profile with only a nickname and one of four preset avatars. The child receives no Auth account, email, password, age, or photo. Creation requires acknowledgement of the current versioned guardian notice, records that acknowledgement in a private database table, and stops at 10 active children per family. The client persists a caller- and backend-scoped request identity before submission, so an interrupted or uncertain request can be retried without creating a duplicate child.
 
-This acknowledgement is an implementation safeguard for the synthetic pilot flow, not approval of the final legal basis or wording. Legal/privacy review, withdrawal, deletion, retention, and any real-child or child-photo pilot remain separate release gates.
+This acknowledgement protects child-profile creation, but it is not approval of the final legal basis or wording for a broader release. Legal/privacy review, withdrawal, deletion, and retention remain separate product work before distribution beyond the private family prototype.
 
 The email-to-code, session restoration, first-family onboarding, empty-family, existing-child, and logout flows have been tested in local Safari with synthetic data. Child-creation database rules and interruption-retry behavior have automated local coverage. Local Mailpit and all local browser/app callbacks are ready. The tested parent- and child-onboarding migrations are deployed to Hosted Development. Custom hosted SMTP with the Danish template and CAPTCHA or server-side throttling remain separate gates.
 
 On iOS and Android, the full Supabase session is encrypted with Expo Crypto AES-256-GCM before its ciphertext is written to AsyncStorage. The encryption key is kept separately in SecureStore and is restricted to the unlocked device. Safari uses a separate origin-scoped browser adapter so native storage modules never enter its bundle.
 
-The Auth slice added `expo-crypto`, `expo-secure-store`, and AsyncStorage. The closed AI lab also adds `expo-image-picker`, `expo-image-manipulator`, and `expo-file-system`, plus a gallery permission. The app and runtime version are therefore `1.2.0`; an installed `1.1.0` or older development/preview binary must be replaced with a fresh EAS build, not updated over the air. Native OTP, cold and warm magic-link callbacks, session restoration, logout, and gallery permission remain acceptance checks for that fresh build.
+The Auth slice added `expo-crypto`, `expo-secure-store`, and AsyncStorage. The private AI portrait flow also adds `expo-image-picker`, `expo-image-manipulator`, and `expo-file-system`, plus a gallery permission. The app and runtime version are therefore `1.2.0`; an installed `1.1.0` or older development/preview binary must be replaced with a fresh EAS build, not updated over the air. Native OTP, cold and warm magic-link callbacks, session restoration, logout, and gallery permission remain acceptance checks for that fresh build.
 
-## Closed AI cartoon lab
+## Private family AI cartoon portrait
 
-The app contains a guarded technical route for turning one synthetic or adult
-test portrait into a 3D cartoon with Microsoft `microsoft/mai-image-2.5`
-through an Azure-only, no-fallback route in the server-side OpenRouter worker.
-It selects from the gallery only, downsizes the long edge to 1536 pixels,
-uploads at most 8 MiB to a reserved private object, and displays the generated
-PNG through a short-lived signed URL. Camera and microphone permissions are
-disabled, and the result is never written to a child profile.
+An authenticated parent can select an active child, choose one photo from the
+gallery, and create a 3D cartoon portrait with OpenAI `openai/gpt-image-2`
+through the server-side OpenRouter worker. The app downsizes the long edge to
+1536 pixels, uploads at most 8 MiB to a reserved private object, and displays
+the generated PNG through a short-lived signed URL. Camera and microphone
+permissions stay disabled. Both the input and result are linked to the selected
+child, but the generated image does not automatically replace the preset
+avatar.
 
-The entry point is present for authenticated parents without a public
-build-time feature flag. This does not activate image processing: the database
-operation starts disabled, the trusted tester allowlist starts empty, and the
-database rejects child-labelled or child-profile-linked requests. A caller's
-label cannot prove who is pictured, so the allowlisted tester remains
-responsible for never selecting a real child image.
+The entry point has no feature toggle or tester allowlist. The current database
+migration selects GPT Image 2 as active version 2 without a separate enable
+state, while family access, active-child ownership, private storage, server-only
+credentials, per-job cost limits, and retry-safe job handling remain enforced.
+Automated tests and development evidence continue to use synthetic fixtures
+only.
 
 The client never receives or submits the prompt, model, provider settings, or
 OpenRouter key. It sends the stable operation key `portrait.cartoon_3d`; the
@@ -65,9 +66,6 @@ configuration used by existing jobs.
 
 The screen polls the same idempotent job and may ask the worker to reconcile a
 stale lease, but it never repeats the paid image-generation POST automatically.
-The operation remains off until the documented privacy, provider-routing,
-durable-queue, finalization, retention/deletion, recovery, and budget gates are
-complete.
 
 ## EAS builds for an iPhone
 

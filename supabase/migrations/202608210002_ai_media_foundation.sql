@@ -35,7 +35,6 @@ create table public.ai_operations (
     check (capability ~ '^[a-z0-9]+([._-][a-z0-9]+)*$'),
   description text not null default ''
     check (char_length(description) <= 500),
-  is_enabled boolean not null default false,
   active_version_id uuid,
   created_by uuid references public.profiles (id) on delete set null,
   created_at timestamptz not null default now(),
@@ -253,17 +252,6 @@ create table private.ai_job_attempts (
 comment on table private.ai_job_attempts is
   'Worker-only provider attempt audit. Never store prompts, media, signed URLs, or raw provider responses here.';
 
-create table private.ai_media_testers (
-  user_id uuid primary key references public.profiles (id) on delete cascade,
-  authorized_by uuid references public.profiles (id) on delete set null,
-  authorized_at timestamptz not null default now(),
-  expires_at timestamptz not null,
-  check (expires_at > authorized_at)
-);
-
-comment on table private.ai_media_testers is
-  'Server-managed, expiring allowlist for audited adult/synthetic media testing. It is intentionally empty outside tests until a reviewed activation.';
-
 create index ai_operation_versions_operation_idx
   on public.ai_operation_versions (operation_id, version desc);
 create index media_assets_family_created_idx
@@ -313,7 +301,6 @@ alter table public.media_assets enable row level security;
 alter table public.ai_jobs enable row level security;
 alter table public.ai_job_media enable row level security;
 alter table private.ai_job_attempts enable row level security;
-alter table private.ai_media_testers enable row level security;
 
 create policy "Admins can read AI operations"
 on public.ai_operations for select to authenticated
@@ -389,9 +376,6 @@ revoke all on table private.ai_job_attempts
   from public, anon, authenticated, service_role;
 grant select on table private.ai_job_attempts to service_role;
 
-revoke all on table private.ai_media_testers
-  from public, anon, authenticated, service_role;
-
 insert into storage.buckets (
   id,
   name,
@@ -447,7 +431,6 @@ as $$
         and asset.mime_type = p_mime_type
         and asset.asset_role = 'reference_input'
         and asset.status = 'pending'
-        and asset.subject_kind <> 'child'
         and asset.created_by = (select auth.uid())
         and (select private.is_family_member(asset.family_id))
     );
@@ -481,7 +464,7 @@ using (
   )
 );
 
-create policy "Requesters can upload reserved non-child AI inputs"
+create policy "Requesters can upload reserved family AI inputs"
 on storage.objects for insert to authenticated
 with check (
   bucket_id = 'ai-media-private'
@@ -695,16 +678,6 @@ begin
       using errcode = '42501';
   end if;
 
-  if not exists (
-    select 1
-    from private.ai_media_testers as tester
-    where tester.user_id = caller_id
-      and tester.expires_at > now()
-  ) then
-    raise exception 'AI media testing is not enabled for this account.'
-      using errcode = '0A000';
-  end if;
-
   if p_client_request_id is null
     or p_client_request_id = '00000000-0000-0000-0000-000000000000'::uuid
   then
@@ -712,17 +685,29 @@ begin
       using errcode = '22023';
   end if;
 
-  -- The allowlist above limits this to audited technical testers, but a caller
-  -- label cannot prove who appears in an image. Child media therefore remains
-  -- prohibited until a reviewed legal basis, notice, withdrawal, provider
-  -- privacy mode, deletion, and retention contract exists.
-  if p_subject_kind = 'child' or p_child_profile_id is not null then
-    raise exception 'Child photo AI processing is not enabled.'
-      using errcode = '0A000';
+  if p_subject_kind is null then
+    raise exception 'The media subject kind is required.'
+      using errcode = '22023';
   end if;
 
-  if p_subject_kind not in ('synthetic', 'adult_test') then
-    raise exception 'Only synthetic or adult test media is allowed.'
+  if p_subject_kind = 'child' then
+    if p_child_profile_id is null then
+      raise exception 'A child photo must be linked to a child profile.'
+        using errcode = '22023';
+    end if;
+
+    if not exists (
+      select 1
+      from public.child_profiles as child
+      where child.id = p_child_profile_id
+        and child.family_id = p_family_id
+        and child.is_active
+    ) then
+      raise exception 'The active child profile is unavailable to this family.'
+        using errcode = '42501';
+    end if;
+  elsif p_child_profile_id is not null then
+    raise exception 'Only child media can be linked to a child profile.'
       using errcode = '22023';
   end if;
 
@@ -831,8 +816,7 @@ begin
   join public.ai_operation_versions as active_version
     on active_version.id = operation.active_version_id
     and active_version.operation_id = operation.id
-  where operation.id = selected_operation_id
-    and operation.is_enabled;
+  where operation.id = selected_operation_id;
 
   if selected_operation_version_id is null then
     raise exception 'The requested AI operation is unavailable.'
@@ -850,29 +834,42 @@ begin
       using errcode = '22023';
   end if;
 
+  if not exists (
+    select 1
+    from jsonb_array_elements_text(
+      selected_input_contract #> '{reference_image,allowed_subject_kinds}'
+    ) as allowed_subject_kind(value)
+    where allowed_subject_kind.value = p_subject_kind::text
+  ) then
+    raise exception 'The media subject type is not supported by this operation.'
+      using errcode = '22023';
+  end if;
+
   if (
     select count(*)
     from public.ai_jobs as recent_job
     where recent_job.requested_by = caller_id
       and recent_job.created_at >= now() - interval '24 hours'
   ) >= 10 then
-    raise exception 'The daily AI media test limit has been reached.'
+    raise exception 'The daily AI media limit has been reached.'
       using errcode = '54000';
   end if;
 
   -- A browser/app can disappear after reserving private paths but before it
   -- receives the job id. A genuinely new, validated request supersedes only
-  -- unclaimed reservations so that such a crash cannot block the tester
-  -- forever. The profile lock serializes competing prepares; the job lock
-  -- serializes a racing worker claim so it either wins and remains protected
-  -- as processing, or observes the committed cancellation without calling
-  -- the provider.
+  -- unclaimed reservations for the same family member and operation so such a
+  -- crash cannot block that capability forever. The profile lock serializes
+  -- competing prepares; the job lock serializes a racing worker claim so it
+  -- either wins and remains protected as processing, or observes the committed
+  -- cancellation without calling the provider.
   with superseded_jobs as (
     update public.ai_jobs as superseded_job
     set status = 'cancelled',
         public_error_code = 'request_superseded',
         completed_at = now()
     where superseded_job.requested_by = caller_id
+      and superseded_job.family_id = p_family_id
+      and superseded_job.operation_id = selected_operation_id
       and superseded_job.status = 'awaiting_upload'
     returning superseded_job.id
   )
@@ -892,9 +889,11 @@ begin
     select 1
     from public.ai_jobs as active_job
     where active_job.requested_by = caller_id
+      and active_job.family_id = p_family_id
+      and active_job.operation_id = selected_operation_id
       and active_job.status in ('awaiting_upload', 'processing')
   ) then
-    raise exception 'Only one AI media test can be active at a time.'
+    raise exception 'Only one AI media job for this operation can be active at a time.'
       using errcode = '55000';
   end if;
 
@@ -933,7 +932,7 @@ begin
     (
       inserted_input_asset_id,
       p_family_id,
-      null,
+      p_child_profile_id,
       p_subject_kind,
       'reference_input',
       'pending',
@@ -945,7 +944,7 @@ begin
     (
       inserted_output_asset_id,
       p_family_id,
-      null,
+      p_child_profile_id,
       p_subject_kind,
       'generated_output',
       'pending',
@@ -971,7 +970,7 @@ begin
   values (
     inserted_job_id,
     p_family_id,
-    null,
+    p_child_profile_id,
     p_subject_kind,
     selected_operation_id,
     selected_operation_version_id,
@@ -1045,7 +1044,7 @@ comment on function public.prepare_ai_media_job(
   text,
   uuid
 ) is
-  'Reserves an idempotent family-scoped AI job and private input/output paths, superseding only older unclaimed reservations. Child-labelled and child-profile-linked requests are rejected; caller labels cannot prove who appears in an image, so real child media remains prohibited until a separate approved privacy migration.';
+  'Reserves an idempotent family-scoped AI job and private input/output paths, superseding only older unclaimed reservations. Child media must be linked to an active child profile in the authenticated family.';
 
 create function public.claim_ai_media_job_for_worker(p_job_id uuid)
 returns table (
@@ -1087,50 +1086,7 @@ begin
     return;
   end if;
 
-  if selected_job.subject_kind = 'child'
-    or selected_job.child_profile_id is not null
-    or selected_job.status in ('succeeded', 'cancelled')
-  then
-    return;
-  end if;
-
-  -- Disabling an operation is a strict release kill switch. It prevents new
-  -- work and closes an existing lease if this job is invoked again. The
-  -- completion transition independently rechecks the same gate so an active
-  -- worker cannot publish output after the switch is committed.
-  if not exists (
-    select 1
-    from public.ai_operations as operation
-    where operation.id = selected_job.operation_id
-      and operation.is_enabled
-  ) then
-    update public.ai_jobs
-    set status = 'cancelled',
-        public_error_code = 'operation_disabled',
-        completed_at = now()
-    where id = selected_job.id
-      and status not in ('succeeded', 'cancelled');
-
-    update private.ai_job_attempts as attempt
-    set status = 'failed',
-        error_code = 'operation_disabled',
-        completed_at = now()
-    where attempt.job_id = selected_job.id
-      and attempt.status = 'processing';
-
-    update public.media_assets as asset
-    set status = 'failed'
-    where asset.status = 'pending'
-      and asset.asset_role = 'generated_output'
-      and exists (
-        select 1
-        from public.ai_job_media as link
-        where link.job_id = selected_job.id
-          and link.family_id = selected_job.family_id
-          and link.media_asset_id = asset.id
-          and link.slot = 'generated_image'
-          and link.ordinal = 0
-      );
+  if selected_job.status in ('succeeded', 'cancelled') then
     return;
   end if;
 
@@ -1210,7 +1166,8 @@ begin
     and link.slot = 'reference_image'
     and link.ordinal = 0
     and asset.asset_role = 'reference_input'
-    and asset.subject_kind <> 'child';
+    and asset.subject_kind = selected_job.subject_kind
+    and asset.child_profile_id is not distinct from selected_job.child_profile_id;
 
   select asset.*
   into selected_output
@@ -1223,7 +1180,8 @@ begin
     and link.slot = 'generated_image'
     and link.ordinal = 0
     and asset.asset_role = 'generated_output'
-    and asset.subject_kind <> 'child';
+    and asset.subject_kind = selected_job.subject_kind
+    and asset.child_profile_id is not distinct from selected_job.child_profile_id;
 
   if selected_version.id is null
     or selected_input.id is null
@@ -1316,8 +1274,6 @@ set search_path = ''
 as $$
 declare
   accumulated_cost_microusd bigint;
-  operation_enabled boolean;
-  selected_operation_id uuid;
 begin
   if p_output_byte_size is null
     or p_output_byte_size not between 1 and 8388608
@@ -1346,31 +1302,16 @@ begin
     return;
   end if;
 
-  select job.operation_id
-  into selected_operation_id
+  perform 1
   from public.ai_jobs as job
   where job.id = p_job_id
     and job.status = 'processing'
     and job.attempt_count = p_attempt_number
   for update;
 
-  if selected_operation_id is null then
+  if not found then
     raise exception 'The AI job is no longer owned by this worker attempt.'
       using errcode = '40001';
-  end if;
-
-  -- Lock the operation row until this completion commits. A concurrent
-  -- disable either wins first and blocks publication, or waits until this
-  -- already-validated completion is atomically visible.
-  select operation.is_enabled
-  into operation_enabled
-  from public.ai_operations as operation
-  where operation.id = selected_operation_id
-  for share;
-
-  if operation_enabled is distinct from true then
-    raise exception 'The AI operation was disabled before completion.'
-      using errcode = '55000';
   end if;
 
   select coalesce(job.actual_cost_microusd, 0) + p_cost_microusd
@@ -1489,8 +1430,6 @@ language plpgsql
 security definer
 set search_path = ''
 as $$
-declare
-  cancelled_attempt_cost_microusd bigint;
 begin
   if p_public_error_code is null
     or p_public_error_code !~ '^[a-z0-9]+([._-][a-z0-9]+)*$'
@@ -1502,50 +1441,6 @@ begin
   then
     raise exception 'The worker error category is invalid.'
       using errcode = '22023';
-  end if;
-
-  -- A strict operation disable may have cancelled the public job just before
-  -- an active worker reports a provider result. Preserve that late billing
-  -- evidence exactly once without reopening the job or making output visible.
-  select attempt.cost_microusd
-  into cancelled_attempt_cost_microusd
-  from public.ai_jobs as job
-  join private.ai_job_attempts as attempt
-    on attempt.job_id = job.id
-    and attempt.attempt_number = p_attempt_number
-    and attempt.status = 'failed'
-    and attempt.error_code = 'operation_disabled'
-  where job.id = p_job_id
-    and job.status = 'cancelled'
-    and job.public_error_code = 'operation_disabled'
-  for update of attempt;
-
-  if found then
-    update private.ai_job_attempts as attempt
-    set provider_request_id = coalesce(
-          attempt.provider_request_id,
-          left(p_provider_request_id, 200)
-        ),
-        usage = case
-          when attempt.usage = '{}'::jsonb then p_usage
-          else attempt.usage
-        end,
-        cost_microusd = coalesce(attempt.cost_microusd, p_cost_microusd)
-    where attempt.job_id = p_job_id
-      and attempt.attempt_number = p_attempt_number;
-
-    if cancelled_attempt_cost_microusd is null
-      and p_cost_microusd is not null
-    then
-      update public.ai_jobs
-      set actual_cost_microusd = coalesce(actual_cost_microusd, 0)
-        + p_cost_microusd
-      where id = p_job_id
-        and status = 'cancelled'
-        and public_error_code = 'operation_disabled';
-    end if;
-
-    return;
   end if;
 
   if exists (
@@ -1634,15 +1529,13 @@ insert into public.ai_operations (
   id,
   operation_key,
   capability,
-  description,
-  is_enabled
+  description
 )
 values (
   'a1000000-0000-4000-8000-000000000001',
   'portrait.cartoon_3d',
   'image_transform',
-  'Creates a friendly stylized 3D cartoon portrait from one reference image.',
-  false
+  'Creates a friendly stylized 3D cartoon portrait from one reference image.'
 );
 
 insert into public.ai_operation_versions (
@@ -1695,13 +1588,64 @@ values (
   250000
 );
 
+insert into public.ai_operation_versions (
+  id,
+  operation_id,
+  version,
+  prompt_template,
+  gateway,
+  provider,
+  model,
+  request_options,
+  input_contract,
+  output_contract,
+  max_attempts,
+  timeout_ms,
+  max_cost_microusd
+)
+values (
+  'a2000000-0000-4000-8000-000000000002',
+  'a1000000-0000-4000-8000-000000000001',
+  2,
+  'Create a friendly stylized 3D cartoon version of this person. Preserve their recognizable face, hairstyle, skin tone and distinctive features.',
+  'openrouter',
+  'openai',
+  'openai/gpt-image-2',
+  '{
+    "n": 1,
+    "aspect_ratio": "1:1",
+    "background": "opaque",
+    "quality": "low",
+    "provider": {
+      "only": ["openai"],
+      "allow_fallbacks": false
+    }
+  }'::jsonb,
+  '{
+    "reference_image": {
+      "count": 1,
+      "mime_types": ["image/jpeg", "image/png"],
+      "max_bytes": 8388608,
+      "allowed_subject_kinds": ["synthetic", "adult_test", "child"]
+    }
+  }'::jsonb,
+  '{
+    "generated_image": {
+      "count": 1,
+      "mime_types": ["image/png"]
+    }
+  }'::jsonb,
+  1,
+  120000,
+  250000
+);
+
 update public.ai_operations
-set active_version_id = 'a2000000-0000-4000-8000-000000000001'
+set active_version_id = 'a2000000-0000-4000-8000-000000000002'
 where id = 'a1000000-0000-4000-8000-000000000001';
 
--- The operation and the server-managed tester allowlist both start empty/off.
--- Child-labelled and child-profile-linked requests are rejected. A
--- client-supplied subject label cannot identify a person, so real child media
--- also remains prohibited by policy even for an allowlisted technical tester.
+-- The private family prototype has no separate feature toggle or tester
+-- allowlist. Authentication, family membership, child linkage, private
+-- Storage, one-attempt jobs, and cost ceilings remain enforced.
 
 commit;

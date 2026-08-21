@@ -184,7 +184,7 @@ async function processJob(jobId: string): Promise<void> {
   let usage: Record<string, number> = {};
 
   try {
-    if (claim.gateway !== "openrouter" || claim.provider !== "azure") {
+    if (claim.gateway !== "openrouter" || claim.provider !== "openai") {
       throw new OpenRouterImageError({
         attemptCode: "unsupported_gateway",
         publicCode: "server_configuration",
@@ -299,15 +299,6 @@ async function processJob(jobId: string): Promise<void> {
     }
 
     if (completeError) {
-      if (completeError.code === "55000") {
-        throw new OpenRouterImageError({
-          attemptCode: "operation_disabled",
-          providerRequestId: result.providerRequestId,
-          publicCode: "operation_disabled",
-          retryable: false,
-        });
-      }
-
       throw new Error("completion_failed");
     }
 
