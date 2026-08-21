@@ -37,12 +37,24 @@ by the worker request with `provider.only: ["openai"]` and
 `allow_fallbacks: false`.
 
 The key is installed only in the ignored local Function environment and Hosted
-Development's Edge secrets. The new migration and Edge Function have not been
-deployed, so the hosted secret alone does not make the family flow live.
+Development's Edge secrets. On 2026-08-21 protected PR #4 deployed the two AI
+migrations through the native Supabase integration, after which
+`process-ai-job` was deployed separately with JWT verification enabled. The
+hosted Function returned HTTP 401 without authentication and HTTP 200 for its
+CORS preflight, confirming that the active deployment remains behind the
+expected authentication boundary.
 
-The successful verification used a fully synthetic 1024 by 1024 PNG, the exact
-prompt above, model `openai/gpt-image-2`, and the same OpenAI-only/no-fallback
-route as the worker. It returned HTTP 200, one valid PNG, and generation ID
+An authenticated Hosted Development end-to-end verification on the same date
+uploaded a synthetic image for the selected synthetic child, processed one job
+through the deployed Function and OpenAI GPT Image 2 route, and displayed the
+generated result from private Storage. This proves the deployed family path;
+it does not close the separate recovery, finalization, retention, or broader
+privacy work listed below.
+
+The earlier local synthetic end-to-end verification used a fully synthetic
+1024 by 1024 PNG, the exact prompt above, model `openai/gpt-image-2`, and the
+same OpenAI-only/no-fallback route as the worker. It returned HTTP 200, one
+valid PNG, and generation ID
 `gen-img-1787315324-mf0eyF1qKxxS42h1pzy4` in about 19 seconds. OpenRouter marked
 the call as BYOK and reported USD 0 billed by OpenRouter; its response reported
 USD 0.014237 of upstream inference cost. No real family image was used.

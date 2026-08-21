@@ -136,18 +136,24 @@ Earlier Azure/model allowlists and the non-frontier ZDR requirement were
 removed. The worker independently enforces `openai/gpt-image-2`, OpenAI-only,
 and no fallback.
 
-An exact live test on 2026-08-21 used a synthetic 1024 by 1024 PNG and returned
-HTTP 200 with a valid PNG in about 19 seconds. OpenRouter marked the request as
-BYOK and billed USD 0; its response reported USD 0.014237 in upstream inference
-cost. No real family photo was used. The earlier immutable version 1 Azure/MAI
-route and its two HTTP 400 tests remain part of the decision history.
+An exact local live test on 2026-08-21 used a synthetic 1024 by 1024 PNG and
+returned HTTP 200 with a valid PNG in about 19 seconds. OpenRouter marked the
+request as BYOK and billed USD 0; its response reported USD 0.014237 in upstream
+inference cost. No real family photo was used. The earlier immutable version 1
+Azure/MAI route and its two HTTP 400 tests remain part of the decision history.
 
-The migration and Edge Function have not been deployed to Hosted Development,
-so the hosted secret alone does not make this flow live. The owner has accepted
-the remaining under-18/provider risk for this private family prototype. Durable
-recovery, post-provider finalization, physical retention deletion, Storage-byte
-recovery, and broader privacy/legal work remain open. `delete_after` is metadata
-only until a deletion worker actually removes the private object. See
+The two AI migrations and `process-ai-job` Edge Function were deployed to
+Hosted Development on 2026-08-21 after protected PR #4 passed its quality,
+database, and Vercel checks. Migration alignment, active Function status, JWT
+verification, an unauthenticated HTTP 401, and a CORS HTTP 200 were verified. A
+separate authenticated Hosted Development test completed the full path with a
+synthetic upload, one deployed provider job, private output retrieval, and a
+rendered GPT Image 2 result for the selected synthetic child. The owner has
+accepted the remaining under-18/provider risk for this private family
+prototype. Durable recovery, post-provider finalization, physical retention
+deletion, Storage-byte recovery, and broader privacy/legal work remain open.
+`delete_after` is metadata only until a deletion worker actually removes the
+private object. See
 [`ai-image-provider-review.md`](./ai-image-provider-review.md) and
 `supabase/README.md` for the decision and explicitly approved local commands.
 
@@ -235,7 +241,7 @@ If the local network blocks the connection, stop the command with Control-C and 
 mise exec -- pnpm dev:iphone:tunnel
 ```
 
-The phone should normally use the hosted development Supabase project. `127.0.0.1` on an iPhone means the phone itself, not this Mac. New-parent family onboarding and owner-only child creation are now available there for synthetic testing. The GPT Image 2 migration and Edge Function are not deployed there yet, so the private family cartoon flow is not currently available from that hosted backend. A deliberate later deployment may make the private family prototype available to authenticated family members; broader real-data testing still depends on the privacy, retention, and backup roadmap.
+The phone should normally use the hosted development Supabase project. `127.0.0.1` on an iPhone means the phone itself, not this Mac. New-parent family onboarding, owner-only child creation, and the private GPT Image 2 path are available there. The migrations, Edge Function, and one authenticated end-to-end generation have been verified with synthetic media. Repository verification and task evidence must continue to use synthetic media, and broader real-data testing still depends on the privacy, retention, and backup roadmap.
 
 ## A standalone preview for another tester
 

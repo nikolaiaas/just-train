@@ -101,13 +101,18 @@ as BYOK and billed USD 0, while reporting an upstream inference cost of USD
 its earlier provider, model, and ZDR restrictions were removed. The worker
 still independently pins the exact OpenAI model/provider route.
 
-The migration and Edge Function have not been deployed to Hosted Development,
-so this new flow is local source state rather than a live hosted feature. The
-owner has accepted the under-18/provider risk for the private family prototype.
-A durable queue and stale-job sweeper, provider-success checkpoint and
-idempotent finalizer, physical retention deletion, Storage-byte recovery test,
-and the broader legal/privacy review remain roadmap work rather than claims of
-current protection. The decision history is recorded in
+The two AI migrations reached Hosted Development through protected PR #4 on
+2026-08-21, and `process-ai-job` was then deployed separately as an active Edge
+Function with JWT verification enabled. The hosted endpoint passed
+unauthenticated HTTP 401 and CORS HTTP 200 smoke checks. An authenticated
+Hosted Development test then completed a full synthetic upload, job,
+OpenAI GPT Image 2 generation, private output read, and result render for the
+selected synthetic child. The owner has accepted the under-18/provider risk for
+the private family prototype. A durable queue and stale-job sweeper,
+provider-success checkpoint and idempotent finalizer, physical retention
+deletion, Storage-byte recovery test, and the broader legal/privacy review
+remain roadmap work rather than claims of current protection. The decision
+history is recorded in
 [`ai-image-provider-review.md`](./ai-image-provider-review.md).
 
 ## First vertical slice
