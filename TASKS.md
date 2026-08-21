@@ -181,7 +181,7 @@ Exit condition: pilot screens can be assembled from reviewed components rather t
 - [x] Keep child profiles parent-owned and collect no child Auth, email, password, age, or photo in this slice; direct child authentication remains deferred.
 - [x] Add administrator roles in protected metadata and server-side route guards.
 - [x] Write and test parent RLS for the current profile, family, membership, and child-profile tables, including owner-only child creation and default-deny private acknowledgement evidence.
-- [ ] Resolve or explicitly document every current Supabase Database Advisor warning: review the platform `rls_auto_enable` execute grants, preserve the tested boundaries of the four intentional `SECURITY DEFINER` product RPCs, and measure or consolidate overlapping read policies for topics, goals, and exercises.
+- [x] Resolve or explicitly document every current Supabase Database Advisor warning: review the platform `rls_auto_enable` execute grants, preserve the tested boundaries of the four intentional `SECURITY DEFINER` product RPCs, and measure or consolidate overlapping read policies for topics, goals, and exercises.
 - [x] Add narrow service-role worker RPCs and positive/negative RLS and Storage-policy tests for the first AI media flow, including parent-session family isolation and selected-child linkage; direct child authentication remains deferred.
 - [ ] Add policies and positive/negative tests for each future personal-data table and private Storage bucket as it is introduced.
 - [x] Ensure the content-administrator role alone cannot browse child data.
