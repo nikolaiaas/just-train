@@ -16,6 +16,11 @@ pnpm supabase:test
 pnpm supabase:lint
 ```
 
+The reviewed Security and Performance Advisor inventory, intentional
+`SECURITY DEFINER` exceptions, and passwordless leaked-password decision are
+recorded in
+[`docs/database-advisor-review.md`](../docs/database-advisor-review.md).
+
 Local Studio runs at <http://127.0.0.1:54323>. The seed is intentionally made
 only from synthetic fixtures. Never replace it with a dump of child or family
 data from a hosted environment. Automatic seeding is disabled in `config.toml`

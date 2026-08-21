@@ -303,9 +303,9 @@ export function ContentOverview({ topics }: ContentOverviewProps) {
           <p className={styles.eyebrow}>Næste fase</p>
           <h2 id="ai-dialog-title">Skab et forløb sammen med AI</h2>
           <p>
-            Her skal indholdsansvarlige kunne beskrive et emne og få et
-            struktureret forslag. OpenRouter kobles på server-side i en senere
-            fase, så nøglen aldrig lander i browseren.
+            Forslag til træningsindhold kommer i en senere fase. Det skal bruge
+            den eksisterende serverstyrede AI-platform og altid lande som en
+            kladde til menneskelig gennemgang.
           </p>
           <div className={styles.dialogActions}>
             <button className={styles.primaryButton} value="close">

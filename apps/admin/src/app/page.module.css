@@ -220,6 +220,11 @@
   background: #dff1ed;
 }
 
+.navItemAvailable:hover {
+  background: #f1f5f4;
+  color: #29485a;
+}
+
 .navIcon {
   width: 18px;
   height: 18px;
@@ -338,6 +343,10 @@
 .content {
   min-width: 0;
   padding: clamp(24px, 4vw, 52px);
+}
+
+.dashboardContent {
+  min-width: 0;
 }
 
 .toolbar {

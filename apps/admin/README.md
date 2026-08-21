@@ -55,7 +55,10 @@ offentlige Supabase-URL og publishable key med `NEXT_PUBLIC_`-præfiks. De
 valgfri lokale værdier er server-only, så de må ikke få præfikset.
 
 `OPENROUTER_API_KEY` er server-only og må aldrig eksponeres som en offentlig
-browservariabel. AI-handlinger er endnu ikke forbundet.
+browservariabel. En godkendt administrator kan se de immutable AI-promptversioner
+og udgive en ny prompt fra administrationssiden. Udgivelsen går gennem den
+versionslåste databasefunktion; provider, model, kontrakter og grænser kopieres
+på serveren og kan ikke vælges i browseren.
 
 Hosted login kræver desuden en rigtig voksen administratorkonto og en
 brugerdefineret SMTP-afsender. Begge dele er separate opgaver; den lokale

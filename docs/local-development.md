@@ -165,6 +165,8 @@ Supabase hosts the backend, not the visible previews. The administration preview
 
 Vercel creates protected administration previews for pull requests and updates the stable preview from `main`. `main` is protected by pull requests and the required quality, database, and Vercel preview checks. The native Supabase GitHub integration is enabled for this repository with `main` production deploys on and preview branches off. A protected merge has been verified end to end to update Hosted Development automatically, retain aligned migrations, pass hosted Auth and RLS health checks, and update the stable Vercel deployment.
 
+Use the [internal-preview release checklist](./internal-preview-release-checklist.md) for the repeatable preflight, protected merge, hosted deployment, iOS delivery, smoke-test, and rollback gates.
+
 The shared preview flow works as follows:
 
 1. A pull request runs the required GitHub **quality** and **database** checks. The database check starts a disposable local Supabase stack, applies every migration, and runs the permission tests without touching Hosted Development.

@@ -1,18 +1,7 @@
 {
   "version": 3,
-  "updatedAt": "2026-08-21T15:48:27.000Z",
+  "updatedAt": "2026-08-21T17:28:33.000Z",
   "items": [
-    {
-      "id": "auth-environment-slice",
-      "title": "Forbind login og de første data",
-      "details": "Opret Supabase-klient, admin-login og en localhost-only vælger mellem Local og Hosted Development.",
-      "implementationNotes": "",
-      "evidence": [],
-      "status": "backlog",
-      "priority": 0,
-      "createdAt": "2026-08-20T18:45:00.000Z",
-      "updatedAt": "2026-08-20T18:45:00.000Z"
-    },
     {
       "id": "hosted-preview-safety",
       "title": "Luk de sidste preview-huller",
@@ -20,26 +9,9 @@
       "implementationNotes": "",
       "evidence": [],
       "status": "backlog",
-      "priority": 1,
+      "priority": 0,
       "createdAt": "2026-08-20T18:45:00.000Z",
       "updatedAt": "2026-08-21T09:02:49.268Z"
-    },
-    {
-      "id": "f7f114f4-e2bb-4ac2-a8bf-1cec4032f9b2",
-      "title": "Ryd Supabase Advisor-advarsler",
-      "details": "Gennemgå de syv nuværende database-advarsler: begræns platformens rls_auto_enable-execute-rettigheder hvis sikkert, dokumentér de to tilsigtede SECURITY DEFINER-RPCer, og mål eller foren de overlappende læsepolitikker for topics, goals og exercises.",
-      "implementationNotes": "Ingen Advisor-fejl er fundet. RPCernes adgangsgrænser er allerede dækket af RLS- og concurrency-tests; event-triggerens standard execute-grants og de overlappende permissive policies skal stadig vurderes i en separat, testet migration før en rigtig pilot.",
-      "evidence": [
-        {
-          "kind": "link",
-          "label": "Supabase database advisors (login kræves)",
-          "url": "https://supabase.com/dashboard/project/wxhshsouhrjtlxdagwmh/advisors/security"
-        }
-      ],
-      "status": "backlog",
-      "priority": 2,
-      "createdAt": "2026-08-21T09:08:00.832Z",
-      "updatedAt": "2026-08-21T09:08:01.418Z"
     },
     {
       "id": "iphone-smoke-test",
@@ -48,7 +20,7 @@
       "implementationNotes": "",
       "evidence": [],
       "status": "backlog",
-      "priority": 3,
+      "priority": 1,
       "createdAt": "2026-08-20T18:45:00.000Z",
       "updatedAt": "2026-08-21T10:30:00.000Z"
     },
@@ -59,7 +31,7 @@
       "implementationNotes": "",
       "evidence": [],
       "status": "backlog",
-      "priority": 4,
+      "priority": 2,
       "createdAt": "2026-08-20T18:45:00.000Z",
       "updatedAt": "2026-08-20T19:48:09.561Z"
     },
@@ -70,19 +42,8 @@
       "implementationNotes": "Ejeren har accepteret den snævre risiko for den private familieprototype med valgt barn. GPT Image 2-ruten er teknisk verificeret med syntetiske data, men den beslutning er ikke en juridisk eller produktionsmæssig godkendelse til en bredere pilot. Se docs/ai-image-provider-review.md.",
       "evidence": [],
       "status": "backlog",
-      "priority": 5,
+      "priority": 3,
       "createdAt": "2026-08-20T23:58:25.783Z",
-      "updatedAt": "2026-08-21T12:42:52.000Z"
-    },
-    {
-      "id": "ai-prompt-admin",
-      "title": "Byg administration til AI-prompter",
-      "details": "Vis den aktive immutable promptversion, publicér en ny version med forventet aktiv version og audit, og vis versionshistorikken uden at sende prompt eller modelvalg fra klienten.",
-      "implementationNotes": "Database-RPCen til versionssikker promptpublicering findes allerede; kortet dækker den manglende gennemsete administrationsflade.",
-      "evidence": [],
-      "status": "backlog",
-      "priority": 6,
-      "createdAt": "2026-08-21T10:30:00.000Z",
       "updatedAt": "2026-08-21T12:42:52.000Z"
     },
     {
@@ -167,6 +128,23 @@
       "priority": 0,
       "createdAt": "2026-08-21T09:02:49.299Z",
       "updatedAt": "2026-08-21T09:02:49.299Z"
+    },
+    {
+      "id": "f7f114f4-e2bb-4ac2-a8bf-1cec4032f9b2",
+      "title": "Ryd Supabase Advisor-advarsler",
+      "details": "Gennemgå de syv nuværende database-advarsler: begræns platformens rls_auto_enable-execute-rettigheder hvis sikkert, dokumentér de fire tilsigtede SECURITY DEFINER-produkt-RPCer, og mål eller foren de overlappende læsepolitikker for topics, goals og exercises.",
+      "implementationNotes": "Migration 202608210004 fjerner klienters execute-ret til den valgfrie rls_auto_enable-hjælper og samler læsepolitikkerne for topics, goals og exercises uden at ændre synligheden for anonymous, forældre eller administratorer. De fire tilsigtede authenticated SECURITY DEFINER-produkt-RPCer og den passwordfri leaked-password-undtagelse er eksplicit dokumenteret. Den fulde lokale databasepakke og Advisor-specifikke pgTAP-tests er grønne; kortet forbliver Doing, indtil migrationen er deployet gennem protected main og begge Hosted Development Advisors er kørt igen.",
+      "evidence": [
+        {
+          "kind": "link",
+          "label": "Supabase database advisors (login kræves)",
+          "url": "https://supabase.com/dashboard/project/wxhshsouhrjtlxdagwmh/advisors/security"
+        }
+      ],
+      "status": "doing",
+      "priority": 1,
+      "createdAt": "2026-08-21T09:08:00.832Z",
+      "updatedAt": "2026-08-21T17:28:33.000Z"
     },
     {
       "id": "dev-console",
@@ -403,6 +381,28 @@
       "priority": 11,
       "createdAt": "2026-08-20T19:52:36.409Z",
       "updatedAt": "2026-08-21T15:48:27.000Z"
+    },
+    {
+      "id": "auth-environment-slice",
+      "title": "Forbind login og de første data",
+      "details": "Opret Supabase-klient, admin-login og en localhost-only vælger mellem Local og Hosted Development.",
+      "implementationNotes": "Den validerede fælles Supabase-klient, passwordfri admin-login og localhost-only valg mellem Local Supabase og Hosted Development er implementeret. Production vises ikke i vælgeren, og de to miljøer bruger adskilte sessionsnavnerum. API-klient- og admin-testene dækker forløbet.",
+      "evidence": [],
+      "status": "done",
+      "priority": 12,
+      "createdAt": "2026-08-20T18:45:00.000Z",
+      "updatedAt": "2026-08-21T17:12:50.000Z"
+    },
+    {
+      "id": "ai-prompt-admin",
+      "title": "Byg administration til AI-prompter",
+      "details": "Vis den aktive immutable promptversion, publicér en ny version med forventet aktiv version og audit, og vis versionshistorikken uden at sende prompt eller modelvalg fra klienten.",
+      "implementationNotes": "Den godkendte administrationsside viser aktive immutable promptversioner, neutral revisionshistorik og serverstyrede provider-, model- og omkostningsgrænser. En gennemset prompt kan publiceres atomisk gennem den eksisterende versionslåste RPC; konflikt-, validerings- og adgangsfejl vises uden rå databaseoplysninger. Admin-test, typecheck, lint og production build er grønne. En syntetisk lokal browserkontrol publicerede version 3 og viste den som aktiv med komplet historik; den afsluttende database-reset fjernede testversionen igen.",
+      "evidence": [],
+      "status": "done",
+      "priority": 13,
+      "createdAt": "2026-08-21T10:30:00.000Z",
+      "updatedAt": "2026-08-21T17:28:33.000Z"
     }
   ]
 }
