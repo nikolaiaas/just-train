@@ -1,6 +1,6 @@
 {
   "version": 3,
-  "updatedAt": "2026-08-21T18:53:41.000Z",
+  "updatedAt": "2026-08-21T19:14:02.000Z",
   "items": [
     {
       "id": "hosted-preview-safety",
@@ -120,14 +120,14 @@
     },
     {
       "id": "iphone-smoke-test",
-      "title": "Bekræft udviklingsappen på iPhone",
-      "details": "Byg og installér en frisk Bare Træn Dev 1.2.0, slå Developer Mode til, forbind Metro på port 11001, og verificér OTP, cold/warm magic-link, session efter genstart, logout og galleriadgang. Send aldrig 1.2.0-koden som update til en 1.1.0- eller ældre binary.",
-      "implementationNotes": "EAS development-build 1.2.0 (build 2) er færdig fra ren main med det registrerede iPhone-device i den aktive ad hoc-profil. Builden hentede kun de offentlige Supabase-klientvariabler fra EAS development-miljøet. Installationsdialogen er åbnet privat i Expo, og Metro kører på port 11001 med Hosted Development-værdier injiceret kun i processen; installation, Developer Mode og de native smoke-tests afventer ejeren.",
+      "title": "Bekræft standalone-previewet på iPhone",
+      "details": "Installér Bare Træn Preview 1.2.0 uden Metro, og verificér OTP, cold/warm magic-link, session efter genstart, logout og galleriadgang. Send aldrig 1.2.0-koden som update til en 1.1.0- eller ældre binary.",
+      "implementationNotes": "EAS internal-distribution preview 1.2.0 (build 3) er færdig med det registrerede iPhone-device i den aktive ad hoc-profil. Builden bruger preview-kanalen og hentede kun de offentlige Supabase-klientvariabler fra EAS preview-miljøet. JavaScript-bundlen er indlejret, den lokale Metro-server er stoppet, og installationsdialogen er åbnet privat i Expo; installation og de native smoke-tests afventer ejeren.",
       "evidence": [],
       "status": "doing",
       "priority": 1,
       "createdAt": "2026-08-20T18:45:00.000Z",
-      "updatedAt": "2026-08-21T18:53:41.000Z"
+      "updatedAt": "2026-08-21T19:14:02.000Z"
     },
     {
       "id": "dev-console",

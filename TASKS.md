@@ -140,7 +140,7 @@ Exit condition: a pull request gets a safe administration preview without touchi
 - [x] Point the phone build at the hosted development Supabase project.
 - [ ] Confirm live local development through Metro on the same network or a tunnel.
 - [ ] Verify native OTP, cold and warm magic-link callbacks, session restoration, logout, and gallery permission in the fresh `1.2.0` build.
-- [ ] Create a production-like EAS internal-distribution preview build that runs without Metro.
+- [x] Create a production-like EAS internal-distribution preview build that runs without Metro.
 - [x] Disable unauthenticated EAS internal-build access, or otherwise document and enforce who may receive unlisted build URLs.
 - [x] Configure a `preview` EAS Update channel so JavaScript, styling, and asset changes usually do not require a new binary.
 - [x] Document that native-library, permission, and native-configuration changes require a new build, and that the `1.2.0` AI-media slice must not be sent to a `1.1.0` or older binary through EAS Update.
