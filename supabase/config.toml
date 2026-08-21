@@ -22,7 +22,10 @@ enabled = true
 schema_paths = []
 
 [db.seed]
-enabled = true
+# Hosted preview branches read this file, so automatic seeding must remain off.
+# The repository's local reset script opts in explicitly with --local and
+# --sql-paths; seed.sql then performs its own fail-closed local-stack check.
+enabled = false
 sql_paths = ["./seed.sql"]
 
 [realtime]
@@ -33,7 +36,10 @@ enabled = true
 port = 54323
 api_url = "http://127.0.0.1"
 
-[local_smtp]
+# The hosted GitHub deployment parser does not yet accept the CLI's newer
+# [local_smtp] name. The current CLI still maps this legacy section to Mailpit
+# locally (with a deprecation warning), keeping one config valid in both places.
+[inbucket]
 enabled = true
 port = 54324
 

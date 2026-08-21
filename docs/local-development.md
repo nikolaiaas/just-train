@@ -103,7 +103,9 @@ mise exec -- pnpm supabase:reset
 mise exec -- pnpm supabase:stop
 ```
 
-`supabase:reset` deliberately deletes and recreates the **local** development data. Use it only when a clean synthetic database is wanted. Never run a reset against a hosted project.
+`supabase:reset` deliberately targets only the **local** database, deletes and recreates its development data, and then explicitly loads `supabase/seed.sql`. Automatic branch seeding is disabled, and the seed itself refuses to run unless it detects the known local Supabase stack. Use the reset only when a clean synthetic database is wanted. Never run a reset against a hosted project.
+
+The local CLI may show a warning that `[inbucket]` is deprecated when it starts Mailpit. This is expected for now: the hosted GitHub deployment parser rejects the newer `[local_smtp]` name, while the current local CLI still accepts `[inbucket]` and keeps Mailpit available at port 54324.
 
 Starting local Supabase does **not** automatically switch either app away from its configured backend. The administration login has a localhost-only **Udviklingsmiljø** choice between Local Supabase and Hosted Development. The mobile app has no runtime selector: its backend is fixed when it starts from the two public values in its ignored `.env.local`. If a task needs mobile Safari connected to Local Supabase, ask the agent to replace only those two public values temporarily and restore the hosted values before iPhone work.
 
