@@ -1,9 +1,14 @@
 "use client";
 
+import Link from "next/link";
 import { useDeferredValue, useRef, useState } from "react";
+import {
+  countDraftTopics,
+  topicStatusCopy,
+  topicStatusFilterOptions,
+  type TopicStatus,
+} from "./content-overview-state";
 import styles from "./page.module.css";
-
-export type TopicStatus = "published" | "review" | "draft";
 
 export type Topic = {
   id: string;
@@ -18,6 +23,7 @@ export type Topic = {
 
 type ContentOverviewProps = {
   topics: Topic[];
+  unavailable?: boolean;
 };
 
 const statusContent: Record<
@@ -25,19 +31,12 @@ const statusContent: Record<
   { label: string; className: string; detail: string }
 > = {
   published: {
-    label: "Udgivet",
+    ...topicStatusCopy.published,
     className: styles.statusPublished,
-    detail: "Synligt i appen",
-  },
-  review: {
-    label: "Gennemgå",
-    className: styles.statusReview,
-    detail: "Kræver menneskelig godkendelse",
   },
   draft: {
-    label: "Kladde",
+    ...topicStatusCopy.draft,
     className: styles.statusDraft,
-    detail: "Ikke udgivet endnu",
   },
 };
 
@@ -103,14 +102,16 @@ function StatusBadge({ status }: { status: TopicStatus }) {
   );
 }
 
-export function ContentOverview({ topics }: ContentOverviewProps) {
+export function ContentOverview({
+  topics,
+  unavailable = false,
+}: ContentOverviewProps) {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<"all" | TopicStatus>("all");
   const [selectedTopic, setSelectedTopic] = useState<Topic | null>(
     topics[0] ?? null,
   );
   const deferredQuery = useDeferredValue(query);
-  const aiDialogRef = useRef<HTMLDialogElement>(null);
   const topicDialogRef = useRef<HTMLDialogElement>(null);
 
   const normalizedQuery = deferredQuery.trim().toLocaleLowerCase("da-DK");
@@ -132,8 +133,8 @@ export function ContentOverview({ topics }: ContentOverviewProps) {
       label: "træningsmål",
     },
     {
-      value: topics.filter((topic) => topic.status !== "published").length,
-      label: "skal gennemgås",
+      value: countDraftTopics(topics),
+      label: "kladder",
     },
   ];
 
@@ -155,14 +156,10 @@ export function ContentOverview({ topics }: ContentOverviewProps) {
           </p>
         </div>
 
-        <button
-          className={styles.primaryButton}
-          type="button"
-          onClick={() => aiDialogRef.current?.showModal()}
-        >
+        <Link className={styles.primaryButton} href="/emner/ny">
           <SparkleIcon />
           Nyt emne med AI
-        </button>
+        </Link>
       </div>
 
       <dl className={styles.summary} aria-label="Overblik over indhold">
@@ -207,16 +204,25 @@ export function ContentOverview({ topics }: ContentOverviewProps) {
                   setStatus(event.target.value as "all" | TopicStatus)
                 }
               >
-                <option value="all">Alle statusser</option>
-                <option value="published">Udgivet</option>
-                <option value="review">Gennemgå</option>
-                <option value="draft">Kladde</option>
+                {topicStatusFilterOptions.map((option) => (
+                  <option value={option.value} key={option.value}>
+                    {option.label}
+                  </option>
+                ))}
               </select>
             </label>
           </div>
         </div>
 
-        {filteredTopics.length > 0 ? (
+        {unavailable ? (
+          <div className={styles.emptyState} role="alert">
+            <span aria-hidden="true">↻</span>
+            <h3>Emnebiblioteket kan ikke hentes</h3>
+            <p>
+              Forbindelsen til indholdsdatabasen er midlertidigt utilgængelig.
+            </p>
+          </div>
+        ) : filteredTopics.length > 0 ? (
           <div className={styles.tableScroller}>
             <table className={styles.topicTable}>
               <caption className={styles.visuallyHidden}>
@@ -274,46 +280,36 @@ export function ContentOverview({ topics }: ContentOverviewProps) {
           </div>
         ) : (
           <div className={styles.emptyState}>
-            <span aria-hidden="true">🔎</span>
-            <h3>Ingen emner matcher</h3>
-            <p>Prøv en anden søgning eller vælg alle statusser.</p>
-            <button
-              type="button"
-              className={styles.secondaryButton}
-              onClick={() => {
-                setQuery("");
-                setStatus("all");
-              }}
-            >
-              Nulstil filtre
-            </button>
+            <span aria-hidden="true">{topics.length === 0 ? "✨" : "🔎"}</span>
+            <h3>
+              {topics.length === 0
+                ? "Opret det første emne"
+                : "Ingen emner matcher"}
+            </h3>
+            <p>
+              {topics.length === 0
+                ? "Start med et emnegrundlag, som gemmes som en upubliceret kladde."
+                : "Prøv en anden søgning eller vælg alle statusser."}
+            </p>
+            {topics.length === 0 ? (
+              <Link className={styles.secondaryButton} href="/emner/ny">
+                Opret emnekladde
+              </Link>
+            ) : (
+              <button
+                type="button"
+                className={styles.secondaryButton}
+                onClick={() => {
+                  setQuery("");
+                  setStatus("all");
+                }}
+              >
+                Nulstil filtre
+              </button>
+            )}
           </div>
         )}
       </section>
-
-      <dialog
-        ref={aiDialogRef}
-        className={styles.dialog}
-        aria-labelledby="ai-dialog-title"
-      >
-        <form method="dialog" className={styles.dialogContent}>
-          <span className={styles.dialogMark} aria-hidden="true">
-            <SparkleIcon />
-          </span>
-          <p className={styles.eyebrow}>Næste fase</p>
-          <h2 id="ai-dialog-title">Skab et forløb sammen med AI</h2>
-          <p>
-            Forslag til træningsindhold kommer i en senere fase. Det skal bruge
-            den eksisterende serverstyrede AI-platform og altid lande som en
-            kladde til menneskelig gennemgang.
-          </p>
-          <div className={styles.dialogActions}>
-            <button className={styles.primaryButton} value="close">
-              Forstået
-            </button>
-          </div>
-        </form>
-      </dialog>
 
       <dialog
         ref={topicDialogRef}
@@ -343,12 +339,22 @@ export function ContentOverview({ topics }: ContentOverviewProps) {
               </div>
             </dl>
             <p className={styles.fixtureMessage}>
-              Detaljeredigering forbindes til Supabase i en senere opgave.
+              {selectedTopic.status === "draft"
+                ? "Fortsæt fra det første trin, der endnu ikke er gemt. Allerede gemte trin vises låst."
+                : "Detaljeredigering af mål og deløvelser er næste trin i administrationsforløbet."}
             </p>
             <div className={styles.dialogActions}>
               <button className={styles.secondaryButton} value="close">
                 Luk
               </button>
+              {selectedTopic.status === "draft" ? (
+                <Link
+                  className={styles.primaryButton}
+                  href={`/emner/ny?topic=${encodeURIComponent(selectedTopic.id)}`}
+                >
+                  Fortsæt kladde
+                </Link>
+              ) : null}
             </div>
           </form>
         ) : null}

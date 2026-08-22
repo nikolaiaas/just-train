@@ -56,6 +56,10 @@ policy = "per_worker"
 enabled = true
 verify_jwt = true
 
+[functions.process-admin-ai-job]
+enabled = true
+verify_jwt = true
+
 [auth]
 enabled = true
 site_url = "http://127.0.0.1:11000"

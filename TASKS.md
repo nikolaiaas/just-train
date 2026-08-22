@@ -227,7 +227,7 @@ Exit condition: a child cannot lose or duplicate a completed attempt because of 
 - [x] Implement administrator sign-in and authorization guard.
 - [ ] Implement the topic/goal library with draft, review, and published statuses.
 - [ ] Implement editing and reordering the seeded goal's exercises.
-- [ ] Validate name, explanation, measurement type, target, training time, equipment, and safety text.
+- [x] Validate name, explanation, measurement type, target, training time, equipment, and safety text.
 - [ ] Implement draft preview using the child-app presentation model.
 - [ ] Implement human review and an explicit publish action.
 - [ ] Publish an immutable topic release atomically.
@@ -252,7 +252,7 @@ Exit condition: an authorized person can edit and publish content without direct
 - [ ] Resolve the recorded Zero Data Retention, EU processing, processor-contract, and under-18 risks before any broader real-child rollout; the owner has explicitly accepted them only for the private family prototype.
 - [ ] Test short exercise-video download size, playback, caching, and offline behaviour.
 - [ ] Prototype personalized motion/video generation separately and record quality, cost, latency, consent, and moderation blockers.
-- [ ] Prototype schema-validated AI content drafts that can only create a reviewable draft revision.
+- [x] Prototype schema-validated AI content drafts that can only create a reviewable draft revision.
 
 Exit condition: each risky feature has a written go/defer decision and does not block the core training loop.
 
