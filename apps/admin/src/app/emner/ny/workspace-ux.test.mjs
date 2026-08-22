@@ -8,6 +8,7 @@ import {
   goalSnapshotHasChanges,
   syncExerciseMeasurementResetDefault,
   topicSnapshotHasChanges,
+  wardrobeSnapshotHasChanges,
 } from "./workspace-ux.ts";
 
 test("assistant responses are shown only in the context that submitted them", () => {
@@ -138,6 +139,50 @@ test("goal and exercise dirty checks cover every editable field", () => {
   ]) {
     assert.equal(
       exerciseSnapshotHasChanges({ ...exercise, ...change }, exercise),
+      true,
+    );
+  }
+});
+
+test("wardrobe dirty checks cover content and unlock method", () => {
+  const item = {
+    category: "equipment",
+    editorialNote: "Passer til emnet.",
+    icon: "🌈",
+    name: "Regnbuebold",
+    points: "125",
+    rarity: "rare",
+    unlockMode: "points",
+    unlockRule: "",
+  };
+
+  assert.equal(wardrobeSnapshotHasChanges(item, item), false);
+  assert.equal(wardrobeSnapshotHasChanges(item, null), true);
+  assert.equal(
+    wardrobeSnapshotHasChanges(
+      {
+        ...item,
+        editorialNote: "  Passer til emnet.\r\n",
+        icon: "  🌈 ",
+        name: "  Regnbuebold ",
+        points: "0125",
+      },
+      item,
+    ),
+    false,
+  );
+
+  for (const change of [
+    { category: "effect" },
+    { editorialNote: "Passer til farvetemaet." },
+    { icon: "⚽" },
+    { name: "Stjernebold" },
+    { points: "150" },
+    { rarity: "special" },
+    { unlockMode: "rule", points: "0", unlockRule: "Gennemfør et mål" },
+  ]) {
+    assert.equal(
+      wardrobeSnapshotHasChanges({ ...item, ...change }, item),
       true,
     );
   }

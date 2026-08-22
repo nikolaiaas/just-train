@@ -60,6 +60,7 @@ export default async function NewTopicPage({
       initialDraft={initialDraft}
       profileName={session.access.profile.displayName}
       topicRequestId={randomUUID()}
+      wardrobeRequestId={randomUUID()}
     />
   );
 }

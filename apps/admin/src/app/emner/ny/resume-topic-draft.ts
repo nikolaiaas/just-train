@@ -1,6 +1,7 @@
 import type {
   AdminContentDifficulty,
   AdminExerciseMeasurement,
+  AdminWardrobeItemDraft,
   BareTraenClient,
 } from "@bare-traen/api-client";
 
@@ -37,6 +38,7 @@ export type ResumableTopicDraft = {
     videoUrl: string | null;
     sortOrder: number;
   } | null;
+  wardrobeItems: AdminWardrobeItemDraft[];
   nextExerciseSortOrder: number;
   nextGoalSortOrder: number;
 };
@@ -81,6 +83,17 @@ export function getResumeStartingStep(
   return "wardrobe";
 }
 
+export function isMissingWardrobeStorageError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error.code === "42P01" ||
+      error.code === "PGRST202" ||
+      error.code === "PGRST205")
+  );
+}
+
 export async function loadResumableTopicDraft(
   client: BareTraenClient,
   topicId: string,
@@ -98,30 +111,41 @@ export async function loadResumableTopicDraft(
 
   if (!topicResponse.data) return null;
 
-  const [goalResponse, latestGoalOrderResponse] = await Promise.all([
-    client
-      .from("goals")
-      .select(
-        "id, title, summary, difficulty, estimated_minutes, equipment, hero_media_url, sort_order, updated_at",
-      )
-      .eq("topic_id", topicId)
-      .eq("is_published", false)
-      .order("sort_order", { ascending: true })
-      .order("created_at", { ascending: true })
-      .limit(1)
-      .maybeSingle(),
-    client
-      .from("goals")
-      .select("sort_order")
-      .eq("topic_id", topicId)
-      .order("sort_order", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-  ]);
+  const [goalResponse, latestGoalOrderResponse, wardrobeResponse] =
+    await Promise.all([
+      client
+        .from("goals")
+        .select(
+          "id, title, summary, difficulty, estimated_minutes, equipment, hero_media_url, sort_order, updated_at",
+        )
+        .eq("topic_id", topicId)
+        .eq("is_published", false)
+        .order("sort_order", { ascending: true })
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle(),
+      client
+        .from("goals")
+        .select("sort_order")
+        .eq("topic_id", topicId)
+        .order("sort_order", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      client.rpc("list_admin_wardrobe_item_drafts", {
+        p_topic_id: topicId,
+      }),
+    ]);
 
-  if (goalResponse.error || latestGoalOrderResponse.error) {
-    throw new Error("The topic goal draft could not be loaded.");
+  if (
+    goalResponse.error ||
+    latestGoalOrderResponse.error ||
+    (wardrobeResponse.error &&
+      !isMissingWardrobeStorageError(wardrobeResponse.error))
+  ) {
+    throw new Error("The topic draft content could not be loaded.");
   }
+
+  const wardrobeRows = wardrobeResponse.error ? [] : wardrobeResponse.data;
 
   let exercise: ResumableTopicDraft["exercise"] = null;
   let nextExerciseSortOrder = 0;
@@ -196,6 +220,25 @@ export async function loadResumableTopicDraft(
         }
       : null,
     exercise,
+    wardrobeItems: wardrobeRows.map((item) => ({
+      category: item.category,
+      contentVersion: item.content_version,
+      createdAt: item.created_at,
+      createdBy: item.created_by,
+      editorialNote: item.editorial_note ?? "",
+      editorialStatus: item.editorial_status,
+      icon: item.icon,
+      id: item.id,
+      name: item.name,
+      points: item.points ?? 0,
+      publishedAt: null,
+      rarity: item.rarity,
+      sortOrder: item.sort_order,
+      status: "draft",
+      topicId: item.topic_id,
+      unlockRule: item.unlock_rule ?? "",
+      updatedAt: item.updated_at,
+    })),
     nextExerciseSortOrder,
     nextGoalSortOrder: getNextSortOrder(
       latestGoalOrderResponse.data?.sort_order,

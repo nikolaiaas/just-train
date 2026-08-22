@@ -128,6 +128,19 @@ proposal into the form and save an unpublished draft. The review operation
 returns only a structured checklist and next actions; it has no save, approval,
 or publication shape.
 
+Topic-specific reward authoring is persisted separately in `wardrobe_items`.
+Each row belongs to one topic and carries either a bounded point price or a
+bounded unlock rule, plus category, rarity, editorial note, order, and an
+explicit `draft`, `approved`, or `rejected` decision. RLS allows content
+administrators to manage unpublished rows while public readers can see only
+approved rows that have been published under a published topic. AI wardrobe
+output remains a transient suggestion until an administrator opens it in the
+editor and saves it; any later content edit resets the decision to `draft`.
+Public client grants omit editorial notes and creator provenance; the admin
+workspace reads those fields through a narrowly scoped, administrator-only
+database function.
+Atomic topic publication and child inventory remain separate roadmap work.
+
 ## First vertical slice
 
 The first backend-connected implementation should prove:

@@ -1,6 +1,6 @@
 {
   "version": 3,
-  "updatedAt": "2026-08-22T08:06:55.000Z",
+  "updatedAt": "2026-08-22T09:25:28.000Z",
   "items": [
     {
       "id": "hosted-preview-safety",
@@ -113,6 +113,17 @@
       "updatedAt": "2026-08-21T15:48:27.000Z"
     },
     {
+      "id": "admin-wardrobe-authoring",
+      "title": "Opret emnegarderobe og belønningseksempler",
+      "details": "Tilføj en rigtig garderobemodel og en adminside, hvor man kan oprette, rette, godkende og afvise emnespecifikke ting med navn, type, sjældenhed, pointpris eller oplåsningsregel. AI skal kunne foreslå sikre syntetiske eksempler uden brands, links eller børnedata.",
+      "implementationNotes": "En rigtig garderobetabel med RLS, review-guardrails og typed API til oprettelse, redigering, godkendelse og afvisning er nu bygget. Adminflowet gemmer emnespecifikke ting som upublicerede databasekladder, genindlæser dem efter refresh og trin-skift og holder AI-forslag tydeligt adskilt som ikke gemte, indtil redaktøren aktivt vælger og tilpasser et forslag. Lokal browser- og UX-test har verificeret manuel oprettelse, point og oplåsningsregel, persistens, redigering, afvisning, godkendelse, automatisk ny gennemgang efter ændringer, ren browserkonsol samt desktop- og mobil-layout. Kortet forbliver Doing, fordi manuel rækkefølge og den endelige belønningsøkonomi endnu ikke er besluttet; atomisk publicering og barnets point/inventar ligger på de efterfølgende roadmap-kort.",
+      "evidence": [],
+      "status": "doing",
+      "priority": 0,
+      "createdAt": "2026-08-21T20:22:21.000Z",
+      "updatedAt": "2026-08-22T09:25:28.000Z"
+    },
+    {
       "id": "a5ed6926-00b7-49c4-ad6b-41a4974b6728",
       "title": "Bekræft første Pro-backup og recovery",
       "details": "Bekræft den første fuldførte daglige databasebackup, som er dateret efter Pro-opgraderingen 21. august 2026, og dokumentér restorevalg og forventet nedetid uden at udføre en destruktiv restore på Hosted Development.",
@@ -125,7 +136,7 @@
         }
       ],
       "status": "doing",
-      "priority": 0,
+      "priority": 1,
       "createdAt": "2026-08-21T09:02:49.299Z",
       "updatedAt": "2026-08-21T09:02:49.299Z"
     },
@@ -136,7 +147,7 @@
       "implementationNotes": "EAS internal-distribution preview 1.2.0 (build 3) er færdig og installeret på ejerens registrerede iPhone. Builden bruger preview-kanalen og hentede kun de offentlige Supabase-klientvariabler fra EAS preview-miljøet. JavaScript-bundlen er indlejret, og den lokale Metro-server er stoppet. De native OTP-, link-, sessions-, logout- og galleritests mangler stadig, så opgaven forbliver Doing.",
       "evidence": [],
       "status": "doing",
-      "priority": 1,
+      "priority": 2,
       "createdAt": "2026-08-20T18:45:00.000Z",
       "updatedAt": "2026-08-21T19:23:40.000Z"
     },
@@ -147,7 +158,7 @@
       "implementationNotes": "Fem serverstyrede handlinger er nu på plads til emne, mål, deløvelse, garderobe og samlet gennemgang. De bruger versionslåste prompts fra databasen, GPT-5 mini via OpenRouter/OpenAI-only og præcise input/output-skemaer. Chatten nulstiller sin kontekst sikkert mellem trin, strukturerede feltforslag kopieres kun ved et aktivt valg, og review returnerer en ikke-muterende checklist uden save- eller publish-vej. Live browsertest har verificeret alle fem handlinger. Eksplicit afvisning/fortryd, persistente samtaler og en garderobekontrakt med hele mål- og deløvelseshierarkiet mangler fortsat.",
       "evidence": [],
       "status": "doing",
-      "priority": 2,
+      "priority": 3,
       "createdAt": "2026-08-21T20:22:21.000Z",
       "updatedAt": "2026-08-22T07:41:25.000Z"
     },
@@ -158,20 +169,9 @@
       "implementationNotes": "Første vertikale snit er nu bygget og browsertestet: redaktøren kan oprette og rette ét upubliceret mål og én upubliceret deløvelse under emnet med tid, udstyr, måling, måltal og sikkerhedstekst. Opdateringer er afgrænset til upublicerede rækker og bevarer forælder, media og rækkefølge. Revisionskontrol afviser en reelt forældet fane uden at overskrive nyere arbejde, mens en identisk gentagelse efter et tabt svar stadig lykkes. Slugs er afgrænset til deres forælder, dubletnavne får feltfeedback, og AI-forslag vises som før/forslag/hvorfor og kopieres kun ved et aktivt valg. Flere mål/deløvelser, manuel rækkefølge og video mangler fortsat.",
       "evidence": [],
       "status": "doing",
-      "priority": 3,
-      "createdAt": "2026-08-21T20:22:21.000Z",
-      "updatedAt": "2026-08-22T08:06:55.000Z"
-    },
-    {
-      "id": "admin-wardrobe-authoring",
-      "title": "Opret emnegarderobe og belønningseksempler",
-      "details": "Tilføj en rigtig garderobemodel og en adminside, hvor man kan oprette, rette, godkende og afvise emnespecifikke ting med navn, type, sjældenhed, pointpris eller oplåsningsregel. AI skal kunne foreslå sikre syntetiske eksempler uden brands, links eller børnedata.",
-      "implementationNotes": "AI-assistenten kan nu foreslå 3-6 skemavaliderede, syntetiske garderobeeksempler med navn, ikon, type, sjældenhed, point eller oplåsningsregel samt en synlig begrundelse. Live browsertest bekræfter, at forslagene vises tydeligt som ikke gemte og indgår som valgfri kontekst i AI-gennemgangen. Den rigtige garderobetabel, persistens, manuel redigering, godkendelse, afvisning og publicering mangler fortsat.",
-      "evidence": [],
-      "status": "doing",
       "priority": 4,
       "createdAt": "2026-08-21T20:22:21.000Z",
-      "updatedAt": "2026-08-22T07:41:25.000Z"
+      "updatedAt": "2026-08-22T08:06:55.000Z"
     },
     {
       "id": "dev-console",

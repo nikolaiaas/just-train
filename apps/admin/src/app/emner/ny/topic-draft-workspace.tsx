@@ -1,7 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useActionState,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+
+import type { AdminWardrobeItemDraft } from "@bare-traen/api-client";
 
 import {
   askAdminContentAssistant,
@@ -36,6 +45,7 @@ import {
   type GoalEditorSnapshot,
   type TopicEditorSnapshot,
 } from "./workspace-ux";
+import { WardrobeAuthoring } from "./wardrobe-authoring";
 
 type ChatMessage = {
   id: string;
@@ -52,6 +62,7 @@ type TopicDraftWorkspaceProps = {
   initialDraft: ResumableTopicDraft | null;
   profileName: string;
   topicRequestId: string;
+  wardrobeRequestId: string;
 };
 
 const initialCreateTopicState: CreateTopicState = { status: "idle" };
@@ -94,18 +105,6 @@ const measurementLabels = {
   repetitions: "Gentagelser",
   duration: "Sekunder",
 } as const;
-
-const categoryLabels: Record<AssistantWardrobeItem["category"], string> = {
-  clothing: "Tøj",
-  equipment: "Udstyr",
-  effect: "Effekt",
-};
-
-const rarityLabels: Record<AssistantWardrobeItem["rarity"], string> = {
-  common: "Almindelig",
-  rare: "Sjælden",
-  special: "Særlig",
-};
 
 function normalizeText(value: string, maximum: number): string {
   return Array.from(value.replace(/\r\n?/gu, "\n").trim())
@@ -177,52 +176,6 @@ function AppMark() {
   );
 }
 
-function WardrobeSuggestions({ items }: { items: AssistantWardrobeItem[] }) {
-  if (items.length === 0) return null;
-
-  return (
-    <section
-      className={styles.wardrobeSuggestions}
-      aria-labelledby="wardrobe-title"
-    >
-      <header>
-        <div>
-          <p className={styles.eyebrow}>Syntetiske eksempler</p>
-          <h3 id="wardrobe-title">Idéer til garderoben</h3>
-        </div>
-        <span>{items.length} forslag</span>
-      </header>
-      <div className={styles.wardrobeGrid}>
-        {items.map((item, index) => (
-          <article
-            className={styles.wardrobeCard}
-            key={`${item.name}-${index}`}
-          >
-            <span className={styles.wardrobeIcon} aria-hidden="true">
-              {item.icon}
-            </span>
-            <strong>{item.name}</strong>
-            <small>
-              {categoryLabels[item.category]} · {rarityLabels[item.rarity]}
-            </small>
-            <p>
-              {item.points > 0
-                ? `${item.points} point`
-                : item.unlockRule || "Oplåsningsregel foreslås senere"}
-            </p>
-            <p>{item.reason}</p>
-            <span className={styles.exampleBadge}>Ikke gemt</span>
-          </article>
-        ))}
-      </div>
-      <p className={styles.wardrobeDisclaimer}>
-        Forslagene er kun eksempler i kladden. De kan først gemmes, når den
-        særskilte garderobemodel og menneskelige godkendelse er på plads.
-      </p>
-    </section>
-  );
-}
-
 function SuggestionCard({
   before,
   after,
@@ -276,6 +229,7 @@ export function TopicDraftWorkspace({
   initialDraft,
   profileName,
   topicRequestId,
+  wardrobeRequestId,
 }: TopicDraftWorkspaceProps) {
   const resumedTopicState: CreateTopicState = initialDraft
     ? {
@@ -438,9 +392,14 @@ export function TopicDraftWorkspace({
   const [suggestion, setSuggestion] = useState<AssistantSuggestion | null>(
     null,
   );
-  const [wardrobeItems, setWardrobeItems] = useState<AssistantWardrobeItem[]>(
-    [],
-  );
+  const [wardrobeSuggestions, setWardrobeSuggestions] = useState<
+    AssistantWardrobeItem[]
+  >([]);
+  const [savedWardrobeItems, setSavedWardrobeItems] = useState<
+    AdminWardrobeItemDraft[]
+  >(initialDraft?.wardrobeItems ?? []);
+  const [wardrobeDirty, setWardrobeDirty] = useState(false);
+  const [wardrobeBusy, setWardrobeBusy] = useState(false);
   const [reviewResult, setReviewResult] = useState<AssistantDraftReview | null>(
     null,
   );
@@ -529,13 +488,16 @@ export function TopicDraftWorkspace({
     exerciseEditing &&
     exerciseCreated &&
     exerciseSnapshotHasChanges(currentExerciseSnapshot, savedExerciseSnapshot);
-  const dirtyEditingStep: "topic" | "goal" | "exercise" | null = topicDirty
-    ? "topic"
-    : goalDirty
-      ? "goal"
-      : exerciseDirty
-        ? "exercise"
-        : null;
+  const dirtyEditingStep: "topic" | "goal" | "exercise" | "wardrobe" | null =
+    topicDirty
+      ? "topic"
+      : goalDirty
+        ? "goal"
+        : exerciseDirty
+          ? "exercise"
+          : wardrobeDirty
+            ? "wardrobe"
+            : null;
   const topicBusy = topicPending || topicUpdatePending;
   const goalBusy = goalPending || goalUpdatePending;
   const exerciseBusy = exercisePending || exerciseUpdatePending;
@@ -828,7 +790,7 @@ export function TopicDraftWorkspace({
       setSuggestion(response.suggestion);
       setReviewResult(response.review);
       if (response.items.length > 0) {
-        setWardrobeItems(response.items);
+        setWardrobeSuggestions(response.items);
       }
     }, 0);
 
@@ -878,7 +840,19 @@ export function TopicDraftWorkspace({
           equipment: parseEquipment(exerciseEquipment),
           safetyNote: normalizeText(exerciseSafety, 1_000),
         },
-        wardrobeExamples: wardrobeItems,
+        wardrobeExamples: savedWardrobeItems
+          .filter((item) => item.editorialStatus !== "rejected")
+          .map((item) => ({
+            category: item.category,
+            icon: item.icon,
+            name: item.name,
+            points: item.points,
+            rarity: item.rarity,
+            reason:
+              item.editorialNote ||
+              "Gemt manuelt af en indholdsansvarlig til dette emne.",
+            unlockRule: item.unlockRule,
+          })),
       }),
     [
       accentColor,
@@ -897,7 +871,7 @@ export function TopicDraftWorkspace({
       goalTitle,
       icon,
       title,
-      wardrobeItems,
+      savedWardrobeItems,
     ],
   );
 
@@ -1006,6 +980,14 @@ export function TopicDraftWorkspace({
   }
 
   function preventDirtyNavigation(destination: string): boolean {
+    if (wardrobeBusy) {
+      const message = `Garderoben gemmer eller opdaterer stadig. Vent et øjeblik, før du ${destination}.`;
+      setNavigationWarning(message);
+      setStepAnnouncement(message);
+      window.requestAnimationFrame(() => navigationAlertRef.current?.focus());
+      return true;
+    }
+
     if (!dirtyEditingStep) return false;
 
     const draftLabel =
@@ -1013,7 +995,9 @@ export function TopicDraftWorkspace({
         ? "emnekladden"
         : dirtyEditingStep === "goal"
           ? "målkladden"
-          : "deløvelseskladden";
+          : dirtyEditingStep === "exercise"
+            ? "deløvelseskladden"
+            : "garderobeformularen";
     const message = `Du har ændringer i ${draftLabel}, som ikke er gemt. Gem eller vælg Annuller ændringer, før du ${destination}.`;
     setNavigationWarning(message);
     setStepAnnouncement(message);
@@ -1238,6 +1222,27 @@ export function TopicDraftWorkspace({
     selectAssistantMode("review");
     window.requestAnimationFrame(() => assistantInputRef.current?.focus());
   }
+
+  const handleWardrobeItemsChange = useCallback(
+    (items: AdminWardrobeItemDraft[]) => setSavedWardrobeItems(items),
+    [],
+  );
+  const handleWardrobeDirtyChange = useCallback(
+    (dirty: boolean) => setWardrobeDirty(dirty),
+    [],
+  );
+  const handleWardrobeBusyChange = useCallback(
+    (busy: boolean) => setWardrobeBusy(busy),
+    [],
+  );
+  const handleWardrobeAnnouncement = useCallback(
+    (message: string) => setStepAnnouncement(message),
+    [],
+  );
+  const clearWardrobeNavigationWarning = useCallback(
+    () => setNavigationWarning(null),
+    [],
+  );
 
   function assistantModeIsEnabled(mode: AssistantMode): boolean {
     if (mode === "topic") return !topicCreated || topicEditing;
@@ -1527,7 +1532,7 @@ export function TopicDraftWorkspace({
                 <span className={styles.reviewBadge}>Ikke publiceret</span>
               </header>
 
-              {navigationWarning && dirtyEditingStep ? (
+              {navigationWarning && (dirtyEditingStep || wardrobeBusy) ? (
                 <div className={styles.stepContent}>
                   <p
                     ref={navigationAlertRef}
@@ -2223,38 +2228,21 @@ export function TopicDraftWorkspace({
               ) : null}
 
               {activeStep === "wardrobe" ? (
-                <div className={styles.stepContent}>
-                  <div className={styles.stepIntro}>
-                    <p className={styles.eyebrow}>AI-eksempler</p>
-                    <h3>Skab belønninger, der passer til emnet</h3>
-                    <p>
-                      Vælg Garderobe i AI-assistenten og beskriv stilen. Du kan
-                      fx få forslag som turkise støvler, en regnbuebold eller en
-                      trænerkasket – altid uden rigtige brands.
-                    </p>
-                    <button
-                      type="button"
-                      className={styles.secondaryButton}
-                      onClick={openWardrobeAssistant}
-                    >
-                      Hjælp mig med garderoben
-                    </button>
-                  </div>
-                  <WardrobeSuggestions items={wardrobeItems} />
-                  <div className={styles.draftFooter}>
-                    <p className={styles.idleMessage}>
-                      Garderobeforslag gemmes endnu ikke. Det bliver næste
-                      selvstændige indholdsmodel og godkendelsesflow.
-                    </p>
-                    <button
-                      className={styles.primaryButton}
-                      type="button"
-                      onClick={() => openStep("review")}
-                    >
-                      Gå til gennemgang
-                    </button>
-                  </div>
-                </div>
+                <WardrobeAuthoring
+                  initialItems={savedWardrobeItems}
+                  onAnnouncement={handleWardrobeAnnouncement}
+                  onBusyChange={handleWardrobeBusyChange}
+                  onClearNavigationWarning={clearWardrobeNavigationWarning}
+                  onContinue={() => openStep("review")}
+                  onDirtyChange={handleWardrobeDirtyChange}
+                  onItemsChange={handleWardrobeItemsChange}
+                  onOpenAssistant={openWardrobeAssistant}
+                  requestId={wardrobeRequestId}
+                  suggestions={wardrobeSuggestions}
+                  topicId={
+                    topicState.status === "success" ? topicState.topicId : ""
+                  }
+                />
               ) : null}
 
               {activeStep === "review" ? (
@@ -2334,8 +2322,29 @@ export function TopicDraftWorkspace({
                       <span>4</span>
                       <div>
                         <small>Garderobe</small>
-                        <strong>{wardrobeItems.length} AI-eksempler</strong>
-                        <p>Ikke gemt endnu</p>
+                        <strong>
+                          {savedWardrobeItems.length} gemte garderobeting
+                        </strong>
+                        <p>
+                          {
+                            savedWardrobeItems.filter(
+                              (item) => item.editorialStatus === "approved",
+                            ).length
+                          }{" "}
+                          godkendt ·{" "}
+                          {
+                            savedWardrobeItems.filter(
+                              (item) => item.editorialStatus === "draft",
+                            ).length
+                          }{" "}
+                          kladde ·{" "}
+                          {
+                            savedWardrobeItems.filter(
+                              (item) => item.editorialStatus === "rejected",
+                            ).length
+                          }{" "}
+                          afvist
+                        </p>
                       </div>
                       <button
                         type="button"

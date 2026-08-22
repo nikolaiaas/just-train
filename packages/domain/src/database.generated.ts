@@ -1007,6 +1007,81 @@ export type Database = {
           },
         ];
       };
+      wardrobe_items: {
+        Row: {
+          category: Database["public"]["Enums"]["wardrobe_item_category"];
+          content_version: number;
+          created_at: string;
+          created_by: string | null;
+          editorial_note: string | null;
+          editorial_status: Database["public"]["Enums"]["wardrobe_editorial_status"];
+          icon: string;
+          id: string;
+          is_published: boolean;
+          name: string;
+          points: number | null;
+          published_at: string | null;
+          rarity: Database["public"]["Enums"]["wardrobe_item_rarity"];
+          sort_order: number;
+          topic_id: string;
+          unlock_rule: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          category: Database["public"]["Enums"]["wardrobe_item_category"];
+          content_version?: number;
+          created_at?: string;
+          created_by?: string | null;
+          editorial_note?: string | null;
+          editorial_status?: Database["public"]["Enums"]["wardrobe_editorial_status"];
+          icon: string;
+          id?: string;
+          is_published?: boolean;
+          name: string;
+          points?: number | null;
+          published_at?: string | null;
+          rarity?: Database["public"]["Enums"]["wardrobe_item_rarity"];
+          sort_order?: number;
+          topic_id: string;
+          unlock_rule?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          category?: Database["public"]["Enums"]["wardrobe_item_category"];
+          content_version?: number;
+          created_at?: string;
+          created_by?: string | null;
+          editorial_note?: string | null;
+          editorial_status?: Database["public"]["Enums"]["wardrobe_editorial_status"];
+          icon?: string;
+          id?: string;
+          is_published?: boolean;
+          name?: string;
+          points?: number | null;
+          published_at?: string | null;
+          rarity?: Database["public"]["Enums"]["wardrobe_item_rarity"];
+          sort_order?: number;
+          topic_id?: string;
+          unlock_rule?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "wardrobe_items_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "wardrobe_items_topic_id_fkey";
+            columns: ["topic_id"];
+            isOneToOne: false;
+            referencedRelation: "topics";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: {
       [_ in never]: never;
@@ -1131,6 +1206,28 @@ export type Database = {
         };
         Returns: undefined;
       };
+      list_admin_wardrobe_item_drafts: {
+        Args: { p_topic_id: string; p_wardrobe_item_id?: string };
+        Returns: {
+          category: Database["public"]["Enums"]["wardrobe_item_category"];
+          content_version: number;
+          created_at: string;
+          created_by: string;
+          editorial_note: string;
+          editorial_status: Database["public"]["Enums"]["wardrobe_editorial_status"];
+          icon: string;
+          id: string;
+          is_published: boolean;
+          name: string;
+          points: number;
+          published_at: string;
+          rarity: Database["public"]["Enums"]["wardrobe_item_rarity"];
+          sort_order: number;
+          topic_id: string;
+          unlock_rule: string;
+          updated_at: string;
+        }[];
+      };
       prepare_admin_ai_job: {
         Args: {
           p_client_request_id: string;
@@ -1189,6 +1286,9 @@ export type Database = {
       media_subject_kind: "synthetic" | "adult_test" | "child";
       progress_state: "in_progress" | "completed";
       session_status: "in_progress" | "completed" | "abandoned";
+      wardrobe_editorial_status: "draft" | "approved" | "rejected";
+      wardrobe_item_category: "clothing" | "equipment" | "effect";
+      wardrobe_item_rarity: "common" | "rare" | "special";
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -1337,6 +1437,9 @@ export const Constants = {
       media_subject_kind: ["synthetic", "adult_test", "child"],
       progress_state: ["in_progress", "completed"],
       session_status: ["in_progress", "completed", "abandoned"],
+      wardrobe_editorial_status: ["draft", "approved", "rejected"],
+      wardrobe_item_category: ["clothing", "equipment", "effect"],
+      wardrobe_item_rarity: ["common", "rare", "special"],
     },
   },
 } as const;
