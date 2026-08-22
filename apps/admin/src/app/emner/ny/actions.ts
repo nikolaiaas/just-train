@@ -1,11 +1,12 @@
 "use server";
 
 import {
-  AdminContentError,
-  AdminContentStepError,
   createAdminExerciseDraft as createExerciseDraft,
   createAdminGoalDraft as createGoalDraft,
   createAdminTopicDraft as createTopicDraft,
+  updateAdminExerciseDraft as updateExerciseDraft,
+  updateAdminGoalDraft as updateGoalDraft,
+  updateAdminTopicDraft as updateTopicDraft,
 } from "@bare-traen/api-client";
 import { revalidatePath } from "next/cache";
 
@@ -17,9 +18,18 @@ import { getAdminRequestContext } from "@/lib/auth/request-context";
 import {
   parseAssistantOutput,
   validateAssistantRequest,
+  type AssistantDraftReview,
   type AssistantSuggestion,
   type AssistantWardrobeItem,
 } from "../assistant-request";
+import {
+  mapExerciseCreationError,
+  mapExerciseUpdateError,
+  mapGoalCreationError,
+  mapGoalUpdateError,
+  mapTopicCreationError,
+  mapTopicUpdateError,
+} from "./creation-error-state";
 import {
   validateExerciseDraftForm,
   validateGoalDraftForm,
@@ -33,6 +43,7 @@ import {
 
 export type {
   AssistantMode,
+  AssistantDraftReview,
   AssistantSuggestion,
   AssistantWardrobeItem,
   ExerciseAssistantSuggestion,
@@ -48,7 +59,12 @@ export type CreateTopicState =
       fieldErrors: TopicDraftFieldErrors;
     }
   | { status: "denied" | "unavailable"; message: string }
-  | { status: "success"; message: string; topicId: string };
+  | {
+      status: "success";
+      message: string;
+      topicId: string;
+      updatedAt: string;
+    };
 
 export type CreateGoalState =
   | { status: "idle" }
@@ -58,7 +74,12 @@ export type CreateGoalState =
       fieldErrors: GoalDraftFieldErrors;
     }
   | { status: "denied" | "unavailable"; message: string }
-  | { status: "success"; message: string; goalId: string };
+  | {
+      status: "success";
+      message: string;
+      goalId: string;
+      updatedAt: string;
+    };
 
 export type CreateExerciseState =
   | { status: "idle" }
@@ -68,7 +89,12 @@ export type CreateExerciseState =
       fieldErrors: ExerciseDraftFieldErrors;
     }
   | { status: "denied" | "unavailable"; message: string }
-  | { status: "success"; message: string; exerciseId: string };
+  | {
+      status: "success";
+      message: string;
+      exerciseId: string;
+      updatedAt: string;
+    };
 
 export type AssistantState =
   | { status: "idle" }
@@ -84,14 +110,8 @@ export type AssistantState =
       reply: string;
       suggestion: AssistantSuggestion | null;
       items: AssistantWardrobeItem[];
+      review: AssistantDraftReview | null;
     };
-
-export const initialCreateTopicState: CreateTopicState = { status: "idle" };
-export const initialCreateGoalState: CreateGoalState = { status: "idle" };
-export const initialCreateExerciseState: CreateExerciseState = {
-  status: "idle",
-};
-export const initialAssistantState: AssistantState = { status: "idle" };
 
 async function requestHasTrustedOrigin(): Promise<boolean> {
   const requestContext = await getAdminRequestContext();
@@ -106,100 +126,9 @@ async function requestHasTrustedOrigin(): Promise<boolean> {
   );
 }
 
-function mapTopicCreationError(error: unknown): CreateTopicState {
-  if (!(error instanceof AdminContentError)) {
-    return {
-      status: "unavailable",
-      message:
-        "Emnekladden kunne ikke gemmes lige nu. Intet er publiceret. Prøv igen senere.",
-    };
-  }
-
-  if (error.code === "admin_access_denied") {
-    return {
-      status: "denied",
-      message: "Din konto har ikke adgang til at oprette emner.",
-    };
-  }
-
-  if (error.code === "topic_creation_conflict") {
-    return {
-      status: "invalid",
-      message:
-        "Denne kladdeanmodning er allerede brugt til et andet emne. Genindlæs siden og prøv igen.",
-      fieldErrors: {},
-    };
-  }
-
-  return {
-    status: "unavailable",
-    message:
-      "Emnekladden kunne ikke gemmes lige nu. Intet er publiceret. Prøv igen senere.",
-  };
-}
-
-function mapGoalCreationError(error: unknown): CreateGoalState {
-  if (!(error instanceof AdminContentStepError)) {
-    return {
-      status: "unavailable",
-      message:
-        "Målkladden kunne ikke gemmes lige nu. Intet er publiceret. Prøv igen senere.",
-    };
-  }
-
-  if (error.code === "admin_access_denied") {
-    return {
-      status: "denied",
-      message: "Din konto har ikke adgang til at oprette mål.",
-    };
-  }
-
-  if (error.code === "goal_creation_conflict") {
-    return {
-      status: "invalid",
-      message:
-        "Denne kladdeanmodning er allerede brugt til et andet mål. Genindlæs siden og prøv igen.",
-      fieldErrors: {},
-    };
-  }
-
-  return {
-    status: "unavailable",
-    message:
-      "Målkladden kunne ikke gemmes lige nu. Intet er publiceret. Prøv igen senere.",
-  };
-}
-
-function mapExerciseCreationError(error: unknown): CreateExerciseState {
-  if (!(error instanceof AdminContentStepError)) {
-    return {
-      status: "unavailable",
-      message:
-        "Deløvelseskladden kunne ikke gemmes lige nu. Intet er publiceret. Prøv igen senere.",
-    };
-  }
-
-  if (error.code === "admin_access_denied") {
-    return {
-      status: "denied",
-      message: "Din konto har ikke adgang til at oprette deløvelser.",
-    };
-  }
-
-  if (error.code === "exercise_creation_conflict") {
-    return {
-      status: "invalid",
-      message:
-        "Denne kladdeanmodning er allerede brugt til en anden deløvelse. Genindlæs siden og prøv igen.",
-      fieldErrors: {},
-    };
-  }
-
-  return {
-    status: "unavailable",
-    message:
-      "Deløvelseskladden kunne ikke gemmes lige nu. Intet er publiceret. Prøv igen senere.",
-  };
+function readExpectedUpdatedAt(formData: FormData): string {
+  const values = formData.getAll("expectedUpdatedAt");
+  return values.length === 1 && typeof values[0] === "string" ? values[0] : "";
 }
 
 export async function createAdminTopicDraft(
@@ -265,9 +194,80 @@ export async function createAdminTopicDraft(
         ? "Emnekladden er gemt og klar til næste trin."
         : "Emnekladden var allerede gemt og er hentet igen.",
       topicId: result.topic.id,
+      updatedAt: result.topic.updatedAt,
     };
   } catch (error) {
     return mapTopicCreationError(error);
+  }
+}
+
+export async function updateAdminTopicDraft(
+  _previousState: CreateTopicState,
+  formData: FormData,
+): Promise<CreateTopicState> {
+  const validation = validateTopicDraftForm(formData);
+
+  if (!validation.ok) {
+    return {
+      status: "invalid",
+      message: validation.message,
+      fieldErrors: validation.fieldErrors,
+    };
+  }
+
+  if (!(await requestHasTrustedOrigin())) {
+    return {
+      status: "denied",
+      message:
+        "Gemningen kom ikke fra en godkendt administrationsside. Genindlæs siden og prøv igen.",
+    };
+  }
+
+  const session = await getAdminAccessSession();
+
+  if (session.access.kind === "unauthenticated") {
+    return {
+      status: "denied",
+      message: "Din session er udløbet. Log ind igen, før du gemmer.",
+    };
+  }
+
+  if (session.access.kind !== "authorized" || !session.client) {
+    return session.access.kind === "denied"
+      ? {
+          status: "denied",
+          message: "Din konto har ikke adgang til at redigere emner.",
+        }
+      : {
+          status: "unavailable",
+          message:
+            "Administrationen kan ikke forbinde til databasen lige nu. Intet er gemt.",
+        };
+  }
+
+  try {
+    const result = await updateTopicDraft(session.client, {
+      authenticatedUserId: session.access.profile.id,
+      accentColor: validation.value.accentColor,
+      description: validation.value.description,
+      expectedUpdatedAt: readExpectedUpdatedAt(formData),
+      icon: validation.value.icon,
+      requestId: validation.value.requestId,
+      slug: validation.value.slug,
+      title: validation.value.title,
+    });
+
+    revalidatePath("/");
+    revalidatePath("/emner/ny");
+
+    return {
+      status: "success",
+      message: "Emnekladden er opdateret.",
+      topicId: result.topic.id,
+      updatedAt: result.topic.updatedAt,
+    };
+  } catch (error) {
+    return mapTopicUpdateError(error);
   }
 }
 
@@ -339,9 +339,84 @@ export async function createAdminGoalDraft(
         ? "Målkladden er gemt og klar til næste trin."
         : "Målkladden var allerede gemt og er hentet igen.",
       goalId: result.goal.id,
+      updatedAt: result.goal.updatedAt,
     };
   } catch (error) {
     return mapGoalCreationError(error);
+  }
+}
+
+export async function updateAdminGoalDraft(
+  _previousState: CreateGoalState,
+  formData: FormData,
+): Promise<CreateGoalState> {
+  const validation = validateGoalDraftForm(formData);
+
+  if (!validation.ok) {
+    return {
+      status: "invalid",
+      message: validation.message,
+      fieldErrors: validation.fieldErrors,
+    };
+  }
+
+  if (!(await requestHasTrustedOrigin())) {
+    return {
+      status: "denied",
+      message:
+        "Gemningen kom ikke fra en godkendt administrationsside. Genindlæs siden og prøv igen.",
+    };
+  }
+
+  const session = await getAdminAccessSession();
+
+  if (session.access.kind === "unauthenticated") {
+    return {
+      status: "denied",
+      message: "Din session er udløbet. Log ind igen, før du gemmer.",
+    };
+  }
+
+  if (session.access.kind !== "authorized" || !session.client) {
+    return session.access.kind === "denied"
+      ? {
+          status: "denied",
+          message: "Din konto har ikke adgang til at redigere mål.",
+        }
+      : {
+          status: "unavailable",
+          message:
+            "Administrationen kan ikke forbinde til databasen lige nu. Intet er gemt.",
+        };
+  }
+
+  try {
+    const result = await updateGoalDraft(session.client, {
+      authenticatedUserId: session.access.profile.id,
+      difficulty: validation.value.difficulty,
+      equipment: validation.value.equipment,
+      estimatedMinutes: validation.value.estimatedMinutes,
+      expectedUpdatedAt: readExpectedUpdatedAt(formData),
+      heroMediaUrl: validation.value.heroMediaUrl,
+      requestId: validation.value.requestId,
+      slug: validation.value.slug,
+      sortOrder: validation.value.sortOrder,
+      summary: validation.value.summary,
+      title: validation.value.title,
+      topicId: validation.value.topicId,
+    });
+
+    revalidatePath("/");
+    revalidatePath("/emner/ny");
+
+    return {
+      status: "success",
+      message: "Målkladden er opdateret.",
+      goalId: result.goal.id,
+      updatedAt: result.goal.updatedAt,
+    };
+  } catch (error) {
+    return mapGoalUpdateError(error);
   }
 }
 
@@ -415,9 +490,86 @@ export async function createAdminExerciseDraft(
         ? "Deløvelseskladden er gemt og klar til næste trin."
         : "Deløvelseskladden var allerede gemt og er hentet igen.",
       exerciseId: result.exercise.id,
+      updatedAt: result.exercise.updatedAt,
     };
   } catch (error) {
     return mapExerciseCreationError(error);
+  }
+}
+
+export async function updateAdminExerciseDraft(
+  _previousState: CreateExerciseState,
+  formData: FormData,
+): Promise<CreateExerciseState> {
+  const validation = validateExerciseDraftForm(formData);
+
+  if (!validation.ok) {
+    return {
+      status: "invalid",
+      message: validation.message,
+      fieldErrors: validation.fieldErrors,
+    };
+  }
+
+  if (!(await requestHasTrustedOrigin())) {
+    return {
+      status: "denied",
+      message:
+        "Gemningen kom ikke fra en godkendt administrationsside. Genindlæs siden og prøv igen.",
+    };
+  }
+
+  const session = await getAdminAccessSession();
+
+  if (session.access.kind === "unauthenticated") {
+    return {
+      status: "denied",
+      message: "Din session er udløbet. Log ind igen, før du gemmer.",
+    };
+  }
+
+  if (session.access.kind !== "authorized" || !session.client) {
+    return session.access.kind === "denied"
+      ? {
+          status: "denied",
+          message: "Din konto har ikke adgang til at redigere deløvelser.",
+        }
+      : {
+          status: "unavailable",
+          message:
+            "Administrationen kan ikke forbinde til databasen lige nu. Intet er gemt.",
+        };
+  }
+
+  try {
+    const result = await updateExerciseDraft(session.client, {
+      authenticatedUserId: session.access.profile.id,
+      equipment: validation.value.equipment,
+      estimatedMinutes: validation.value.recommendedMinutes,
+      expectedUpdatedAt: readExpectedUpdatedAt(formData),
+      goalId: validation.value.goalId,
+      instructions: validation.value.instructions,
+      measurement: validation.value.measurement,
+      requestId: validation.value.requestId,
+      safetyNotes: validation.value.safetyNote,
+      slug: validation.value.slug,
+      sortOrder: validation.value.sortOrder,
+      targetValue: validation.value.targetValue,
+      title: validation.value.title,
+      videoUrl: validation.value.videoUrl,
+    });
+
+    revalidatePath("/");
+    revalidatePath("/emner/ny");
+
+    return {
+      status: "success",
+      message: "Deløvelseskladden er opdateret.",
+      exerciseId: result.exercise.id,
+      updatedAt: result.exercise.updatedAt,
+    };
+  } catch (error) {
+    return mapExerciseUpdateError(error);
   }
 }
 
@@ -553,5 +705,6 @@ export async function askAdminContentAssistant(
     reply: parsed.reply,
     suggestion: parsed.suggestion,
     items: parsed.items,
+    review: parsed.review ?? null,
   };
 }

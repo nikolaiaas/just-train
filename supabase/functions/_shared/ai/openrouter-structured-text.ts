@@ -692,6 +692,10 @@ export function createOpenRouterStructuredTextRequest(input: {
     // Request-level plugin settings override OpenRouter account defaults. This
     // keeps a default legacy web plugin from adding browsing to editorial jobs.
     plugins: [{ enabled: false, id: "web" }],
+    // GPT-5 models spend part of max_tokens on hidden reasoning. Keep that
+    // bounded for these simple editorial transforms so the JSON answer cannot
+    // be crowded out by the model's default reasoning effort.
+    reasoning: { effort: "minimal", exclude: true },
     response_format: {
       json_schema: {
         name: input.schemaName,
@@ -1180,6 +1184,15 @@ export function parseOpenRouterStructuredTextResponse(input: {
       attemptCode: "openrouter_refusal",
       providerRequestId: input.providerRequestId,
       publicCode: "provider_rejected_input",
+      retryable: false,
+    });
+  }
+
+  if (choice.finish_reason === "length") {
+    throw new OpenRouterStructuredTextError({
+      attemptCode: "openrouter_output_truncated",
+      providerRequestId: input.providerRequestId,
+      publicCode: "provider_failed",
       retryable: false,
     });
   }

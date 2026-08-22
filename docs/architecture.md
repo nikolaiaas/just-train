@@ -116,14 +116,17 @@ remain roadmap work rather than claims of current protection. The decision
 history is recorded in
 [`ai-image-provider-review.md`](./ai-image-provider-review.md).
 
-Administration uses four additional bounded operations:
-`content.topic_brief`, `content.goal_draft`, `content.exercise_draft`, and
-`content.wardrobe_examples`. Their prompts and strict JSON contracts live in
-immutable database versions. They pin `openai/gpt-5-mini` through OpenRouter to
-OpenAI-only routing with fallback disabled. The browser can provide the current
-draft and a short bounded conversation, but cannot select a provider, model,
-prompt, cost limit, publication state, or database identity. A redaktør must
-explicitly copy a proposal into the form and save an unpublished draft.
+Administration uses five additional bounded operations:
+`content.topic_brief`, `content.goal_draft`, `content.exercise_draft`,
+`content.wardrobe_examples`, and `content.draft_review`. Their prompts and
+strict JSON contracts live in immutable database versions. They pin
+`openai/gpt-5-mini` through OpenRouter to OpenAI-only routing with fallback
+disabled. The browser can provide the current draft and a short bounded
+conversation, but cannot select a provider, model, prompt, cost limit,
+publication state, or database identity. A redaktør must explicitly copy a
+proposal into the form and save an unpublished draft. The review operation
+returns only a structured checklist and next actions; it has no save, approval,
+or publication shape.
 
 ## First vertical slice
 

@@ -5,6 +5,7 @@ import {
   AdminContentError,
   createAdminTopicDraft,
   loadAdminTopicLibrary,
+  updateAdminTopicDraft,
 } from "../src/index.ts";
 
 const requestId = "d1000000-0000-4000-8000-000000000001";
@@ -39,6 +40,11 @@ const validInput = Object.freeze({
   title: createdRow.title,
 });
 
+const validUpdateInput = Object.freeze({
+  ...validInput,
+  expectedUpdatedAt: createdRow.updated_at,
+});
+
 function assertContentError(error, code) {
   assert.ok(error instanceof AdminContentError);
   assert.equal(error.code, code);
@@ -66,6 +72,10 @@ function awaitableQuery(response, calls) {
     },
     then(resolve, reject) {
       return Promise.resolve(response).then(resolve, reject);
+    },
+    update(value) {
+      calls.push({ operation: "update", value });
+      return query;
     },
   };
 
@@ -355,7 +365,11 @@ test("recovers an exact duplicate request without overwriting the draft", async 
         queryNumber === 1
           ? {
               data: null,
-              error: { code: "23505", message: "Synthetic unique details" },
+              error: {
+                code: "23505",
+                message:
+                  'duplicate key value violates unique constraint "topics_slug_key"',
+              },
             }
           : { data: createdRow, error: null },
         calls,
@@ -393,6 +407,185 @@ test("treats a reused request id or an unrelated slug collision as a conflict", 
       assertContentError(error, "topic_creation_conflict"),
     );
   }
+});
+
+test("classifies a named topic slug collision after checking for an exact retry", async () => {
+  const calls = [];
+  let queryNumber = 0;
+  const client = {
+    from(table) {
+      calls.push({ operation: "from", table });
+      queryNumber += 1;
+      return awaitableQuery(
+        queryNumber === 1
+          ? {
+              data: null,
+              error: {
+                code: "23505",
+                message:
+                  'duplicate key value violates unique constraint "topics_slug_key"',
+              },
+            }
+          : { data: null, error: null },
+        calls,
+      );
+    },
+  };
+
+  await assert.rejects(createAdminTopicDraft(client, validInput), (error) => {
+    assertContentError(error, "topic_slug_conflict");
+    assert.doesNotMatch(error.message, /topics_slug_key|23505/i);
+    return true;
+  });
+  assert.equal(calls.filter((call) => call.operation === "from").length, 2);
+  assert.deepEqual(
+    calls.find((call) => call.operation === "eq"),
+    {
+      operation: "eq",
+      column: "id",
+      value: requestId,
+    },
+  );
+});
+
+test("updates only editable topic fields while preserving publication and provenance", async () => {
+  const calls = [];
+  const updatedRow = {
+    ...createdRow,
+    accent_color: "#336699",
+    description: "En opdateret beskrivelse.",
+    icon: "🤸",
+    slug: "balanceeventyr",
+    title: "Balanceeventyr",
+  };
+  const client = {
+    from(table) {
+      calls.push({ operation: "from", table });
+      return awaitableQuery({ data: updatedRow, error: null }, calls);
+    },
+  };
+
+  const result = await updateAdminTopicDraft(client, {
+    ...validUpdateInput,
+    accentColor: "#336699",
+    description: updatedRow.description,
+    icon: updatedRow.icon,
+    slug: updatedRow.slug,
+    title: updatedRow.title,
+  });
+
+  assert.equal(result.topic.title, "Balanceeventyr");
+  assert.deepEqual(
+    calls.find((call) => call.operation === "update"),
+    {
+      operation: "update",
+      value: {
+        accent_color: "#336699",
+        description: updatedRow.description,
+        icon: updatedRow.icon,
+        slug: updatedRow.slug,
+        title: updatedRow.title,
+      },
+    },
+  );
+  assert.deepEqual(
+    calls.filter((call) => call.operation === "eq"),
+    [
+      { operation: "eq", column: "id", value: requestId },
+      { operation: "eq", column: "is_published", value: false },
+      {
+        operation: "eq",
+        column: "updated_at",
+        value: createdRow.updated_at,
+      },
+    ],
+  );
+});
+
+test("rejects topic updates that collide or no longer target an editable draft", async () => {
+  for (const [response, code] of [
+    [
+      {
+        data: null,
+        error: {
+          code: "23505",
+          constraint: "topics_slug_key",
+          message: "private database details",
+        },
+      },
+      "topic_slug_conflict",
+    ],
+    [{ data: null, error: null }, "topic_draft_not_editable"],
+  ]) {
+    const client = {
+      from() {
+        return awaitableQuery(response, []);
+      },
+    };
+
+    await assert.rejects(
+      updateAdminTopicDraft(client, validUpdateInput),
+      (error) => {
+        assertContentError(error, code);
+        assert.doesNotMatch(error.message, /topics_slug_key|private|database/i);
+        return true;
+      },
+    );
+  }
+});
+
+test("recovers an exact topic update retry but rejects a stale edit", async () => {
+  for (const [persistedRow, expectedCode] of [
+    [createdRow, null],
+    [
+      { ...createdRow, title: "Ændret i en anden fane" },
+      "topic_draft_conflict",
+    ],
+  ]) {
+    const calls = [];
+    const responses = [
+      { data: null, error: null },
+      { data: persistedRow, error: null },
+    ];
+    let index = 0;
+    const client = {
+      from(table) {
+        calls.push({ operation: "from", table });
+        return awaitableQuery(responses[index++], calls);
+      },
+    };
+
+    if (expectedCode) {
+      await assert.rejects(
+        updateAdminTopicDraft(client, validUpdateInput),
+        (error) => assertContentError(error, expectedCode),
+      );
+    } else {
+      const result = await updateAdminTopicDraft(client, validUpdateInput);
+      assert.equal(result.topic.updatedAt, createdRow.updated_at);
+    }
+
+    assert.equal(calls.filter((call) => call.operation === "from").length, 2);
+  }
+});
+
+test("rejects a topic update without a valid expected revision", async () => {
+  let calls = 0;
+  const client = {
+    from() {
+      calls += 1;
+      throw new Error("must not query");
+    },
+  };
+
+  for (const expectedUpdatedAt of [undefined, "", "not-a-timestamp"]) {
+    await assert.rejects(
+      updateAdminTopicDraft(client, { ...validInput, expectedUpdatedAt }),
+      (error) => assertContentError(error, "invalid_expected_updated_at"),
+    );
+  }
+
+  assert.equal(calls, 0);
 });
 
 test("normalizes creation failures and validates the inserted row", async () => {

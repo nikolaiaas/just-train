@@ -125,9 +125,6 @@ function AdminDashboard({
 }) {
   const initial =
     profile.displayName.trim().charAt(0).toLocaleUpperCase("da-DK") || "A";
-  const reviewCount = topics.filter(
-    (topic) => topic.status !== "published",
-  ).length;
 
   return (
     <main className={styles.viewport}>
@@ -189,14 +186,6 @@ function AdminDashboard({
                   >
                     <NavIcon name={item.icon} />
                     <span>{item.label}</span>
-                    {item.label === "Gennemgang" ? (
-                      <span
-                        className={styles.navCount}
-                        aria-label={`${reviewCount} afventer`}
-                      >
-                        {reviewCount}
-                      </span>
-                    ) : null}
                   </span>
                 ),
               )}

@@ -93,3 +93,54 @@ test("fails closed when canonicalization removes required copy", () => {
     null,
   );
 });
+
+test("canonicalizes a non-mutating draft review without creating proposal data", () => {
+  assert.deepEqual(
+    normalizeAdminContentOutput("content.draft_review", {
+      reply: " Samlet set er kladden klar. ",
+      verdict: "ready_for_human_review",
+      checklist: {
+        topic: { status: "ok", note: " Tydeligt\r\nemne. " },
+        goal: { status: "ok", note: "Målet passer." },
+        exercise: { status: "ok", note: "Trinnet er konkret." },
+        wardrobe: {
+          status: "optional",
+          note: "Garderobeeksempler er valgfrie.",
+        },
+      },
+      nextActions: [
+        " Læs sikkerhedsteksten højt ",
+        "læs sikkerhedsteksten højt",
+      ],
+    }),
+    {
+      checklist: {
+        exercise: { note: "Trinnet er konkret.", status: "ok" },
+        goal: { note: "Målet passer.", status: "ok" },
+        topic: { note: "Tydeligt\nemne.", status: "ok" },
+        wardrobe: {
+          note: "Garderobeeksempler er valgfrie.",
+          status: "optional",
+        },
+      },
+      nextActions: ["Læs sikkerhedsteksten højt"],
+      reply: "Samlet set er kladden klar.",
+      verdict: "ready_for_human_review",
+    },
+  );
+
+  assert.equal(
+    normalizeAdminContentOutput("content.draft_review", {
+      reply: "Forkert status.",
+      verdict: "ready_for_human_review",
+      checklist: {
+        topic: { status: "optional", note: "Emnet kan ikke være valgfrit." },
+        goal: { status: "ok", note: "Klar." },
+        exercise: { status: "ok", note: "Klar." },
+        wardrobe: { status: "optional", note: "Valgfri." },
+      },
+      nextActions: [],
+    }),
+    null,
+  );
+});

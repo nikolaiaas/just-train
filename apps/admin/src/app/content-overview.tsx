@@ -2,9 +2,13 @@
 
 import Link from "next/link";
 import { useDeferredValue, useRef, useState } from "react";
+import {
+  countDraftTopics,
+  topicStatusCopy,
+  topicStatusFilterOptions,
+  type TopicStatus,
+} from "./content-overview-state";
 import styles from "./page.module.css";
-
-export type TopicStatus = "published" | "review" | "draft";
 
 export type Topic = {
   id: string;
@@ -27,19 +31,12 @@ const statusContent: Record<
   { label: string; className: string; detail: string }
 > = {
   published: {
-    label: "Udgivet",
+    ...topicStatusCopy.published,
     className: styles.statusPublished,
-    detail: "Synligt i appen",
-  },
-  review: {
-    label: "Gennemgå",
-    className: styles.statusReview,
-    detail: "Kræver menneskelig godkendelse",
   },
   draft: {
-    label: "Kladde",
+    ...topicStatusCopy.draft,
     className: styles.statusDraft,
-    detail: "Ikke udgivet endnu",
   },
 };
 
@@ -136,8 +133,8 @@ export function ContentOverview({
       label: "træningsmål",
     },
     {
-      value: topics.filter((topic) => topic.status !== "published").length,
-      label: "skal gennemgås",
+      value: countDraftTopics(topics),
+      label: "kladder",
     },
   ];
 
@@ -207,10 +204,11 @@ export function ContentOverview({
                   setStatus(event.target.value as "all" | TopicStatus)
                 }
               >
-                <option value="all">Alle statusser</option>
-                <option value="published">Udgivet</option>
-                <option value="review">Gennemgå</option>
-                <option value="draft">Kladde</option>
+                {topicStatusFilterOptions.map((option) => (
+                  <option value={option.value} key={option.value}>
+                    {option.label}
+                  </option>
+                ))}
               </select>
             </label>
           </div>

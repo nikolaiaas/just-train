@@ -14,34 +14,34 @@ select results_eq(
   $$,
   $$
     values
+      ('content.draft_review'::text),
       ('content.exercise_draft'::text),
       ('content.goal_draft'::text),
       ('content.topic_brief'::text),
       ('content.wardrobe_examples'::text)
   $$,
-  'all four bounded administrator AI operations exist'
+  'all five bounded administrator AI operations exist'
 );
 
 select results_eq(
   $$
     select gateway, provider, model
-    from public.ai_operation_versions
-    where id in (
-      'a2000000-0000-4000-8000-000000000003',
-      'a2000000-0000-4000-8000-000000000004',
-      'a2000000-0000-4000-8000-000000000005',
-      'a2000000-0000-4000-8000-000000000006'
-    )
-    order by id
+    from public.ai_operation_versions as version
+    join public.ai_operations as operation
+      on operation.active_version_id = version.id
+      and operation.id = version.operation_id
+    where operation.operation_key like 'content.%'
+    order by operation.operation_key
   $$,
   $$
     values
       ('openrouter'::text, 'openai'::text, 'openai/gpt-5-mini'::text),
       ('openrouter'::text, 'openai'::text, 'openai/gpt-5-mini'::text),
       ('openrouter'::text, 'openai'::text, 'openai/gpt-5-mini'::text),
+      ('openrouter'::text, 'openai'::text, 'openai/gpt-5-mini'::text),
       ('openrouter'::text, 'openai'::text, 'openai/gpt-5-mini'::text)
   $$,
-  'all four operations pin GPT-5 mini through the OpenAI provider on OpenRouter'
+  'all five operations pin GPT-5 mini through the OpenAI provider on OpenRouter'
 );
 
 select is(
@@ -956,10 +956,14 @@ select results_eq(
     from public.publish_ai_operation_version(
       'content.topic_brief',
       'Opdateret testprompt til redaktionelle emneforslag.',
-      'a2000000-0000-4000-8000-000000000003'
+      (
+        select active_version_id
+        from public.ai_operations
+        where operation_key = 'content.topic_brief'
+      )
     )
   $$,
-  $$ values (2) $$,
+  $$ values (3) $$,
   'an administrator can publish a reviewed prompt-only revision'
 );
 
@@ -968,7 +972,7 @@ select results_eq(
     select gateway, provider, model, request_options
     from public.ai_operation_versions
     where operation_id = 'a1000000-0000-4000-8000-000000000002'
-      and version = 2
+      and version = 3
   $$,
   $$
     values (
@@ -1012,7 +1016,7 @@ insert into public.ai_operation_versions (
   max_cost_microusd
 )
 select
-  'a2000000-0000-4000-8000-000000000007'::uuid,
+  'a2000000-0000-4000-8000-000000000009'::uuid,
   operation.id,
   active_version.version + 1,
   'Inkompatibel testrevision, som kun bruges til at bevise versionsbinding.',
@@ -1020,8 +1024,8 @@ select
   active_version.provider,
   active_version.model,
   active_version.request_options,
-  '{"type":"object","additionalProperties":false,"properties":{"revisionMarker":{"type":"string","enum":["v3"]}},"required":["revisionMarker"]}'::jsonb,
-  '{"type":"object","additionalProperties":false,"properties":{"revisionMarker":{"type":"string","enum":["v3"]}},"required":["revisionMarker"]}'::jsonb,
+  '{"type":"object","additionalProperties":false,"properties":{"revisionMarker":{"type":"string","enum":["v4"]}},"required":["revisionMarker"]}'::jsonb,
+  '{"type":"object","additionalProperties":false,"properties":{"revisionMarker":{"type":"string","enum":["v4"]}},"required":["revisionMarker"]}'::jsonb,
   active_version.max_attempts,
   active_version.timeout_ms,
   active_version.max_cost_microusd
@@ -1032,7 +1036,7 @@ join public.ai_operation_versions as active_version
 where operation.operation_key = 'content.topic_brief';
 
 update public.ai_operations
-set active_version_id = 'a2000000-0000-4000-8000-000000000007'
+set active_version_id = 'a2000000-0000-4000-8000-000000000009'
 where operation_key = 'content.topic_brief';
 
 -- Simulate application validators changing with the newly published contract.
@@ -1090,7 +1094,7 @@ select isnt(
     from public.ai_jobs
     where client_request_id = 'c3000000-0000-4000-8000-000000000060'
   ),
-  'a2000000-0000-4000-8000-000000000007'::uuid,
+  'a2000000-0000-4000-8000-000000000009'::uuid,
   'the queued job remains pinned to its original contract version'
 );
 

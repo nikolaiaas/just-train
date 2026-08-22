@@ -17,7 +17,8 @@ type Claim = {
     | "content.topic_brief"
     | "content.wardrobe_examples"
     | "content.goal_draft"
-    | "content.exercise_draft";
+    | "content.exercise_draft"
+    | "content.draft_review";
   output_contract: unknown;
   prompt_template: string;
   provider: string;
@@ -149,6 +150,8 @@ function schemaName(operationKey: Claim["operation_key"]): string {
       return "admin_goal_draft";
     case "content.exercise_draft":
       return "admin_exercise_draft";
+    case "content.draft_review":
+      return "admin_draft_review";
   }
 }
 
@@ -186,7 +189,8 @@ async function processJob(jobId: string): Promise<void> {
       (claim.operation_key !== "content.topic_brief" &&
         claim.operation_key !== "content.wardrobe_examples" &&
         claim.operation_key !== "content.goal_draft" &&
-        claim.operation_key !== "content.exercise_draft")
+        claim.operation_key !== "content.exercise_draft" &&
+        claim.operation_key !== "content.draft_review")
     ) {
       throw new OpenRouterStructuredTextError({
         attemptCode: "unsupported_gateway",

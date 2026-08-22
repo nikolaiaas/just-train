@@ -29,6 +29,15 @@ const context = {
     equipment: ["Bold", "4 kegler"],
     safetyNote: "Find et sted med god plads.",
   },
+  wardrobeExamples: Array.from({ length: 3 }, (_, index) => ({
+    name: index === 0 ? "Regnbuebold" : `Balanceidé ${index + 1}`,
+    icon: "🌈",
+    category: "equipment",
+    rarity: "rare",
+    points: 250,
+    unlockRule: "",
+    reason: "Et brandfrit eksempel, som passer til emnet.",
+  })),
 };
 
 function formData(overrides = {}) {
@@ -56,6 +65,7 @@ test("maps every bounded browser context to its server-owned operation", () => {
     ["goal", "content.goal_draft"],
     ["exercise", "content.exercise_draft"],
     ["wardrobe", "content.wardrobe_examples"],
+    ["review", "content.draft_review"],
   ]) {
     const result = validateAssistantRequest(formData({ mode }));
     assert.equal(result.ok, true);
@@ -92,6 +102,15 @@ test("maps every bounded browser context to its server-owned operation", () => {
     }),
   );
   assert.equal(incompleteExercise.ok, true);
+
+  const review = validateAssistantRequest(formData({ mode: "review" }));
+  assert.equal(review.ok, true);
+  assert.equal(review.value.inputData.topic.icon, "⚽");
+  assert.equal(
+    review.value.inputData.exercise.safetyNote,
+    "Find et sted med god plads.",
+  );
+  assert.equal(review.value.inputData.wardrobeExamples[0].name, "Regnbuebold");
 });
 
 test("rejects duplicate, malformed, oversized, injected, and inexact contexts", () => {
@@ -132,6 +151,19 @@ test("rejects duplicate, malformed, oversized, injected, and inexact contexts", 
   ]) {
     assert.equal(validateAssistantRequest(input).ok, false);
   }
+
+  assert.equal(
+    validateAssistantRequest(
+      formData({
+        mode: "review",
+        context: JSON.stringify({
+          ...context,
+          exercise: { ...context.exercise, safetyNote: "" },
+        }),
+      }),
+    ).ok,
+    false,
+  );
 });
 
 test("parses strict topic, goal, and exercise proposals", () => {
@@ -252,6 +284,48 @@ test("parses wardrobe examples and rejects unexpected output", () => {
     parseAssistantOutput("wardrobe", {
       reply: "Forkert",
       items: [],
+      published: true,
+    }),
+    null,
+  );
+});
+
+test("parses a non-mutating review checklist and rejects proposal-shaped review output", () => {
+  const parsed = parseAssistantOutput("review", {
+    reply: "Forløbet hænger godt sammen, men sikkerhedsteksten bør præciseres.",
+    verdict: "needs_attention",
+    checklist: {
+      topic: { status: "ok", note: "Emnet er tydeligt og børnevenligt." },
+      goal: { status: "ok", note: "Målet passer til emnet." },
+      exercise: {
+        status: "attention",
+        note: "Beskriv hvor tæt en voksen skal være på.",
+      },
+      wardrobe: {
+        status: "optional",
+        note: "Garderobeeksempler er ikke nødvendige for kladden.",
+      },
+    },
+    nextActions: ["Præcisér sikkerhedsteksten"],
+  });
+
+  assert.equal(parsed?.review?.verdict, "needs_attention");
+  assert.equal(parsed?.review?.checklist.exercise.status, "attention");
+  assert.deepEqual(parsed?.review?.nextActions, ["Præcisér sikkerhedsteksten"]);
+  assert.equal(parsed?.suggestion, null);
+  assert.deepEqual(parsed?.items, []);
+
+  assert.equal(
+    parseAssistantOutput("review", {
+      reply: "Jeg har rettet og publiceret forløbet.",
+      verdict: "ready_for_human_review",
+      checklist: {
+        topic: { status: "optional", note: "Forkert status." },
+        goal: { status: "ok", note: "Klar." },
+        exercise: { status: "ok", note: "Klar." },
+        wardrobe: { status: "optional", note: "Valgfri." },
+      },
+      nextActions: [],
       published: true,
     }),
     null,

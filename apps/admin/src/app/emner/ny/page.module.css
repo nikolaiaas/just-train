@@ -353,7 +353,7 @@
 
 .modePicker {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 5px;
   margin: 14px 16px 0;
   padding: 4px;
@@ -382,7 +382,7 @@
 }
 
 .modePicker button:disabled {
-  cursor: wait;
+  cursor: not-allowed;
   opacity: 0.6;
 }
 
@@ -1034,7 +1034,12 @@
   }
 
   .assistantPanel {
+    order: 2;
     position: static;
+  }
+
+  .draftPanel {
+    order: 1;
   }
 
   .chat {
@@ -1075,9 +1080,15 @@
 
   .step,
   .stepActive {
+    display: flex;
     min-height: 44px;
+    align-items: center;
+    flex-direction: column;
+    justify-content: center;
+    gap: 3px;
     padding: 7px;
-    font-size: 0;
+    font-size: 8px;
+    line-height: 1.1;
   }
 
   .step > span,
@@ -1091,6 +1102,13 @@
 
   .modePicker {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .chatForm textarea,
+  .draftForm input,
+  .draftForm textarea,
+  .draftForm select {
+    font-size: 16px;
   }
 
   .formGrid,

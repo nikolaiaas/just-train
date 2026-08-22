@@ -1,6 +1,6 @@
 {
   "version": 3,
-  "updatedAt": "2026-08-21T22:10:00.000Z",
+  "updatedAt": "2026-08-22T08:06:55.000Z",
   "items": [
     {
       "id": "hosted-preview-safety",
@@ -34,28 +34,6 @@
       "priority": 2,
       "createdAt": "2026-08-20T23:58:25.783Z",
       "updatedAt": "2026-08-21T12:42:52.000Z"
-    },
-    {
-      "id": "admin-goal-exercise-editor",
-      "title": "Redigér mål og deløvelser i administrationen",
-      "details": "Byg den referencebaserede editor til mål, rækkefølge og deløvelser med validering af forklaring, måletype, måltal, træningstid, udstyr og sikkerhedstekst. AI-forslag skal vises som før/efter/hvorfor og kræve et aktivt valg.",
-      "implementationNotes": "Første vertikale snit er nu bygget: redaktøren kan oprette ét upubliceret mål og én upubliceret deløvelse under emnet med tid, udstyr, måling, måltal og sikkerhedstekst. Slugs er afgrænset til deres forælder, database- og RLS-kontrakter er testet, og AI-forslag vises som før/forslag/hvorfor og kopieres kun ved et aktivt valg. Rettelse af gemte rækker, flere mål/deløvelser, manuel rækkefølge og video mangler fortsat.",
-      "evidence": [],
-      "status": "doing",
-      "priority": 3,
-      "createdAt": "2026-08-21T20:22:21.000Z",
-      "updatedAt": "2026-08-21T21:16:34.000Z"
-    },
-    {
-      "id": "admin-wardrobe-authoring",
-      "title": "Opret emnegarderobe og belønningseksempler",
-      "details": "Tilføj en rigtig garderobemodel og en adminside, hvor man kan oprette, rette, godkende og afvise emnespecifikke ting med navn, type, sjældenhed, pointpris eller oplåsningsregel. AI skal kunne foreslå sikre syntetiske eksempler uden brands, links eller børnedata.",
-      "implementationNotes": "AI-assistenten kan nu foreslå 3-6 skemavaliderede, syntetiske garderobeeksempler med navn, ikon, type, sjældenhed, point eller oplåsningsregel. Forslagene vises tydeligt som ikke gemte. Den rigtige garderobetabel, redigering, godkendelse, afvisning og publicering mangler fortsat.",
-      "evidence": [],
-      "status": "doing",
-      "priority": 4,
-      "createdAt": "2026-08-21T20:22:21.000Z",
-      "updatedAt": "2026-08-21T21:16:34.000Z"
     },
     {
       "id": "admin-topic-publication",
@@ -163,26 +141,37 @@
       "updatedAt": "2026-08-21T19:23:40.000Z"
     },
     {
-      "id": "admin-topic-draft-workspace",
-      "title": "Opret en rigtig emnekladde i administrationen",
-      "details": "Erstat fixture-dialogen med et referencebaseret arbejdsrum, hvor en administrator kan oprette og genåbne en emnekladde med grundoplysninger, første mål og redigerbare forslag uden at publicere noget.",
-      "implementationNotes": "Administrationen læser rigtige emner fra Supabase og har et referencebaseret arbejdsrum, der kan oprette et emne, første mål og første deløvelse som upublicerede kladder. En afbrudt kladde kan genåbnes via dens emne-id, fortsætter ved første manglende trin og holder allerede gemte trin låst, så reviewet ikke kan afvige fra databasen. Rettelse af gemte mål og deløvelser følges på det særskilte editor-kort.",
-      "evidence": [],
-      "status": "done",
-      "priority": 15,
-      "createdAt": "2026-08-21T20:22:21.000Z",
-      "updatedAt": "2026-08-21T22:10:00.000Z"
-    },
-    {
       "id": "admin-contextual-ai-assistant",
       "title": "Byg én AI-assistent til alle indholdstrin",
       "details": "Udvid den serverstyrede AI-platform med admin-jobs og en genbrugelig chatboks, der kender det aktive emne, mål, deløvelse, garderobe eller reviewtrin og kun returnerer skemavaliderede forslag til menneskelig accept eller afvisning.",
-      "implementationNotes": "Fire serverstyrede handlinger er nu på plads til emne, mål, deløvelse og garderobe. De bruger versionslåste prompts fra databasen, GPT-5 mini via OpenRouter/OpenAI-only og præcise input/output-skemaer. Chatten kender den aktuelle kladde, og et struktureret forslag kopieres kun ved et aktivt valg. Review-hjælp, eksplicit afvisningshistorik og genoptagelse af samtaler mangler fortsat.",
+      "implementationNotes": "Fem serverstyrede handlinger er nu på plads til emne, mål, deløvelse, garderobe og samlet gennemgang. De bruger versionslåste prompts fra databasen, GPT-5 mini via OpenRouter/OpenAI-only og præcise input/output-skemaer. Chatten nulstiller sin kontekst sikkert mellem trin, strukturerede feltforslag kopieres kun ved et aktivt valg, og review returnerer en ikke-muterende checklist uden save- eller publish-vej. Live browsertest har verificeret alle fem handlinger. Eksplicit afvisning/fortryd, persistente samtaler og en garderobekontrakt med hele mål- og deløvelseshierarkiet mangler fortsat.",
       "evidence": [],
       "status": "doing",
       "priority": 2,
       "createdAt": "2026-08-21T20:22:21.000Z",
-      "updatedAt": "2026-08-21T21:16:34.000Z"
+      "updatedAt": "2026-08-22T07:41:25.000Z"
+    },
+    {
+      "id": "admin-goal-exercise-editor",
+      "title": "Redigér mål og deløvelser i administrationen",
+      "details": "Byg den referencebaserede editor til mål, rækkefølge og deløvelser med validering af forklaring, måletype, måltal, træningstid, udstyr og sikkerhedstekst. AI-forslag skal vises som før/efter/hvorfor og kræve et aktivt valg.",
+      "implementationNotes": "Første vertikale snit er nu bygget og browsertestet: redaktøren kan oprette og rette ét upubliceret mål og én upubliceret deløvelse under emnet med tid, udstyr, måling, måltal og sikkerhedstekst. Opdateringer er afgrænset til upublicerede rækker og bevarer forælder, media og rækkefølge. Revisionskontrol afviser en reelt forældet fane uden at overskrive nyere arbejde, mens en identisk gentagelse efter et tabt svar stadig lykkes. Slugs er afgrænset til deres forælder, dubletnavne får feltfeedback, og AI-forslag vises som før/forslag/hvorfor og kopieres kun ved et aktivt valg. Flere mål/deløvelser, manuel rækkefølge og video mangler fortsat.",
+      "evidence": [],
+      "status": "doing",
+      "priority": 3,
+      "createdAt": "2026-08-21T20:22:21.000Z",
+      "updatedAt": "2026-08-22T08:06:55.000Z"
+    },
+    {
+      "id": "admin-wardrobe-authoring",
+      "title": "Opret emnegarderobe og belønningseksempler",
+      "details": "Tilføj en rigtig garderobemodel og en adminside, hvor man kan oprette, rette, godkende og afvise emnespecifikke ting med navn, type, sjældenhed, pointpris eller oplåsningsregel. AI skal kunne foreslå sikre syntetiske eksempler uden brands, links eller børnedata.",
+      "implementationNotes": "AI-assistenten kan nu foreslå 3-6 skemavaliderede, syntetiske garderobeeksempler med navn, ikon, type, sjældenhed, point eller oplåsningsregel samt en synlig begrundelse. Live browsertest bekræfter, at forslagene vises tydeligt som ikke gemte og indgår som valgfri kontekst i AI-gennemgangen. Den rigtige garderobetabel, persistens, manuel redigering, godkendelse, afvisning og publicering mangler fortsat.",
+      "evidence": [],
+      "status": "doing",
+      "priority": 4,
+      "createdAt": "2026-08-21T20:22:21.000Z",
+      "updatedAt": "2026-08-22T07:41:25.000Z"
     },
     {
       "id": "dev-console",
@@ -458,6 +447,17 @@
       "priority": 14,
       "createdAt": "2026-08-21T09:08:00.832Z",
       "updatedAt": "2026-08-21T17:39:50.000Z"
+    },
+    {
+      "id": "admin-topic-draft-workspace",
+      "title": "Opret en rigtig emnekladde i administrationen",
+      "details": "Erstat fixture-dialogen med et referencebaseret arbejdsrum, hvor en administrator kan oprette og genåbne en emnekladde med grundoplysninger, første mål og redigerbare forslag uden at publicere noget.",
+      "implementationNotes": "Administrationen læser rigtige emner fra Supabase og har et referencebaseret arbejdsrum, der kan oprette, genåbne og rette et emne, første mål og første deløvelse som upublicerede kladder. En afbrudt kladde genåbnes via emne-id og fortsætter ved første manglende trin. Gemte trin er låst som standard, men kan åbnes eksplicit til sikre rettelser; navigation annoncerer trin og flytter fokus, og reviewkort åbner den relevante rettelse. Ugemte rettelser blokerer trin-, AI- og luk-navigation, indtil de gemmes eller annulleres, og gennemgangen viser kun den senest gemte version. Hele forløbet er verificeret i browser på desktop, iPhone-bredde og med en reel konflikt mellem to redaktørfaner.",
+      "evidence": [],
+      "status": "done",
+      "priority": 15,
+      "createdAt": "2026-08-21T20:22:21.000Z",
+      "updatedAt": "2026-08-22T08:06:55.000Z"
     }
   ]
 }

@@ -11,14 +11,18 @@ export type ResumableTopicDraft = {
     icon: string | null;
     id: string;
     title: string;
+    updatedAt: string;
   };
   goal: {
     difficulty: AdminContentDifficulty;
     equipment: string[];
     estimatedMinutes: number | null;
+    heroMediaUrl: string | null;
     id: string;
+    sortOrder: number;
     summary: string;
     title: string;
+    updatedAt: string;
   } | null;
   exercise: {
     equipment: string[];
@@ -29,6 +33,9 @@ export type ResumableTopicDraft = {
     safetyNotes: string;
     targetValue: number | null;
     title: string;
+    updatedAt: string;
+    videoUrl: string | null;
+    sortOrder: number;
   } | null;
   nextExerciseSortOrder: number;
   nextGoalSortOrder: number;
@@ -80,7 +87,7 @@ export async function loadResumableTopicDraft(
 ): Promise<ResumableTopicDraft | null> {
   const topicResponse = await client
     .from("topics")
-    .select("id, title, description, icon, accent_color")
+    .select("id, title, description, icon, accent_color, updated_at")
     .eq("id", topicId)
     .eq("is_published", false)
     .maybeSingle();
@@ -94,7 +101,9 @@ export async function loadResumableTopicDraft(
   const [goalResponse, latestGoalOrderResponse] = await Promise.all([
     client
       .from("goals")
-      .select("id, title, summary, difficulty, estimated_minutes, equipment")
+      .select(
+        "id, title, summary, difficulty, estimated_minutes, equipment, hero_media_url, sort_order, updated_at",
+      )
       .eq("topic_id", topicId)
       .eq("is_published", false)
       .order("sort_order", { ascending: true })
@@ -122,7 +131,7 @@ export async function loadResumableTopicDraft(
       client
         .from("exercises")
         .select(
-          "id, title, instructions, measurement, target_value, estimated_minutes, equipment, safety_notes",
+          "id, title, instructions, measurement, target_value, estimated_minutes, equipment, safety_notes, video_url, sort_order, updated_at",
         )
         .eq("goal_id", goalResponse.data.id)
         .eq("is_published", false)
@@ -157,6 +166,9 @@ export async function loadResumableTopicDraft(
         safetyNotes: exerciseResponse.data.safety_notes,
         targetValue: exerciseResponse.data.target_value,
         title: exerciseResponse.data.title,
+        updatedAt: exerciseResponse.data.updated_at,
+        videoUrl: exerciseResponse.data.video_url,
+        sortOrder: exerciseResponse.data.sort_order,
       };
     }
   }
@@ -168,15 +180,19 @@ export async function loadResumableTopicDraft(
       icon: topicResponse.data.icon,
       id: topicResponse.data.id,
       title: topicResponse.data.title,
+      updatedAt: topicResponse.data.updated_at,
     },
     goal: goalResponse.data
       ? {
           difficulty: goalResponse.data.difficulty,
           equipment: goalResponse.data.equipment,
           estimatedMinutes: goalResponse.data.estimated_minutes,
+          heroMediaUrl: goalResponse.data.hero_media_url,
           id: goalResponse.data.id,
+          sortOrder: goalResponse.data.sort_order,
           summary: goalResponse.data.summary,
           title: goalResponse.data.title,
+          updatedAt: goalResponse.data.updated_at,
         }
       : null,
     exercise,

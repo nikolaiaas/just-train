@@ -2,7 +2,8 @@ export type AdminContentOperationKey =
   | "content.topic_brief"
   | "content.wardrobe_examples"
   | "content.goal_draft"
-  | "content.exercise_draft";
+  | "content.exercise_draft"
+  | "content.draft_review";
 
 type JsonPrimitive = boolean | null | number | string;
 type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue };
@@ -237,6 +238,57 @@ function normalizeWardrobeOutput(value: UnknownRecord): JsonObject | null {
   return { items, reply };
 }
 
+function normalizeReviewCheck(
+  value: unknown,
+  allowOptional: boolean,
+): JsonObject | null {
+  if (!isRecord(value)) return null;
+
+  const note = normalizeRequiredMultiline(value.note);
+  const status = value.status;
+
+  if (
+    !note ||
+    (status !== "ok" &&
+      status !== "attention" &&
+      (!allowOptional || status !== "optional"))
+  ) {
+    return null;
+  }
+
+  return { note, status };
+}
+
+function normalizeDraftReviewOutput(value: UnknownRecord): JsonObject | null {
+  const reply = normalizeRequiredMultiline(value.reply);
+  const checklist = value.checklist;
+
+  if (
+    !reply ||
+    (value.verdict !== "ready_for_human_review" &&
+      value.verdict !== "needs_attention") ||
+    !isRecord(checklist) ||
+    !Array.isArray(value.nextActions)
+  ) {
+    return null;
+  }
+
+  const topic = normalizeReviewCheck(checklist.topic, false);
+  const goal = normalizeReviewCheck(checklist.goal, false);
+  const exercise = normalizeReviewCheck(checklist.exercise, false);
+  const wardrobe = normalizeReviewCheck(checklist.wardrobe, true);
+  const nextActions = normalizeEquipment(value.nextActions);
+
+  if (!topic || !goal || !exercise || !wardrobe || !nextActions) return null;
+
+  return {
+    checklist: { exercise, goal, topic, wardrobe },
+    nextActions,
+    reply,
+    verdict: value.verdict,
+  };
+}
+
 /**
  * Canonicalizes provider text before the version-pinned SQL completion gate.
  * The strict provider schema handles shape and bounds; this boundary aligns
@@ -257,5 +309,7 @@ export function normalizeAdminContentOutput(
       return normalizeExerciseOutput(value);
     case "content.wardrobe_examples":
       return normalizeWardrobeOutput(value);
+    case "content.draft_review":
+      return normalizeDraftReviewOutput(value);
   }
 }

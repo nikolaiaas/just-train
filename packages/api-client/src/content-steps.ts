@@ -79,6 +79,18 @@ export type CreateAdminExerciseDraftInput = {
   videoUrl: string | null;
 };
 
+/** Uses `requestId` as the id of the existing unpublished goal draft. */
+export type UpdateAdminGoalDraftInput = CreateAdminGoalDraftInput & {
+  /** The revision returned by the last successful load or save. */
+  expectedUpdatedAt: string;
+};
+
+/** Uses `requestId` as the id of the existing unpublished exercise draft. */
+export type UpdateAdminExerciseDraftInput = CreateAdminExerciseDraftInput & {
+  /** The revision returned by the last successful load or save. */
+  expectedUpdatedAt: string;
+};
+
 export type CreateAdminGoalDraftResult = {
   created: boolean;
   goal: AdminGoalDraft;
@@ -89,18 +101,37 @@ export type CreateAdminExerciseDraftResult = {
   exercise: AdminExerciseDraft;
 };
 
+export type UpdateAdminGoalDraftResult = {
+  goal: AdminGoalDraft;
+};
+
+export type UpdateAdminExerciseDraftResult = {
+  exercise: AdminExerciseDraft;
+};
+
 export type AdminContentStepErrorCode =
   | "admin_access_denied"
   | "exercise_creation_conflict"
   | "exercise_creation_failed"
+  | "exercise_draft_conflict"
+  | "exercise_draft_not_editable"
+  | "exercise_slug_conflict"
+  | "exercise_update_failed"
   | "goal_creation_conflict"
   | "goal_creation_failed"
+  | "goal_draft_conflict"
+  | "goal_draft_not_editable"
+  | "goal_slug_conflict"
+  | "goal_update_failed"
   | "invalid_authenticated_user_id"
   | "invalid_difficulty"
   | "invalid_equipment"
   | "invalid_estimated_minutes"
+  | "invalid_expected_updated_at"
   | "invalid_exercise_creation_result"
+  | "invalid_exercise_update_result"
   | "invalid_goal_creation_result"
+  | "invalid_goal_update_result"
   | "invalid_goal_id"
   | "invalid_hero_media_url"
   | "invalid_instructions"
@@ -120,18 +151,30 @@ const ERROR_MESSAGES: Record<AdminContentStepErrorCode, string> = {
   exercise_creation_conflict:
     "The exercise draft request conflicts with existing content.",
   exercise_creation_failed: "The exercise draft could not be created.",
+  exercise_draft_conflict: "The exercise draft was changed by another editor.",
+  exercise_draft_not_editable: "The exercise draft is no longer editable.",
+  exercise_slug_conflict: "An exercise already uses this slug in the goal.",
+  exercise_update_failed: "The exercise draft could not be updated.",
   goal_creation_conflict:
     "The training goal draft request conflicts with existing content.",
   goal_creation_failed: "The training goal draft could not be created.",
+  goal_draft_conflict: "The training goal draft was changed by another editor.",
+  goal_draft_not_editable: "The training goal draft is no longer editable.",
+  goal_slug_conflict: "A training goal already uses this slug in the topic.",
+  goal_update_failed: "The training goal draft could not be updated.",
   invalid_authenticated_user_id:
     "The authenticated administrator id is invalid.",
   invalid_difficulty: "The training goal difficulty is invalid.",
   invalid_equipment: "The training goal equipment is invalid.",
   invalid_estimated_minutes: "The training goal estimated duration is invalid.",
+  invalid_expected_updated_at: "The expected draft revision is invalid.",
   invalid_exercise_creation_result:
     "Exercise creation returned an invalid result.",
+  invalid_exercise_update_result: "Exercise update returned an invalid result.",
   invalid_goal_creation_result:
     "Training goal creation returned an invalid result.",
+  invalid_goal_update_result:
+    "Training goal update returned an invalid result.",
   invalid_goal_id: "The exercise training goal id is invalid.",
   invalid_hero_media_url: "The training goal media URL is invalid.",
   invalid_instructions: "The exercise instructions are invalid.",
@@ -190,6 +233,8 @@ const GOAL_COLUMNS =
   "id, topic_id, slug, title, summary, difficulty, estimated_minutes, equipment, hero_media_url, sort_order, content_version, is_published, published_at, created_by, created_at, updated_at" as const;
 const EXERCISE_COLUMNS =
   "id, goal_id, slug, title, instructions, measurement, target_value, estimated_minutes, equipment, safety_notes, video_url, sort_order, content_version, is_published, published_at, created_by, created_at, updated_at" as const;
+const GOAL_SLUG_UNIQUE_CONSTRAINT = "goals_topic_slug_key";
+const EXERCISE_SLUG_UNIQUE_CONSTRAINT = "exercises_goal_slug_key";
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -506,6 +551,18 @@ function isTimestamp(value: unknown): value is string {
   );
 }
 
+function normalizeExpectedUpdatedAt(value: unknown): string {
+  if (
+    !isTimestamp(value) ||
+    value.length > 64 ||
+    SINGLE_LINE_CONTROL_CHARACTER_PATTERN.test(value)
+  ) {
+    throw new AdminContentStepError("invalid_expected_updated_at");
+  }
+
+  return value;
+}
+
 function isReturnedSingleLine(
   value: unknown,
   maximumLength: number,
@@ -709,9 +766,33 @@ function databaseErrorCode(error: unknown): string | null {
   return isRecord(error) && typeof error.code === "string" ? error.code : null;
 }
 
+function databaseConstraintName(error: unknown): string | null {
+  if (!isRecord(error)) {
+    return null;
+  }
+
+  if (typeof error.constraint === "string") {
+    return error.constraint;
+  }
+
+  if (typeof error.message !== "string") {
+    return null;
+  }
+
+  return (
+    /^duplicate key value violates unique constraint "([a-z0-9_]+)"$/u.exec(
+      error.message.trim(),
+    )?.[1] ?? null
+  );
+}
+
 function mapDatabaseFailure(
   error: unknown,
-  fallback: "exercise_creation_failed" | "goal_creation_failed",
+  fallback:
+    | "exercise_creation_failed"
+    | "exercise_update_failed"
+    | "goal_creation_failed"
+    | "goal_update_failed",
 ): AdminContentStepError {
   return new AdminContentStepError(
     databaseErrorCode(error) === "42501" ? "admin_access_denied" : fallback,
@@ -787,6 +868,58 @@ async function findExerciseByRequestId(
     .maybeSingle();
 }
 
+async function updateGoalDraft(
+  client: BareTraenClient,
+  input: NormalizedGoalDraft,
+  expectedUpdatedAt: string,
+) {
+  return client
+    .from("goals")
+    .update({
+      difficulty: input.difficulty,
+      equipment: input.equipment,
+      estimated_minutes: input.estimatedMinutes,
+      hero_media_url: input.heroMediaUrl,
+      slug: input.slug,
+      sort_order: input.sortOrder,
+      summary: input.summary,
+      title: input.title,
+    })
+    .eq("id", input.requestId)
+    .eq("topic_id", input.topicId)
+    .eq("is_published", false)
+    .eq("updated_at", expectedUpdatedAt)
+    .select(GOAL_COLUMNS)
+    .maybeSingle();
+}
+
+async function updateExerciseDraft(
+  client: BareTraenClient,
+  input: NormalizedExerciseDraft,
+  expectedUpdatedAt: string,
+) {
+  return client
+    .from("exercises")
+    .update({
+      equipment: input.equipment,
+      estimated_minutes: input.estimatedMinutes,
+      instructions: input.instructions,
+      measurement: input.measurement,
+      safety_notes: input.safetyNotes,
+      slug: input.slug,
+      sort_order: input.sortOrder,
+      target_value: input.targetValue,
+      title: input.title,
+      video_url: input.videoUrl,
+    })
+    .eq("id", input.requestId)
+    .eq("goal_id", input.goalId)
+    .eq("is_published", false)
+    .eq("updated_at", expectedUpdatedAt)
+    .select(EXERCISE_COLUMNS)
+    .maybeSingle();
+}
+
 function matchesGoalDraft(
   goal: AdminGoalDraft,
   input: NormalizedGoalDraft,
@@ -837,9 +970,115 @@ function matchesExerciseDraft(
   );
 }
 
+function matchesUpdatedGoalDraft(
+  goal: AdminGoalDraft,
+  input: NormalizedGoalDraft,
+): boolean {
+  return (
+    goal.id === input.requestId &&
+    goal.topicId === input.topicId &&
+    goal.slug === input.slug &&
+    goal.title === input.title &&
+    goal.summary === input.summary &&
+    goal.difficulty === input.difficulty &&
+    goal.estimatedMinutes === input.estimatedMinutes &&
+    goal.equipment.length === input.equipment.length &&
+    goal.equipment.every((item, index) => item === input.equipment[index]) &&
+    goal.heroMediaUrl === input.heroMediaUrl &&
+    goal.sortOrder === input.sortOrder &&
+    goal.status === "draft" &&
+    goal.publishedAt === null
+  );
+}
+
+function matchesUpdatedExerciseDraft(
+  exercise: AdminExerciseDraft,
+  input: NormalizedExerciseDraft,
+): boolean {
+  return (
+    exercise.id === input.requestId &&
+    exercise.goalId === input.goalId &&
+    exercise.slug === input.slug &&
+    exercise.title === input.title &&
+    exercise.instructions === input.instructions &&
+    exercise.equipment.length === input.equipment.length &&
+    exercise.equipment.every(
+      (item, index) => item === input.equipment[index],
+    ) &&
+    exercise.estimatedMinutes === input.estimatedMinutes &&
+    exercise.measurement === input.measurement &&
+    exercise.targetValue === input.targetValue &&
+    exercise.videoUrl === input.videoUrl &&
+    exercise.sortOrder === input.sortOrder &&
+    exercise.status === "draft" &&
+    exercise.publishedAt === null &&
+    exercise.safetyNotes === input.safetyNotes
+  );
+}
+
+async function recoverUpdatedGoalDraft(
+  client: BareTraenClient,
+  input: NormalizedGoalDraft,
+): Promise<UpdateAdminGoalDraftResult> {
+  let response: Awaited<ReturnType<typeof findGoalByRequestId>>;
+
+  try {
+    response = await findGoalByRequestId(client, input.requestId);
+  } catch {
+    throw new AdminContentStepError("goal_update_failed");
+  }
+
+  if (response.error) {
+    throw mapDatabaseFailure(response.error, "goal_update_failed");
+  }
+
+  const goal = parseGoalDraft(response.data);
+
+  if (!goal) {
+    throw new AdminContentStepError("goal_draft_not_editable");
+  }
+
+  if (matchesUpdatedGoalDraft(goal, input)) {
+    return { goal };
+  }
+
+  throw new AdminContentStepError("goal_draft_conflict");
+}
+
+async function recoverUpdatedExerciseDraft(
+  client: BareTraenClient,
+  input: NormalizedExerciseDraft,
+): Promise<UpdateAdminExerciseDraftResult> {
+  let response: Awaited<ReturnType<typeof findExerciseByRequestId>>;
+
+  try {
+    response = await findExerciseByRequestId(client, input.requestId);
+  } catch {
+    throw new AdminContentStepError("exercise_update_failed");
+  }
+
+  if (response.error) {
+    throw mapDatabaseFailure(response.error, "exercise_update_failed");
+  }
+
+  const exercise = parseExerciseDraft(response.data);
+
+  if (!exercise) {
+    throw new AdminContentStepError("exercise_draft_not_editable");
+  }
+
+  if (matchesUpdatedExerciseDraft(exercise, input)) {
+    return { exercise };
+  }
+
+  throw new AdminContentStepError("exercise_draft_conflict");
+}
+
 async function recoverGoalDraft(
   client: BareTraenClient,
   input: NormalizedGoalDraft,
+  missingDraftCode:
+    "goal_creation_conflict" | "goal_slug_conflict" = "goal_creation_conflict",
 ): Promise<CreateAdminGoalDraftResult> {
   let response: Awaited<ReturnType<typeof findGoalByRequestId>>;
 
@@ -855,7 +1094,11 @@ async function recoverGoalDraft(
 
   const goal = parseGoalDraft(response.data);
 
-  if (!goal || !matchesGoalDraft(goal, input)) {
+  if (!goal) {
+    throw new AdminContentStepError(missingDraftCode);
+  }
+
+  if (!matchesGoalDraft(goal, input)) {
     throw new AdminContentStepError("goal_creation_conflict");
   }
 
@@ -865,6 +1108,9 @@ async function recoverGoalDraft(
 async function recoverExerciseDraft(
   client: BareTraenClient,
   input: NormalizedExerciseDraft,
+  missingDraftCode:
+    | "exercise_creation_conflict"
+    | "exercise_slug_conflict" = "exercise_creation_conflict",
 ): Promise<CreateAdminExerciseDraftResult> {
   let response: Awaited<ReturnType<typeof findExerciseByRequestId>>;
 
@@ -880,7 +1126,11 @@ async function recoverExerciseDraft(
 
   const exercise = parseExerciseDraft(response.data);
 
-  if (!exercise || !matchesExerciseDraft(exercise, input)) {
+  if (!exercise) {
+    throw new AdminContentStepError(missingDraftCode);
+  }
+
+  if (!matchesExerciseDraft(exercise, input)) {
     throw new AdminContentStepError("exercise_creation_conflict");
   }
 
@@ -906,7 +1156,13 @@ export async function createAdminGoalDraft(
 
   if (response.error) {
     if (databaseErrorCode(response.error) === "23505") {
-      return recoverGoalDraft(client, normalized);
+      return recoverGoalDraft(
+        client,
+        normalized,
+        databaseConstraintName(response.error) === GOAL_SLUG_UNIQUE_CONSTRAINT
+          ? "goal_slug_conflict"
+          : "goal_creation_conflict",
+      );
     }
 
     throw mapDatabaseFailure(response.error, "goal_creation_failed");
@@ -940,7 +1196,14 @@ export async function createAdminExerciseDraft(
 
   if (response.error) {
     if (databaseErrorCode(response.error) === "23505") {
-      return recoverExerciseDraft(client, normalized);
+      return recoverExerciseDraft(
+        client,
+        normalized,
+        databaseConstraintName(response.error) ===
+          EXERCISE_SLUG_UNIQUE_CONSTRAINT
+          ? "exercise_slug_conflict"
+          : "exercise_creation_conflict",
+      );
     }
 
     throw mapDatabaseFailure(response.error, "exercise_creation_failed");
@@ -953,4 +1216,85 @@ export async function createAdminExerciseDraft(
   }
 
   return { created: true, exercise };
+}
+
+/** Updates one existing unpublished goal without changing its parent or author. */
+export async function updateAdminGoalDraft(
+  client: BareTraenClient,
+  input: UpdateAdminGoalDraftInput,
+): Promise<UpdateAdminGoalDraftResult> {
+  const normalized = normalizeGoalDraft(input);
+  const expectedUpdatedAt = normalizeExpectedUpdatedAt(input.expectedUpdatedAt);
+  let response: Awaited<ReturnType<typeof updateGoalDraft>>;
+
+  try {
+    response = await updateGoalDraft(client, normalized, expectedUpdatedAt);
+  } catch {
+    throw new AdminContentStepError("goal_update_failed");
+  }
+
+  if (response.error) {
+    if (
+      databaseErrorCode(response.error) === "23505" &&
+      databaseConstraintName(response.error) === GOAL_SLUG_UNIQUE_CONSTRAINT
+    ) {
+      throw new AdminContentStepError("goal_slug_conflict");
+    }
+
+    throw mapDatabaseFailure(response.error, "goal_update_failed");
+  }
+
+  if (response.data === null) {
+    return recoverUpdatedGoalDraft(client, normalized);
+  }
+
+  const goal = parseGoalDraft(response.data);
+
+  if (!goal || !matchesUpdatedGoalDraft(goal, normalized)) {
+    throw new AdminContentStepError("invalid_goal_update_result");
+  }
+
+  return { goal };
+}
+
+/**
+ * Updates one existing unpublished exercise without changing its parent or
+ * author.
+ */
+export async function updateAdminExerciseDraft(
+  client: BareTraenClient,
+  input: UpdateAdminExerciseDraftInput,
+): Promise<UpdateAdminExerciseDraftResult> {
+  const normalized = normalizeExerciseDraft(input);
+  const expectedUpdatedAt = normalizeExpectedUpdatedAt(input.expectedUpdatedAt);
+  let response: Awaited<ReturnType<typeof updateExerciseDraft>>;
+
+  try {
+    response = await updateExerciseDraft(client, normalized, expectedUpdatedAt);
+  } catch {
+    throw new AdminContentStepError("exercise_update_failed");
+  }
+
+  if (response.error) {
+    if (
+      databaseErrorCode(response.error) === "23505" &&
+      databaseConstraintName(response.error) === EXERCISE_SLUG_UNIQUE_CONSTRAINT
+    ) {
+      throw new AdminContentStepError("exercise_slug_conflict");
+    }
+
+    throw mapDatabaseFailure(response.error, "exercise_update_failed");
+  }
+
+  if (response.data === null) {
+    return recoverUpdatedExerciseDraft(client, normalized);
+  }
+
+  const exercise = parseExerciseDraft(response.data);
+
+  if (!exercise || !matchesUpdatedExerciseDraft(exercise, normalized)) {
+    throw new AdminContentStepError("invalid_exercise_update_result");
+  }
+
+  return { exercise };
 }

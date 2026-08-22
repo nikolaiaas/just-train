@@ -1,4 +1,5 @@
-export type AssistantMode = "topic" | "goal" | "exercise" | "wardrobe";
+export type AssistantMode =
+  "topic" | "goal" | "exercise" | "wardrobe" | "review";
 
 export type AssistantHistoryMessage = {
   role: "user" | "assistant";
@@ -34,6 +35,7 @@ export type AssistantEditorialContext = {
   topic: AssistantTopicContext;
   goal: AssistantGoalContext;
   exercise: AssistantExerciseContext;
+  wardrobeExamples: AssistantWardrobeItem[];
 };
 
 type TopicEditorialInput = {
@@ -64,15 +66,29 @@ type ExerciseEditorialInput = {
   history: AssistantHistoryMessage[];
 };
 
+type ReviewEditorialInput = {
+  message: string;
+  topic: AssistantTopicContext;
+  goal: AssistantGoalContext;
+  exercise: AssistantExerciseContext;
+  wardrobeExamples: AssistantWardrobeItem[];
+  history: AssistantHistoryMessage[];
+};
+
 export type AssistantRequest = {
   mode: AssistantMode;
   operationKey:
     | "content.topic_brief"
     | "content.goal_draft"
     | "content.exercise_draft"
-    | "content.wardrobe_examples";
+    | "content.wardrobe_examples"
+    | "content.draft_review";
   requestId: string;
-  inputData: TopicEditorialInput | GoalEditorialInput | ExerciseEditorialInput;
+  inputData:
+    | TopicEditorialInput
+    | GoalEditorialInput
+    | ExerciseEditorialInput
+    | ReviewEditorialInput;
 };
 
 export type TopicAssistantSuggestion = {
@@ -124,10 +140,27 @@ export type AssistantWardrobeItem = {
   reason: string;
 };
 
+export type AssistantDraftReviewCheck = {
+  status: "ok" | "attention" | "optional";
+  note: string;
+};
+
+export type AssistantDraftReview = {
+  verdict: "ready_for_human_review" | "needs_attention";
+  checklist: {
+    topic: AssistantDraftReviewCheck;
+    goal: AssistantDraftReviewCheck;
+    exercise: AssistantDraftReviewCheck;
+    wardrobe: AssistantDraftReviewCheck;
+  };
+  nextActions: string[];
+};
+
 export type ParsedAssistantOutput = {
   reply: string;
   suggestion: AssistantSuggestion | null;
   items: AssistantWardrobeItem[];
+  review?: AssistantDraftReview;
 };
 
 export type AssistantRequestValidation =
@@ -265,14 +298,23 @@ function isNullableInteger(
   );
 }
 
-function parseEquipment(value: unknown, maximumItems = 12): string[] | null {
+function parseUniqueStrings(
+  value: unknown,
+  maximumItems: number,
+  maximumLength: number,
+  allowMultiline = false,
+): string[] | null {
   if (!Array.isArray(value) || value.length > maximumItems) return null;
 
   const result: string[] = [];
   const seen = new Set<string>();
 
   for (const item of value) {
-    if (!isNormalizedString(item, 80) || item.length === 0) return null;
+    if (
+      !isNormalizedString(item, maximumLength, allowMultiline) ||
+      item.length === 0
+    )
+      return null;
     const key = item.toLocaleLowerCase("da-DK");
     if (seen.has(key)) return null;
     seen.add(key);
@@ -280,6 +322,10 @@ function parseEquipment(value: unknown, maximumItems = 12): string[] | null {
   }
 
   return result;
+}
+
+function parseEquipment(value: unknown, maximumItems = 12): string[] | null {
+  return parseUniqueStrings(value, maximumItems, 80);
 }
 
 function parseTopicContext(value: unknown): AssistantTopicContext | null {
@@ -382,6 +428,70 @@ function parseExerciseContext(value: unknown): AssistantExerciseContext | null {
   };
 }
 
+function parseWardrobeExamples(
+  value: unknown,
+  minimumItems: number,
+): AssistantWardrobeItem[] | null {
+  if (
+    !Array.isArray(value) ||
+    value.length < minimumItems ||
+    value.length > 6
+  ) {
+    return null;
+  }
+
+  const items: AssistantWardrobeItem[] = [];
+
+  for (const item of value) {
+    if (
+      !isRecord(item) ||
+      !hasExactKeys(item, [
+        "name",
+        "icon",
+        "category",
+        "rarity",
+        "points",
+        "unlockRule",
+        "reason",
+      ]) ||
+      !isNormalizedString(item.name, 80) ||
+      item.name.length === 0 ||
+      !isNormalizedString(item.icon, 16) ||
+      item.icon.length === 0 ||
+      (item.category !== "clothing" &&
+        item.category !== "equipment" &&
+        item.category !== "effect") ||
+      (item.rarity !== "common" &&
+        item.rarity !== "rare" &&
+        item.rarity !== "special") ||
+      !Number.isInteger(item.points) ||
+      (item.points as number) < 0 ||
+      (item.points as number) > 1_000 ||
+      !isNormalizedString(item.unlockRule, 200, true) ||
+      !isNormalizedString(item.reason, 300, true) ||
+      item.reason.length === 0 ||
+      !(
+        ((item.points as number) >= 1 && item.unlockRule.length === 0) ||
+        ((item.points as number) === 0 && item.unlockRule.length >= 1)
+      )
+    ) {
+      return null;
+    }
+
+    items.push({
+      name: item.name,
+      icon: item.icon,
+      category: item.category,
+      rarity: item.rarity,
+      points: item.points as number,
+      unlockRule: item.unlockRule,
+      reason: item.reason,
+    });
+  }
+
+  return items;
+}
+
 function parseEditorialContext(
   value: string,
 ): AssistantEditorialContext | null {
@@ -389,7 +499,8 @@ function parseEditorialContext(
 
   if (
     !isRecord(parsed) ||
-    !hasExactKeys(parsed, ["topic", "goal", "exercise"])
+    (!hasExactKeys(parsed, ["topic", "goal", "exercise"]) &&
+      !hasExactKeys(parsed, ["topic", "goal", "exercise", "wardrobeExamples"]))
   ) {
     return null;
   }
@@ -397,8 +508,14 @@ function parseEditorialContext(
   const topic = parseTopicContext(parsed.topic);
   const goal = parseGoalContext(parsed.goal);
   const exercise = parseExerciseContext(parsed.exercise);
+  const wardrobeExamples = parseWardrobeExamples(
+    parsed.wardrobeExamples ?? [],
+    0,
+  );
 
-  return topic && goal && exercise ? { topic, goal, exercise } : null;
+  return topic && goal && exercise && wardrobeExamples
+    ? { topic, goal, exercise, wardrobeExamples }
+    : null;
 }
 
 function operationForMode(
@@ -407,7 +524,8 @@ function operationForMode(
   if (mode === "topic") return "content.topic_brief";
   if (mode === "goal") return "content.goal_draft";
   if (mode === "exercise") return "content.exercise_draft";
-  return "content.wardrobe_examples";
+  if (mode === "wardrobe") return "content.wardrobe_examples";
+  return "content.draft_review";
 }
 
 export function validateAssistantRequest(
@@ -432,7 +550,8 @@ export function validateAssistantRequest(
     (mode !== "topic" &&
       mode !== "goal" &&
       mode !== "exercise" &&
-      mode !== "wardrobe") ||
+      mode !== "wardrobe" &&
+      mode !== "review") ||
     !UUID_PATTERN.test(requestId) ||
     message.length === 0 ||
     codePointLength(message) > 1_000 ||
@@ -470,6 +589,39 @@ export function validateAssistantRequest(
       position: 1,
       sequence: [],
       draft: context.exercise,
+    };
+  } else if (mode === "review") {
+    const targetIsComplete =
+      context.exercise.measurement === "completion" ||
+      context.exercise.targetValue !== null;
+
+    if (
+      context.topic.title.length === 0 ||
+      context.topic.description.length === 0 ||
+      context.topic.icon.length === 0 ||
+      context.topic.accentColor.length === 0 ||
+      context.goal.title.length === 0 ||
+      context.goal.summary.length === 0 ||
+      context.goal.estimatedMinutes === null ||
+      context.exercise.title.length === 0 ||
+      context.exercise.instructions.length === 0 ||
+      context.exercise.recommendedMinutes === null ||
+      context.exercise.safetyNote.length === 0 ||
+      !targetIsComplete
+    ) {
+      return {
+        ok: false,
+        message:
+          "Gennemgangen kræver et gemt emne, mål og deløvelse med alle obligatoriske felter.",
+      };
+    }
+
+    inputData = {
+      ...common,
+      topic: context.topic,
+      goal: context.goal,
+      exercise: context.exercise,
+      wardrobeExamples: context.wardrobeExamples,
     };
   } else {
     inputData = { ...common, draft: context.topic };
@@ -681,61 +833,67 @@ function parseWardrobeOutput(
 ): ParsedAssistantOutput | null {
   if (
     !hasExactKeys(value, ["reply", "items"]) ||
-    !isBoundedString(value.reply, 1, 1_500) ||
-    !Array.isArray(value.items) ||
-    value.items.length < 3 ||
-    value.items.length > 6
+    !isBoundedString(value.reply, 1, 1_500)
   ) {
     return null;
   }
 
-  const items: AssistantWardrobeItem[] = [];
-
-  for (const item of value.items) {
-    if (
-      !isRecord(item) ||
-      !hasExactKeys(item, [
-        "name",
-        "icon",
-        "category",
-        "rarity",
-        "points",
-        "unlockRule",
-        "reason",
-      ]) ||
-      !isBoundedString(item.name, 1, 80) ||
-      !isBoundedString(item.icon, 1, 16) ||
-      (item.category !== "clothing" &&
-        item.category !== "equipment" &&
-        item.category !== "effect") ||
-      (item.rarity !== "common" &&
-        item.rarity !== "rare" &&
-        item.rarity !== "special") ||
-      !Number.isInteger(item.points) ||
-      (item.points as number) < 0 ||
-      (item.points as number) > 1_000 ||
-      !isBoundedString(item.unlockRule, 0, 200) ||
-      !isBoundedString(item.reason, 1, 300) ||
-      !(
-        ((item.points as number) >= 1 && item.unlockRule.length === 0) ||
-        ((item.points as number) === 0 && item.unlockRule.length >= 1)
-      )
-    ) {
-      return null;
-    }
-
-    items.push({
-      name: item.name,
-      icon: item.icon,
-      category: item.category,
-      rarity: item.rarity,
-      points: item.points as number,
-      unlockRule: item.unlockRule,
-      reason: item.reason,
-    });
-  }
+  const items = parseWardrobeExamples(value.items, 3);
+  if (!items) return null;
 
   return { reply: value.reply, suggestion: null, items };
+}
+
+function parseReviewCheck(
+  value: unknown,
+  allowOptional: boolean,
+): AssistantDraftReviewCheck | null {
+  if (
+    !isRecord(value) ||
+    !hasExactKeys(value, ["status", "note"]) ||
+    (value.status !== "ok" &&
+      value.status !== "attention" &&
+      (!allowOptional || value.status !== "optional")) ||
+    !isBoundedString(value.note, 1, 500)
+  ) {
+    return null;
+  }
+
+  return { status: value.status, note: value.note };
+}
+
+function parseReviewOutput(value: UnknownRecord): ParsedAssistantOutput | null {
+  if (
+    !hasExactKeys(value, ["reply", "verdict", "checklist", "nextActions"]) ||
+    !isBoundedString(value.reply, 1, 1_500) ||
+    (value.verdict !== "ready_for_human_review" &&
+      value.verdict !== "needs_attention") ||
+    !isRecord(value.checklist) ||
+    !hasExactKeys(value.checklist, ["topic", "goal", "exercise", "wardrobe"]) ||
+    !Array.isArray(value.nextActions) ||
+    value.nextActions.length > 6
+  ) {
+    return null;
+  }
+
+  const topic = parseReviewCheck(value.checklist.topic, false);
+  const goal = parseReviewCheck(value.checklist.goal, false);
+  const exercise = parseReviewCheck(value.checklist.exercise, false);
+  const wardrobe = parseReviewCheck(value.checklist.wardrobe, true);
+  const nextActions = parseUniqueStrings(value.nextActions, 6, 300, true);
+
+  if (!topic || !goal || !exercise || !wardrobe || !nextActions) return null;
+
+  return {
+    reply: value.reply,
+    suggestion: null,
+    items: [],
+    review: {
+      verdict: value.verdict,
+      checklist: { topic, goal, exercise, wardrobe },
+      nextActions,
+    },
+  };
 }
 
 export function parseAssistantOutput(
@@ -747,5 +905,6 @@ export function parseAssistantOutput(
   if (mode === "topic") return parseTopicOutput(value);
   if (mode === "goal") return parseGoalOutput(value);
   if (mode === "exercise") return parseExerciseOutput(value);
-  return parseWardrobeOutput(value);
+  if (mode === "wardrobe") return parseWardrobeOutput(value);
+  return parseReviewOutput(value);
 }

@@ -13,15 +13,19 @@ const topic = {
   icon: "🌟",
   id: "10000000-0000-4000-8000-000000000001",
   title: "Balance",
+  updatedAt: "2026-08-22T07:00:00.000Z",
 };
 
 const goal = {
   difficulty: "beginner",
   equipment: [],
   estimatedMinutes: 10,
+  heroMediaUrl: "https://media.example.test/goal.mp4",
   id: "20000000-0000-4000-8000-000000000001",
+  sortOrder: 3,
   summary: "Find balancen",
   title: "Stå sikkert",
+  updatedAt: "2026-08-22T07:01:00.000Z",
 };
 
 const exercise = {
@@ -33,6 +37,9 @@ const exercise = {
   safetyNotes: "Brug en voksen ved behov.",
   targetValue: 10,
   title: "Flamingoen",
+  updatedAt: "2026-08-22T07:02:00.000Z",
+  videoUrl: "https://media.example.test/exercise.mp4",
+  sortOrder: 4,
 };
 
 test("resume topic query accepts one non-nil UUID", () => {
@@ -93,6 +100,7 @@ test("resume loads unpublished drafts and avoids occupied content positions", as
         icon: topic.icon,
         id: topic.id,
         title: topic.title,
+        updated_at: topic.updatedAt,
       },
       error: null,
     },
@@ -101,9 +109,12 @@ test("resume loads unpublished drafts and avoids occupied content positions", as
         difficulty: goal.difficulty,
         equipment: goal.equipment,
         estimated_minutes: goal.estimatedMinutes,
+        hero_media_url: goal.heroMediaUrl,
         id: goal.id,
+        sort_order: goal.sortOrder,
         summary: goal.summary,
         title: goal.title,
+        updated_at: goal.updatedAt,
       },
       error: null,
     },
@@ -121,6 +132,9 @@ test("resume loads unpublished drafts and avoids occupied content positions", as
         safety_notes: exercise.safetyNotes,
         target_value: exercise.targetValue,
         title: exercise.title,
+        updated_at: exercise.updatedAt,
+        video_url: exercise.videoUrl,
+        sort_order: exercise.sortOrder,
       },
       error: null,
     },

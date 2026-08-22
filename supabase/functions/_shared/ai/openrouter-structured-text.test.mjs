@@ -136,6 +136,7 @@ test("accepts only bounded server-owned text options", () => {
       },
     },
     { ...OPTIONS, provider: { ...OPTIONS.provider, only: ["anthropic"] } },
+    { ...OPTIONS, reasoning: { effort: "high" } },
     {
       ...OPTIONS,
       provider: { ...OPTIONS.provider, require_parameters: false },
@@ -172,6 +173,10 @@ test("builds strict JSON-schema chat messages without tools or browsing", () => 
     },
   ]);
   assert.deepEqual(request.plugins, [{ enabled: false, id: "web" }]);
+  assert.deepEqual(request.reasoning, {
+    effort: "minimal",
+    exclude: true,
+  });
   assert.deepEqual(request.response_format, {
     json_schema: {
       name: "editorial_activity",
@@ -529,6 +534,36 @@ test("maps a structured-output refusal without exposing its text", () => {
         retryable: false,
       });
       assert.doesNotMatch(error.message, /raw moderation explanation/);
+      return true;
+    },
+  );
+});
+
+test("maps a length-limited response as truncated without parsing partial JSON", () => {
+  const partialOutput = '{"reply":"Et forslag","suggestion":';
+
+  assert.throws(
+    () =>
+      parseOpenRouterStructuredTextResponse({
+        body: {
+          choices: [
+            {
+              finish_reason: "length",
+              message: { content: partialOutput },
+            },
+          ],
+        },
+        outputSchema: OUTPUT_SCHEMA,
+        providerRequestId: "request-truncated",
+      }),
+    (error) => {
+      assertTextError(error, {
+        attemptCode: "openrouter_output_truncated",
+        providerRequestId: "request-truncated",
+        publicCode: "provider_failed",
+        retryable: false,
+      });
+      assert.doesNotMatch(error.message, /Et forslag/);
       return true;
     },
   );

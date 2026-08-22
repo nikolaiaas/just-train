@@ -5,6 +5,8 @@ import {
   AdminContentStepError,
   createAdminExerciseDraft,
   createAdminGoalDraft,
+  updateAdminExerciseDraft,
+  updateAdminGoalDraft,
 } from "../src/content-steps.ts";
 
 const adminId = "10000000-0000-4000-8000-000000000003";
@@ -82,6 +84,16 @@ const validExerciseInput = Object.freeze({
   videoUrl: "https://media.example.test/exercise.mp4",
 });
 
+const validGoalUpdateInput = Object.freeze({
+  ...validGoalInput,
+  expectedUpdatedAt: goalRow.updated_at,
+});
+
+const validExerciseUpdateInput = Object.freeze({
+  ...validExerciseInput,
+  expectedUpdatedAt: exerciseRow.updated_at,
+});
+
 function queryFor(response, calls) {
   const query = {
     eq(column, value) {
@@ -95,6 +107,10 @@ function queryFor(response, calls) {
     maybeSingle: async () => response,
     select(columns) {
       calls.push({ operation: "select", columns });
+      return query;
+    },
+    update(value) {
+      calls.push({ operation: "update", value });
       return query;
     },
   };
@@ -358,12 +374,30 @@ test("allows completion exercises only with a null target", async () => {
 });
 
 test("recovers exact duplicate request ids without overwriting content", async () => {
-  for (const [create, input, row, resultKey] of [
-    [createAdminGoalDraft, validGoalInput, goalRow, "goal"],
-    [createAdminExerciseDraft, validExerciseInput, exerciseRow, "exercise"],
+  for (const [create, input, row, resultKey, constraint] of [
+    [
+      createAdminGoalDraft,
+      validGoalInput,
+      goalRow,
+      "goal",
+      "goals_topic_slug_key",
+    ],
+    [
+      createAdminExerciseDraft,
+      validExerciseInput,
+      exerciseRow,
+      "exercise",
+      "exercises_goal_slug_key",
+    ],
   ]) {
     const { calls, ...client } = clientForResponses([
-      { data: null, error: { code: "23505", message: "private details" } },
+      {
+        data: null,
+        error: {
+          code: "23505",
+          message: `duplicate key value violates unique constraint "${constraint}"`,
+        },
+      },
       { data: row, error: null },
     ]);
 
@@ -414,6 +448,234 @@ test("rejects request-id reuse and unrelated unique collisions as conflicts", as
       assertStepError(error, code),
     );
   }
+});
+
+test("classifies the scoped goal and exercise slug constraints", async () => {
+  for (const [create, input, constraint, code] of [
+    [
+      createAdminGoalDraft,
+      validGoalInput,
+      "goals_topic_slug_key",
+      "goal_slug_conflict",
+    ],
+    [
+      createAdminExerciseDraft,
+      validExerciseInput,
+      "exercises_goal_slug_key",
+      "exercise_slug_conflict",
+    ],
+  ]) {
+    const { calls: _calls, ...client } = clientForResponses([
+      {
+        data: null,
+        error: {
+          code: "23505",
+          message: `duplicate key value violates unique constraint "${constraint}"`,
+        },
+      },
+      { data: null, error: null },
+    ]);
+
+    await assert.rejects(create(client, input), (error) => {
+      assertStepError(error, code);
+      assert.doesNotMatch(error.message, new RegExp(constraint, "i"));
+      return true;
+    });
+  }
+});
+
+test("updates goal fields without changing its parent, author, or publication state", async () => {
+  const updatedRow = {
+    ...goalRow,
+    difficulty: "intermediate",
+    equipment: ["Bold"],
+    estimated_minutes: 20,
+    hero_media_url: null,
+    slug: "rolig-boldkontrol",
+    sort_order: 30,
+    summary: "En rolig opdatering.",
+    title: "Rolig boldkontrol",
+  };
+  const { calls, ...client } = clientForResponses([
+    { data: updatedRow, error: null },
+  ]);
+
+  const result = await updateAdminGoalDraft(client, {
+    ...validGoalUpdateInput,
+    difficulty: "intermediate",
+    equipment: ["Bold"],
+    estimatedMinutes: 20,
+    heroMediaUrl: null,
+    slug: updatedRow.slug,
+    sortOrder: 30,
+    summary: updatedRow.summary,
+    title: updatedRow.title,
+  });
+
+  assert.equal(result.goal.title, updatedRow.title);
+  const updateCall = calls.find((call) => call.operation === "update");
+  assert.ok(updateCall);
+  assert.equal("topic_id" in updateCall.value, false);
+  assert.equal("created_by" in updateCall.value, false);
+  assert.equal("is_published" in updateCall.value, false);
+  assert.deepEqual(
+    calls.filter((call) => call.operation === "eq"),
+    [
+      { operation: "eq", column: "id", value: goalId },
+      { operation: "eq", column: "topic_id", value: topicId },
+      { operation: "eq", column: "is_published", value: false },
+      {
+        operation: "eq",
+        column: "updated_at",
+        value: goalRow.updated_at,
+      },
+    ],
+  );
+});
+
+test("updates exercise fields without changing its parent, author, or publication state", async () => {
+  const updatedRow = {
+    ...exerciseRow,
+    equipment: ["Bold"],
+    estimated_minutes: 12,
+    instructions: "Før bolden roligt mellem keglerne.",
+    measurement: "duration",
+    safety_notes: "Hold god afstand.",
+    slug: "rolig-slalom",
+    sort_order: 40,
+    target_value: 30,
+    title: "Rolig slalom",
+    video_url: null,
+  };
+  const { calls, ...client } = clientForResponses([
+    { data: updatedRow, error: null },
+  ]);
+
+  const result = await updateAdminExerciseDraft(client, {
+    ...validExerciseUpdateInput,
+    equipment: ["Bold"],
+    estimatedMinutes: 12,
+    instructions: updatedRow.instructions,
+    measurement: "duration",
+    safetyNotes: updatedRow.safety_notes,
+    slug: updatedRow.slug,
+    sortOrder: 40,
+    targetValue: 30,
+    title: updatedRow.title,
+    videoUrl: null,
+  });
+
+  assert.equal(result.exercise.title, updatedRow.title);
+  const updateCall = calls.find((call) => call.operation === "update");
+  assert.ok(updateCall);
+  assert.equal("goal_id" in updateCall.value, false);
+  assert.equal("created_by" in updateCall.value, false);
+  assert.equal("is_published" in updateCall.value, false);
+  assert.deepEqual(
+    calls.filter((call) => call.operation === "eq"),
+    [
+      { operation: "eq", column: "id", value: exerciseId },
+      { operation: "eq", column: "goal_id", value: goalId },
+      { operation: "eq", column: "is_published", value: false },
+      {
+        operation: "eq",
+        column: "updated_at",
+        value: exerciseRow.updated_at,
+      },
+    ],
+  );
+});
+
+test("rejects updates that collide or no longer target editable drafts", async () => {
+  for (const [update, input, response, code] of [
+    [
+      updateAdminGoalDraft,
+      validGoalUpdateInput,
+      {
+        data: null,
+        error: {
+          code: "23505",
+          constraint: "goals_topic_slug_key",
+          message: "private details",
+        },
+      },
+      "goal_slug_conflict",
+    ],
+    [
+      updateAdminExerciseDraft,
+      validExerciseUpdateInput,
+      { data: null, error: null },
+      "exercise_draft_not_editable",
+    ],
+  ]) {
+    const { calls: _calls, ...client } = clientForResponses([response]);
+
+    await assert.rejects(update(client, input), (error) => {
+      assertStepError(error, code);
+      assert.doesNotMatch(error.message, /private|goals_topic_slug_key/i);
+      return true;
+    });
+  }
+});
+
+test("recovers exact update retries and rejects genuinely stale drafts", async () => {
+  for (const [update, input, persistedRow, expectedCode] of [
+    [updateAdminGoalDraft, validGoalUpdateInput, goalRow, null],
+    [
+      updateAdminGoalDraft,
+      validGoalUpdateInput,
+      { ...goalRow, title: "Ændret i en anden fane" },
+      "goal_draft_conflict",
+    ],
+    [updateAdminExerciseDraft, validExerciseUpdateInput, exerciseRow, null],
+    [
+      updateAdminExerciseDraft,
+      validExerciseUpdateInput,
+      { ...exerciseRow, title: "Ændret i en anden fane" },
+      "exercise_draft_conflict",
+    ],
+  ]) {
+    const { calls: _calls, ...client } = clientForResponses([
+      { data: null, error: null },
+      { data: persistedRow, error: null },
+    ]);
+
+    if (expectedCode) {
+      await assert.rejects(update(client, input), (error) =>
+        assertStepError(error, expectedCode),
+      );
+    } else {
+      const result = await update(client, input);
+      assert.equal(
+        result.goal?.updatedAt ?? result.exercise?.updatedAt,
+        persistedRow.updated_at,
+      );
+    }
+  }
+});
+
+test("rejects updates without a valid expected revision before querying", async () => {
+  let calls = 0;
+  const client = {
+    from() {
+      calls += 1;
+      throw new Error("must not query");
+    },
+  };
+
+  for (const [update, input] of [
+    [updateAdminGoalDraft, validGoalInput],
+    [updateAdminExerciseDraft, validExerciseInput],
+  ]) {
+    for (const expectedUpdatedAt of [undefined, "", "not-a-timestamp"]) {
+      await assert.rejects(
+        update(client, { ...input, expectedUpdatedAt }),
+        (error) => assertStepError(error, "invalid_expected_updated_at"),
+      );
+    }
+  }
+
+  assert.equal(calls, 0);
 });
 
 test("validates returned rows instead of trusting Supabase output", async () => {

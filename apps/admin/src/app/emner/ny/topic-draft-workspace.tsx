@@ -8,10 +8,11 @@ import {
   createAdminExerciseDraft,
   createAdminGoalDraft,
   createAdminTopicDraft,
-  initialAssistantState,
-  initialCreateExerciseState,
-  initialCreateGoalState,
-  initialCreateTopicState,
+  updateAdminExerciseDraft,
+  updateAdminGoalDraft,
+  updateAdminTopicDraft,
+  type AssistantDraftReview,
+  type AssistantState,
   type AssistantMode,
   type AssistantSuggestion,
   type AssistantWardrobeItem,
@@ -24,6 +25,17 @@ import {
   getResumeStartingStep,
   type ResumableTopicDraft,
 } from "./resume-topic-draft";
+import {
+  assistantResponseBelongsToContext,
+  exerciseSnapshotHasChanges,
+  getAssistantContextGreeting,
+  goalSnapshotHasChanges,
+  syncExerciseMeasurementResetDefault,
+  topicSnapshotHasChanges,
+  type ExerciseEditorSnapshot,
+  type GoalEditorSnapshot,
+  type TopicEditorSnapshot,
+} from "./workspace-ux";
 
 type ChatMessage = {
   id: string;
@@ -42,6 +54,11 @@ type TopicDraftWorkspaceProps = {
   topicRequestId: string;
 };
 
+const initialCreateTopicState: CreateTopicState = { status: "idle" };
+const initialCreateGoalState: CreateGoalState = { status: "idle" };
+const initialCreateExerciseState: CreateExerciseState = { status: "idle" };
+const initialAssistantState: AssistantState = { status: "idle" };
+
 const steps: Array<{ key: EditorStep; label: string; number: string }> = [
   { key: "topic", label: "Grundlag", number: "1" },
   { key: "goal", label: "Mål", number: "2" },
@@ -55,6 +72,7 @@ const assistantLabels: Record<AssistantMode, string> = {
   goal: "Mål",
   exercise: "Deløvelse",
   wardrobe: "Garderobe",
+  review: "Gennemgang",
 };
 
 const assistantPlaceholders: Record<AssistantMode, string> = {
@@ -62,6 +80,7 @@ const assistantPlaceholders: Record<AssistantMode, string> = {
   goal: "Fx: Hjælp mig med et enkelt første mål",
   exercise: "Fx: Lav en tryg deløvelse, barnet kan forstå",
   wardrobe: "Fx: Foreslå fem sjove ting til garderoben",
+  review: "Fx: Gennemgå kladden for klarhed og sikkerhed",
 };
 
 const difficultyLabels = {
@@ -191,6 +210,7 @@ function WardrobeSuggestions({ items }: { items: AssistantWardrobeItem[] }) {
                 ? `${item.points} point`
                 : item.unlockRule || "Oplåsningsregel foreslås senere"}
             </p>
+            <p>{item.reason}</p>
             <span className={styles.exampleBadge}>Ikke gemt</span>
           </article>
         ))}
@@ -260,22 +280,25 @@ export function TopicDraftWorkspace({
   const resumedTopicState: CreateTopicState = initialDraft
     ? {
         status: "success",
-        message: "Emnekladden er hentet. Gemte felter er låst.",
+        message: "Emnekladden er hentet. Vælg Rediger for at ændre den.",
         topicId: initialDraft.topic.id,
+        updatedAt: initialDraft.topic.updatedAt,
       }
     : initialCreateTopicState;
   const resumedGoalState: CreateGoalState = initialDraft?.goal
     ? {
         status: "success",
-        message: "Målkladden er hentet. Gemte felter er låst.",
+        message: "Målkladden er hentet. Vælg Rediger for at ændre den.",
         goalId: initialDraft.goal.id,
+        updatedAt: initialDraft.goal.updatedAt,
       }
     : initialCreateGoalState;
   const resumedExerciseState: CreateExerciseState = initialDraft?.exercise
     ? {
         status: "success",
-        message: "Deløvelsen er hentet. Gemte felter er låst.",
+        message: "Deløvelsen er hentet. Vælg Rediger for at ændre den.",
         exerciseId: initialDraft.exercise.id,
+        updatedAt: initialDraft.exercise.updatedAt,
       }
     : initialCreateExerciseState;
 
@@ -291,6 +314,14 @@ export function TopicDraftWorkspace({
     createAdminExerciseDraft,
     resumedExerciseState,
   );
+  const [topicUpdateState, topicUpdateAction, topicUpdatePending] =
+    useActionState(updateAdminTopicDraft, initialCreateTopicState);
+  const [goalUpdateState, goalUpdateAction, goalUpdatePending] = useActionState(
+    updateAdminGoalDraft,
+    initialCreateGoalState,
+  );
+  const [exerciseUpdateState, exerciseUpdateAction, exerciseUpdatePending] =
+    useActionState(updateAdminExerciseDraft, initialCreateExerciseState);
   const [assistantState, assistantAction, assistantPending] = useActionState(
     askAdminContentAssistant,
     initialAssistantState,
@@ -342,18 +373,66 @@ export function TopicDraftWorkspace({
   const [exerciseSafety, setExerciseSafety] = useState(
     initialDraft?.exercise?.safetyNotes ?? "",
   );
+  const [topicUpdatedAt, setTopicUpdatedAt] = useState<string | null>(
+    initialDraft?.topic.updatedAt ?? null,
+  );
+  const [goalUpdatedAt, setGoalUpdatedAt] = useState<string | null>(
+    initialDraft?.goal?.updatedAt ?? null,
+  );
+  const [exerciseUpdatedAt, setExerciseUpdatedAt] = useState<string | null>(
+    initialDraft?.exercise?.updatedAt ?? null,
+  );
+  const [savedTopicSnapshot, setSavedTopicSnapshot] =
+    useState<TopicEditorSnapshot | null>(() =>
+      initialDraft
+        ? {
+            accentColor: initialDraft.topic.accentColor ?? "#53C987",
+            description: initialDraft.topic.description,
+            icon: initialDraft.topic.icon ?? "✨",
+            title: initialDraft.topic.title,
+          }
+        : null,
+    );
+  const [savedGoalSnapshot, setSavedGoalSnapshot] =
+    useState<GoalEditorSnapshot | null>(() =>
+      initialDraft?.goal
+        ? {
+            difficulty: initialDraft.goal.difficulty,
+            equipment: initialDraft.goal.equipment.join("\n"),
+            minutes: initialDraft.goal.estimatedMinutes?.toString() ?? "",
+            summary: initialDraft.goal.summary,
+            title: initialDraft.goal.title,
+          }
+        : null,
+    );
+  const [savedExerciseSnapshot, setSavedExerciseSnapshot] =
+    useState<ExerciseEditorSnapshot | null>(() =>
+      initialDraft?.exercise
+        ? {
+            equipment: initialDraft.exercise.equipment.join("\n"),
+            instructions: initialDraft.exercise.instructions,
+            measurement: initialDraft.exercise.measurement,
+            minutes: initialDraft.exercise.estimatedMinutes?.toString() ?? "",
+            safety: initialDraft.exercise.safetyNotes,
+            target: initialDraft.exercise.targetValue?.toString() ?? "",
+            title: initialDraft.exercise.title,
+          }
+        : null,
+    );
 
   const [assistantMode, setAssistantMode] =
     useState<AssistantMode>(startingStep);
   const [assistantMessage, setAssistantMessage] = useState("");
+  const [assistantErrorMessage, setAssistantErrorMessage] = useState<
+    string | null
+  >(null);
   const [nextAssistantRequestId, setNextAssistantRequestId] =
     useState(assistantRequestId);
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
-      id: "welcome",
+      id: `welcome-${startingStep}`,
       role: "assistant",
-      content:
-        "Jeg kan hjælpe med emnet, det første mål, en deløvelse og syntetiske garderobeeksempler. Du vælger altid selv, om et forslag skal bruges.",
+      content: getAssistantContextGreeting(startingStep),
     },
   ]);
   const [suggestion, setSuggestion] = useState<AssistantSuggestion | null>(
@@ -361,6 +440,20 @@ export function TopicDraftWorkspace({
   );
   const [wardrobeItems, setWardrobeItems] = useState<AssistantWardrobeItem[]>(
     [],
+  );
+  const [reviewResult, setReviewResult] = useState<AssistantDraftReview | null>(
+    null,
+  );
+  const [assistantSubmission, setAssistantSubmission] = useState<{
+    mode: AssistantMode;
+    requestId: string;
+  } | null>(null);
+  const [topicEditing, setTopicEditing] = useState(false);
+  const [goalEditing, setGoalEditing] = useState(false);
+  const [exerciseEditing, setExerciseEditing] = useState(false);
+  const [stepAnnouncement, setStepAnnouncement] = useState("");
+  const [navigationWarning, setNavigationWarning] = useState<string | null>(
+    null,
   );
 
   const handledAssistantRequest = useRef<string | null>(null);
@@ -376,18 +469,153 @@ export function TopicDraftWorkspace({
   const handledExerciseId = useRef<string | null>(
     initialDraft?.exercise?.id ?? null,
   );
+  const handledTopicUpdateState = useRef<CreateTopicState>(
+    initialCreateTopicState,
+  );
+  const handledGoalUpdateState = useRef<CreateGoalState>(
+    initialCreateGoalState,
+  );
+  const handledExerciseUpdateState = useRef<CreateExerciseState>(
+    initialCreateExerciseState,
+  );
+  const pendingTopicSnapshot = useRef<TopicEditorSnapshot | null>(null);
+  const pendingGoalSnapshot = useRef<GoalEditorSnapshot | null>(null);
+  const pendingExerciseSnapshot = useRef<ExerciseEditorSnapshot | null>(null);
   const assistantInputRef = useRef<HTMLTextAreaElement>(null);
   const chatEndRef = useRef<HTMLSpanElement>(null);
+  const draftPanelRef = useRef<HTMLElement>(null);
+  const draftTitleRef = useRef<HTMLHeadingElement>(null);
+  const navigationAlertRef = useRef<HTMLParagraphElement>(null);
+  const topicTitleRef = useRef<HTMLInputElement>(null);
+  const goalTitleRef = useRef<HTMLInputElement>(null);
+  const exerciseTitleRef = useRef<HTMLInputElement>(null);
+  const exerciseMeasurementRef = useRef<HTMLSelectElement>(null);
+  const focusNextStep = useRef(false);
 
   const topicCreated = topicState.status === "success";
   const goalCreated = goalState.status === "success";
   const exerciseCreated = exerciseState.status === "success";
+  const currentTopicSnapshot: TopicEditorSnapshot = {
+    accentColor,
+    description,
+    icon,
+    title,
+  };
+  const currentGoalSnapshot: GoalEditorSnapshot = {
+    difficulty: goalDifficulty,
+    equipment: goalEquipment,
+    minutes: goalMinutes,
+    summary: goalSummary,
+    title: goalTitle,
+  };
+  const currentExerciseSnapshot: ExerciseEditorSnapshot = {
+    equipment: exerciseEquipment,
+    instructions: exerciseInstructions,
+    measurement: exerciseMeasurement,
+    minutes: exerciseMinutes,
+    safety: exerciseSafety,
+    target: exerciseTarget,
+    title: exerciseTitle,
+  };
+  const topicDirty =
+    topicEditing &&
+    topicCreated &&
+    topicSnapshotHasChanges(currentTopicSnapshot, savedTopicSnapshot);
+  const goalDirty =
+    goalEditing &&
+    goalCreated &&
+    goalSnapshotHasChanges(currentGoalSnapshot, savedGoalSnapshot);
+  const exerciseDirty =
+    exerciseEditing &&
+    exerciseCreated &&
+    exerciseSnapshotHasChanges(currentExerciseSnapshot, savedExerciseSnapshot);
+  const dirtyEditingStep: "topic" | "goal" | "exercise" | null = topicDirty
+    ? "topic"
+    : goalDirty
+      ? "goal"
+      : exerciseDirty
+        ? "exercise"
+        : null;
+  const topicBusy = topicPending || topicUpdatePending;
+  const goalBusy = goalPending || goalUpdatePending;
+  const exerciseBusy = exercisePending || exerciseUpdatePending;
+  const visibleTopicState = topicEditing ? topicUpdateState : topicState;
+  const visibleGoalState = goalEditing ? goalUpdateState : goalState;
+  const visibleExerciseState = exerciseEditing
+    ? exerciseUpdateState
+    : exerciseState;
   const topicErrors =
-    topicState.status === "invalid" ? topicState.fieldErrors : {};
+    visibleTopicState.status === "invalid" ? visibleTopicState.fieldErrors : {};
   const goalErrors =
-    goalState.status === "invalid" ? goalState.fieldErrors : {};
+    visibleGoalState.status === "invalid" ? visibleGoalState.fieldErrors : {};
   const exerciseErrors =
-    exerciseState.status === "invalid" ? exerciseState.fieldErrors : {};
+    visibleExerciseState.status === "invalid"
+      ? visibleExerciseState.fieldErrors
+      : {};
+
+  function resetAssistantContext(mode: AssistantMode) {
+    setAssistantMode(mode);
+    setAssistantMessage("");
+    setAssistantErrorMessage(null);
+    setNextAssistantRequestId(window.crypto.randomUUID());
+    submittedAssistantMessage.current = null;
+    setAssistantSubmission(null);
+    setSuggestion(null);
+    setReviewResult(null);
+    setMessages([
+      {
+        id: `welcome-${mode}-${window.crypto.randomUUID()}`,
+        role: "assistant",
+        content: getAssistantContextGreeting(mode),
+      },
+    ]);
+  }
+
+  function focusStepAfterRender() {
+    focusNextStep.current = true;
+  }
+
+  useEffect(() => {
+    if (!focusNextStep.current) return;
+
+    focusNextStep.current = false;
+    const frame = window.requestAnimationFrame(() => {
+      draftTitleRef.current?.focus({ preventScroll: true });
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [activeStep]);
+
+  useEffect(() => {
+    const select = exerciseMeasurementRef.current;
+    if (!select) return;
+
+    syncExerciseMeasurementResetDefault(
+      Array.from(select.options),
+      exerciseMeasurement,
+    );
+  }, [exerciseMeasurement]);
+
+  useEffect(() => {
+    const activeState =
+      activeStep === "topic"
+        ? visibleTopicState
+        : activeStep === "goal"
+          ? visibleGoalState
+          : activeStep === "exercise"
+            ? visibleExerciseState
+            : null;
+
+    if (activeState?.status !== "invalid") return;
+
+    const frame = window.requestAnimationFrame(() => {
+      draftPanelRef.current
+        ?.querySelector<HTMLElement>('[aria-invalid="true"]')
+        ?.focus();
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [activeStep, visibleExerciseState, visibleGoalState, visibleTopicState]);
 
   useEffect(() => {
     if (
@@ -395,6 +623,12 @@ export function TopicDraftWorkspace({
       topicState.topicId !== handledTopicId.current
     ) {
       handledTopicId.current = topicState.topicId;
+      if (pendingTopicSnapshot.current) {
+        setSavedTopicSnapshot(pendingTopicSnapshot.current);
+      }
+      pendingTopicSnapshot.current = null;
+      setTopicUpdatedAt(topicState.updatedAt);
+      setNavigationWarning(null);
       const url = new URL(window.location.href);
       url.searchParams.set("topic", topicState.topicId);
       window.history.replaceState(
@@ -403,11 +637,9 @@ export function TopicDraftWorkspace({
         `${url.pathname}?${url.searchParams.toString()}${url.hash}`,
       );
       setActiveStep("goal");
-      setAssistantMode("goal");
-      setAssistantMessage("");
-      setNextAssistantRequestId(window.crypto.randomUUID());
-      submittedAssistantMessage.current = null;
-      setSuggestion(null);
+      resetAssistantContext("goal");
+      setStepAnnouncement("Emnekladden er gemt. Trin 2 af 5: Mål.");
+      focusStepAfterRender();
     }
   }, [topicState]);
 
@@ -417,12 +649,16 @@ export function TopicDraftWorkspace({
       goalState.goalId !== handledGoalId.current
     ) {
       handledGoalId.current = goalState.goalId;
+      if (pendingGoalSnapshot.current) {
+        setSavedGoalSnapshot(pendingGoalSnapshot.current);
+      }
+      pendingGoalSnapshot.current = null;
+      setGoalUpdatedAt(goalState.updatedAt);
+      setNavigationWarning(null);
       setActiveStep("exercise");
-      setAssistantMode("exercise");
-      setAssistantMessage("");
-      setNextAssistantRequestId(window.crypto.randomUUID());
-      submittedAssistantMessage.current = null;
-      setSuggestion(null);
+      resetAssistantContext("exercise");
+      setStepAnnouncement("Målkladden er gemt. Trin 3 af 5: Deløvelse.");
+      focusStepAfterRender();
     }
   }, [goalState]);
 
@@ -432,14 +668,104 @@ export function TopicDraftWorkspace({
       exerciseState.exerciseId !== handledExerciseId.current
     ) {
       handledExerciseId.current = exerciseState.exerciseId;
+      if (pendingExerciseSnapshot.current) {
+        setSavedExerciseSnapshot(pendingExerciseSnapshot.current);
+      }
+      pendingExerciseSnapshot.current = null;
+      setExerciseUpdatedAt(exerciseState.updatedAt);
+      setNavigationWarning(null);
       setActiveStep("wardrobe");
-      setAssistantMode("wardrobe");
-      setAssistantMessage("");
-      setNextAssistantRequestId(window.crypto.randomUUID());
-      submittedAssistantMessage.current = null;
-      setSuggestion(null);
+      resetAssistantContext("wardrobe");
+      setStepAnnouncement("Deløvelsen er gemt. Trin 4 af 5: Garderobe.");
+      focusStepAfterRender();
     }
   }, [exerciseState]);
+
+  useEffect(() => {
+    if (topicUpdateState === handledTopicUpdateState.current) return;
+    handledTopicUpdateState.current = topicUpdateState;
+
+    if (topicUpdateState.status === "success") {
+      let frame: number | null = null;
+      const timer = window.setTimeout(() => {
+        if (pendingTopicSnapshot.current) {
+          setSavedTopicSnapshot(pendingTopicSnapshot.current);
+          pendingTopicSnapshot.current = null;
+        }
+        setTopicUpdatedAt(topicUpdateState.updatedAt);
+        setTopicEditing(false);
+        setNavigationWarning(null);
+        setAssistantErrorMessage(null);
+        setSuggestion(null);
+        setStepAnnouncement("Emnekladden er opdateret og stadig upubliceret.");
+        frame = window.requestAnimationFrame(() => {
+          draftTitleRef.current?.focus({ preventScroll: true });
+        });
+      }, 0);
+      return () => {
+        window.clearTimeout(timer);
+        if (frame !== null) window.cancelAnimationFrame(frame);
+      };
+    }
+  }, [topicUpdateState]);
+
+  useEffect(() => {
+    if (goalUpdateState === handledGoalUpdateState.current) return;
+    handledGoalUpdateState.current = goalUpdateState;
+
+    if (goalUpdateState.status === "success") {
+      let frame: number | null = null;
+      const timer = window.setTimeout(() => {
+        if (pendingGoalSnapshot.current) {
+          setSavedGoalSnapshot(pendingGoalSnapshot.current);
+          pendingGoalSnapshot.current = null;
+        }
+        setGoalUpdatedAt(goalUpdateState.updatedAt);
+        setGoalEditing(false);
+        setNavigationWarning(null);
+        setAssistantErrorMessage(null);
+        setSuggestion(null);
+        setStepAnnouncement("Målkladden er opdateret og stadig upubliceret.");
+        frame = window.requestAnimationFrame(() => {
+          draftTitleRef.current?.focus({ preventScroll: true });
+        });
+      }, 0);
+      return () => {
+        window.clearTimeout(timer);
+        if (frame !== null) window.cancelAnimationFrame(frame);
+      };
+    }
+  }, [goalUpdateState]);
+
+  useEffect(() => {
+    if (exerciseUpdateState === handledExerciseUpdateState.current) return;
+    handledExerciseUpdateState.current = exerciseUpdateState;
+
+    if (exerciseUpdateState.status === "success") {
+      let frame: number | null = null;
+      const timer = window.setTimeout(() => {
+        if (pendingExerciseSnapshot.current) {
+          setSavedExerciseSnapshot(pendingExerciseSnapshot.current);
+          pendingExerciseSnapshot.current = null;
+        }
+        setExerciseUpdatedAt(exerciseUpdateState.updatedAt);
+        setExerciseEditing(false);
+        setNavigationWarning(null);
+        setAssistantErrorMessage(null);
+        setSuggestion(null);
+        setStepAnnouncement(
+          "Deløvelseskladden er opdateret og stadig upubliceret.",
+        );
+        frame = window.requestAnimationFrame(() => {
+          draftTitleRef.current?.focus({ preventScroll: true });
+        });
+      }, 0);
+      return () => {
+        window.clearTimeout(timer);
+        if (frame !== null) window.cancelAnimationFrame(frame);
+      };
+    }
+  }, [exerciseUpdateState]);
 
   useEffect(() => {
     if (
@@ -454,24 +780,36 @@ export function TopicDraftWorkspace({
     const timer = window.setTimeout(() => {
       handledAssistantRequest.current = response.requestId;
 
-      if (response.requestId !== nextAssistantRequestId) return;
+      const submitted = submittedAssistantMessage.current;
+
+      if (
+        !assistantResponseBelongsToContext({
+          currentRequestId: nextAssistantRequestId,
+          responseRequestId: response.requestId,
+          submittedRequestId: submitted?.requestId ?? null,
+        })
+      ) {
+        return;
+      }
 
       if (response.status !== "success") {
+        setAssistantErrorMessage(response.message);
         if (response.requestRecovery === "start_new") {
           submittedAssistantMessage.current = null;
+          setAssistantSubmission(null);
           setNextAssistantRequestId(window.crypto.randomUUID());
         }
 
         return;
       }
 
-      const submitted = submittedAssistantMessage.current;
-
-      if (!submitted || submitted.requestId !== response.requestId) return;
+      if (!submitted) return;
 
       submittedAssistantMessage.current = null;
+      setAssistantSubmission(null);
       setNextAssistantRequestId(window.crypto.randomUUID());
       setAssistantMessage("");
+      setAssistantErrorMessage(null);
       setSuggestion(null);
 
       setMessages((current) => [
@@ -488,6 +826,7 @@ export function TopicDraftWorkspace({
         },
       ]);
       setSuggestion(response.suggestion);
+      setReviewResult(response.review);
       if (response.items.length > 0) {
         setWardrobeItems(response.items);
       }
@@ -539,6 +878,7 @@ export function TopicDraftWorkspace({
           equipment: parseEquipment(exerciseEquipment),
           safetyNote: normalizeText(exerciseSafety, 1_000),
         },
+        wardrobeExamples: wardrobeItems,
       }),
     [
       accentColor,
@@ -557,6 +897,7 @@ export function TopicDraftWorkspace({
       goalTitle,
       icon,
       title,
+      wardrobeItems,
     ],
   );
 
@@ -579,6 +920,7 @@ export function TopicDraftWorkspace({
     ) {
       submittedAssistantMessage.current = null;
       handledAssistantRequest.current = null;
+      setAssistantSubmission(null);
       setNextAssistantRequestId(window.crypto.randomUUID());
     }
   }, [
@@ -663,13 +1005,148 @@ export function TopicDraftWorkspace({
     return exerciseCreated;
   }
 
+  function preventDirtyNavigation(destination: string): boolean {
+    if (!dirtyEditingStep) return false;
+
+    const draftLabel =
+      dirtyEditingStep === "topic"
+        ? "emnekladden"
+        : dirtyEditingStep === "goal"
+          ? "målkladden"
+          : "deløvelseskladden";
+    const message = `Du har ændringer i ${draftLabel}, som ikke er gemt. Gem eller vælg Annuller ændringer, før du ${destination}.`;
+    setNavigationWarning(message);
+    setStepAnnouncement(message);
+    window.requestAnimationFrame(() => navigationAlertRef.current?.focus());
+    return true;
+  }
+
+  function closeCleanEditors(except?: "topic" | "goal" | "exercise") {
+    if (except !== "topic" && topicEditing && !topicDirty) {
+      setTopicEditing(false);
+    }
+    if (except !== "goal" && goalEditing && !goalDirty) {
+      setGoalEditing(false);
+    }
+    if (except !== "exercise" && exerciseEditing && !exerciseDirty) {
+      setExerciseEditing(false);
+    }
+  }
+
   function openStep(step: EditorStep) {
     if (!stepIsEnabled(step)) return;
-    setActiveStep(step);
-    setSuggestion(null);
-    if (step !== "review" && assistantModeIsEnabled(step)) {
-      setAssistantMode(step);
+    if (step === activeStep) return;
+    if (
+      preventDirtyNavigation(
+        `går til ${steps.find((item) => item.key === step)?.label ?? "et andet trin"}`,
+      )
+    ) {
+      return;
     }
+
+    closeCleanEditors();
+    setActiveStep(step);
+    if (assistantModeIsEnabled(step)) {
+      resetAssistantContext(step);
+    } else {
+      setAssistantMode(step);
+      setAssistantMessage("");
+      setAssistantErrorMessage(null);
+      setNextAssistantRequestId(window.crypto.randomUUID());
+      submittedAssistantMessage.current = null;
+      setAssistantSubmission(null);
+      setSuggestion(null);
+      setReviewResult(null);
+      setMessages([
+        {
+          id: `welcome-${step}-${window.crypto.randomUUID()}`,
+          role: "assistant",
+          content: getAssistantContextGreeting(step),
+        },
+      ]);
+    }
+    const destination = steps.find((candidate) => candidate.key === step);
+    setStepAnnouncement(
+      destination
+        ? `Trin ${destination.number} af 5: ${destination.label}.`
+        : "",
+    );
+    focusStepAfterRender();
+  }
+
+  function beginEditingStep(step: "topic" | "goal" | "exercise") {
+    if (
+      step !== activeStep &&
+      preventDirtyNavigation("åbner en anden kladde")
+    ) {
+      return;
+    }
+
+    closeCleanEditors(step);
+    if (step === "topic") setTopicEditing(true);
+    if (step === "goal") setGoalEditing(true);
+    if (step === "exercise") setExerciseEditing(true);
+
+    setNavigationWarning(null);
+    setActiveStep(step);
+    resetAssistantContext(step);
+    setStepAnnouncement(
+      step === "topic"
+        ? "Emnekladden er åben for redigering."
+        : step === "goal"
+          ? "Målkladden er åben for redigering."
+          : "Deløvelseskladden er åben for redigering.",
+    );
+
+    window.requestAnimationFrame(() => {
+      if (step === "topic") topicTitleRef.current?.focus();
+      if (step === "goal") goalTitleRef.current?.focus();
+      if (step === "exercise") exerciseTitleRef.current?.focus();
+    });
+  }
+
+  function cancelEditingStep(step: "topic" | "goal" | "exercise") {
+    if (step === "topic" && savedTopicSnapshot) {
+      setTitle(savedTopicSnapshot.title);
+      setDescription(savedTopicSnapshot.description);
+      setIcon(savedTopicSnapshot.icon);
+      setAccentColor(savedTopicSnapshot.accentColor);
+      setTopicEditing(false);
+      pendingTopicSnapshot.current = null;
+    } else if (step === "goal" && savedGoalSnapshot) {
+      setGoalTitle(savedGoalSnapshot.title);
+      setGoalSummary(savedGoalSnapshot.summary);
+      setGoalDifficulty(savedGoalSnapshot.difficulty);
+      setGoalMinutes(savedGoalSnapshot.minutes);
+      setGoalEquipment(savedGoalSnapshot.equipment);
+      setGoalEditing(false);
+      pendingGoalSnapshot.current = null;
+    } else if (step === "exercise" && savedExerciseSnapshot) {
+      setExerciseTitle(savedExerciseSnapshot.title);
+      setExerciseInstructions(savedExerciseSnapshot.instructions);
+      setExerciseMeasurement(savedExerciseSnapshot.measurement);
+      setExerciseTarget(savedExerciseSnapshot.target);
+      setExerciseMinutes(savedExerciseSnapshot.minutes);
+      setExerciseEquipment(savedExerciseSnapshot.equipment);
+      setExerciseSafety(savedExerciseSnapshot.safety);
+      setExerciseEditing(false);
+      pendingExerciseSnapshot.current = null;
+    } else {
+      return;
+    }
+
+    setNavigationWarning(null);
+    resetAssistantContext(step);
+    setStepAnnouncement(
+      step === "topic"
+        ? "Ændringerne i emnekladden er annulleret. Den senest gemte version er gendannet."
+        : step === "goal"
+          ? "Ændringerne i målkladden er annulleret. Den senest gemte version er gendannet."
+          : "Ændringerne i deløvelseskladden er annulleret. Den senest gemte version er gendannet.",
+    );
+    window.requestAnimationFrame(() => {
+      draftTitleRef.current?.focus({ preventScroll: true });
+    });
   }
 
   function applySuggestion() {
@@ -702,6 +1179,7 @@ export function TopicDraftWorkspace({
       setExerciseSafety(suggestion.safetyNote);
     }
 
+    setNavigationWarning(null);
     setSuggestion(null);
   }
 
@@ -716,7 +1194,7 @@ export function TopicDraftWorkspace({
     }
 
     setSuggestion(null);
-    if (assistantMode === "wardrobe") setWardrobeItems([]);
+    setAssistantErrorMessage(null);
     handledAssistantRequest.current = null;
     submittedAssistantMessage.current = {
       context: serializedContext,
@@ -725,13 +1203,30 @@ export function TopicDraftWorkspace({
       mode: assistantMode,
       requestId: nextAssistantRequestId,
     };
+    setAssistantSubmission({
+      mode: assistantMode,
+      requestId: nextAssistantRequestId,
+    });
   }
 
   function selectAssistantMode(mode: AssistantMode) {
     if (assistantPending || !assistantModeIsEnabled(mode)) return;
-    setAssistantMode(mode);
-    setSuggestion(null);
+    if (mode === activeStep && mode === assistantMode) return;
+    if (
+      preventDirtyNavigation(`skifter AI-hjælpen til ${assistantLabels[mode]}`)
+    ) {
+      return;
+    }
+    closeCleanEditors();
+    resetAssistantContext(mode);
     setActiveStep(mode);
+    const destination = steps.find((candidate) => candidate.key === mode);
+    setStepAnnouncement(
+      destination
+        ? `Trin ${destination.number} af 5: ${destination.label}.`
+        : "",
+    );
+    focusStepAfterRender();
   }
 
   function openWardrobeAssistant() {
@@ -739,10 +1234,17 @@ export function TopicDraftWorkspace({
     window.requestAnimationFrame(() => assistantInputRef.current?.focus());
   }
 
+  function openReviewAssistant() {
+    selectAssistantMode("review");
+    window.requestAnimationFrame(() => assistantInputRef.current?.focus());
+  }
+
   function assistantModeIsEnabled(mode: AssistantMode): boolean {
-    if (mode === "topic") return !topicCreated;
-    if (mode === "goal") return topicCreated && !goalCreated;
-    if (mode === "exercise") return goalCreated && !exerciseCreated;
+    if (mode === "topic") return !topicCreated || topicEditing;
+    if (mode === "goal") return topicCreated && (!goalCreated || goalEditing);
+    if (mode === "exercise")
+      return goalCreated && (!exerciseCreated || exerciseEditing);
+    if (mode === "wardrobe") return exerciseCreated;
     return exerciseCreated;
   }
 
@@ -760,6 +1262,12 @@ export function TopicDraftWorkspace({
   const suggestionAfter = visibleSuggestion
     ? describeProposedSuggestion(visibleSuggestion)
     : "";
+  const assistantWorkingHere = Boolean(
+    assistantPending &&
+    assistantSubmission?.requestId === nextAssistantRequestId &&
+    assistantSubmission?.mode === assistantMode &&
+    activeStep === assistantMode,
+  );
   const currentStatus =
     activeStep === "topic"
       ? topicCreated
@@ -767,10 +1275,21 @@ export function TopicDraftWorkspace({
         ? goalCreated
         : activeStep === "exercise"
           ? exerciseCreated
-          : false;
+          : exerciseCreated;
+  const currentStepIsEditing =
+    (activeStep === "topic" && topicEditing) ||
+    (activeStep === "goal" && goalEditing) ||
+    (activeStep === "exercise" && exerciseEditing);
+  const draftEyebrow =
+    currentStatus && !currentStepIsEditing && activeStep !== "wardrobe"
+      ? "Gemt kladde"
+      : "Redigerbar kladde";
 
   return (
     <main className={styles.viewport}>
+      <p className={styles.visuallyHidden} role="status" aria-live="polite">
+        {stepAnnouncement}
+      </p>
       <section className={styles.appShell} aria-label="Opret nyt emne">
         <header className={styles.topbar}>
           <div className={styles.brand}>
@@ -804,7 +1323,15 @@ export function TopicDraftWorkspace({
                 trin, men ændrer aldrig felter eller publicerer uden dit valg.
               </p>
             </div>
-            <Link className={styles.secondaryButton} href="/">
+            <Link
+              className={styles.secondaryButton}
+              href="/"
+              onClick={(event) => {
+                if (preventDirtyNavigation("lukker kladden")) {
+                  event.preventDefault();
+                }
+              }}
+            >
               Luk kladden
             </Link>
           </div>
@@ -847,7 +1374,13 @@ export function TopicDraftWorkspace({
                 </div>
                 <span className={styles.readyBadge}>
                   <span aria-hidden="true" />
-                  {assistantPending ? "Arbejder" : "Klar"}
+                  {assistantPending
+                    ? assistantWorkingHere
+                      ? "Arbejder"
+                      : "Afslutter"
+                    : assistantInteractionEnabled
+                      ? "Klar"
+                      : "Låst"}
                 </span>
               </header>
 
@@ -880,7 +1413,7 @@ export function TopicDraftWorkspace({
                     <strong>{assistantLabels[assistantMode]}</strong>
                   </>
                 ) : (
-                  "Dette trin er allerede gemt. Åbn det første ulåste trin for at bruge AI."
+                  "Dette trin er gemt. Vælg Rediger i kladden for at bruge AI på det igen."
                 )}
               </div>
 
@@ -902,7 +1435,7 @@ export function TopicDraftWorkspace({
                     {message.content}
                   </p>
                 ))}
-                {assistantPending ? (
+                {assistantWorkingHere ? (
                   <p className={styles.thinkingMessage} role="status">
                     <span aria-hidden="true">✦</span> Udarbejder et forslag…
                   </p>
@@ -951,14 +1484,15 @@ export function TopicDraftWorkspace({
                   Send
                 </button>
               </form>
-              {assistantState.status === "error" ? (
+              {assistantErrorMessage ? (
                 <p className={styles.assistantError} role="alert">
-                  {assistantState.message}
+                  {assistantErrorMessage}
                 </p>
               ) : null}
             </section>
 
             <section
+              ref={draftPanelRef}
               className={styles.draftPanel}
               aria-labelledby="draft-title"
             >
@@ -976,8 +1510,8 @@ export function TopicDraftWorkspace({
                             : "✓"}
                   </span>
                   <div>
-                    <p className={styles.eyebrow}>Redigerbar kladde</p>
-                    <h2 id="draft-title">
+                    <p className={styles.eyebrow}>{draftEyebrow}</p>
+                    <h2 id="draft-title" ref={draftTitleRef} tabIndex={-1}>
                       {activeStep === "topic"
                         ? title || "Emnets grundlag"
                         : activeStep === "goal"
@@ -993,6 +1527,19 @@ export function TopicDraftWorkspace({
                 <span className={styles.reviewBadge}>Ikke publiceret</span>
               </header>
 
+              {navigationWarning && dirtyEditingStep ? (
+                <div className={styles.stepContent}>
+                  <p
+                    ref={navigationAlertRef}
+                    className={styles.errorMessage}
+                    role="alert"
+                    tabIndex={-1}
+                  >
+                    {navigationWarning}
+                  </p>
+                </div>
+              ) : null}
+
               {activeStep !== "wardrobe" && activeStep !== "review" ? (
                 <SuggestionCard
                   before={suggestionBefore}
@@ -1004,15 +1551,32 @@ export function TopicDraftWorkspace({
 
               {activeStep === "topic" ? (
                 <form
-                  action={topicAction}
+                  action={topicCreated ? topicUpdateAction : topicAction}
                   className={styles.draftForm}
                   noValidate
+                  onChange={() => setNavigationWarning(null)}
+                  onSubmit={() => {
+                    pendingTopicSnapshot.current = currentTopicSnapshot;
+                    setNavigationWarning(null);
+                  }}
                 >
                   <input
                     type="hidden"
                     name="requestId"
-                    value={topicRequestId}
+                    value={topicCreated ? topicState.topicId : topicRequestId}
                   />
+                  {topicCreated ? (
+                    <input
+                      type="hidden"
+                      name="expectedUpdatedAt"
+                      value={
+                        topicUpdatedAt ??
+                        (topicState.status === "success"
+                          ? topicState.updatedAt
+                          : "")
+                      }
+                    />
+                  ) : null}
                   <div className={styles.fieldGrid}>
                     <label className={styles.iconField}>
                       <span>Ikon</span>
@@ -1020,7 +1584,7 @@ export function TopicDraftWorkspace({
                         name="icon"
                         maxLength={16}
                         value={icon}
-                        disabled={topicPending || topicCreated}
+                        disabled={topicBusy || (topicCreated && !topicEditing)}
                         aria-invalid={Boolean(topicErrors.icon)}
                         onChange={(event) => setIcon(event.target.value)}
                       />
@@ -1032,11 +1596,12 @@ export function TopicDraftWorkspace({
                     <label className={styles.titleField}>
                       <span>Navn på emnet</span>
                       <input
+                        ref={topicTitleRef}
                         name="title"
                         maxLength={100}
                         required
                         value={title}
-                        disabled={topicPending || topicCreated}
+                        disabled={topicBusy || (topicCreated && !topicEditing)}
                         aria-invalid={Boolean(topicErrors.title)}
                         onChange={(event) => setTitle(event.target.value)}
                         placeholder="Fx Fodbold eller Lær at male"
@@ -1053,7 +1618,7 @@ export function TopicDraftWorkspace({
                         rows={5}
                         maxLength={500}
                         value={description}
-                        disabled={topicPending || topicCreated}
+                        disabled={topicBusy || (topicCreated && !topicEditing)}
                         aria-invalid={Boolean(topicErrors.description)}
                         onChange={(event) => setDescription(event.target.value)}
                         placeholder="Hvad skal barnet opleve og lære i dette emne?"
@@ -1074,7 +1639,9 @@ export function TopicDraftWorkspace({
                           name="accentColor"
                           type="color"
                           value={accentColor}
-                          disabled={topicPending || topicCreated}
+                          disabled={
+                            topicBusy || (topicCreated && !topicEditing)
+                          }
                           aria-invalid={Boolean(topicErrors.accentColor)}
                           onChange={(event) =>
                             setAccentColor(event.target.value)
@@ -1091,34 +1658,61 @@ export function TopicDraftWorkspace({
                   <div className={styles.draftFooter}>
                     <p
                       className={
-                        topicState.status === "success"
+                        visibleTopicState.status === "success"
                           ? styles.successMessage
-                          : topicState.status === "idle"
+                          : visibleTopicState.status === "idle"
                             ? styles.idleMessage
                             : styles.errorMessage
                       }
                       aria-live="polite"
                     >
-                      {topicState.status === "idle"
-                        ? "Emnet gemmes som kladde. Derefter åbner det første mål."
-                        : topicState.message}
+                      {visibleTopicState.status === "idle"
+                        ? topicEditing
+                          ? "Gem ændringerne i den upublicerede emnekladde."
+                          : "Emnet gemmes som kladde. Derefter åbner det første mål."
+                        : visibleTopicState.message}
                     </p>
-                    {topicCreated ? (
-                      <button
-                        className={styles.primaryButton}
-                        type="button"
-                        onClick={() => openStep("goal")}
-                      >
-                        Fortsæt til mål
-                      </button>
+                    {topicCreated && !topicEditing ? (
+                      <>
+                        <button
+                          className={styles.secondaryButton}
+                          type="button"
+                          onClick={() => beginEditingStep("topic")}
+                        >
+                          Rediger emnekladde
+                        </button>
+                        <button
+                          className={styles.primaryButton}
+                          type="button"
+                          onClick={() => openStep("goal")}
+                        >
+                          Fortsæt til mål
+                        </button>
+                      </>
                     ) : (
-                      <button
-                        className={styles.primaryButton}
-                        type="submit"
-                        disabled={topicPending || title.trim().length === 0}
-                      >
-                        {topicPending ? "Gemmer…" : "Gem emnekladde"}
-                      </button>
+                      <>
+                        {topicEditing ? (
+                          <button
+                            className={styles.secondaryButton}
+                            type="button"
+                            disabled={topicBusy}
+                            onClick={() => cancelEditingStep("topic")}
+                          >
+                            Annuller ændringer
+                          </button>
+                        ) : null}
+                        <button
+                          className={styles.primaryButton}
+                          type="submit"
+                          disabled={topicBusy || title.trim().length === 0}
+                        >
+                          {topicBusy
+                            ? "Gemmer…"
+                            : topicEditing
+                              ? "Gem ændringer"
+                              : "Gem emnekladde"}
+                        </button>
+                      </>
                     )}
                   </div>
                 </form>
@@ -1126,32 +1720,62 @@ export function TopicDraftWorkspace({
 
               {activeStep === "goal" && topicState.status === "success" ? (
                 <form
-                  action={goalAction}
+                  action={goalCreated ? goalUpdateAction : goalAction}
                   className={styles.draftForm}
                   noValidate
+                  onChange={() => setNavigationWarning(null)}
+                  onSubmit={() => {
+                    pendingGoalSnapshot.current = currentGoalSnapshot;
+                    setNavigationWarning(null);
+                  }}
                 >
-                  <input type="hidden" name="requestId" value={goalRequestId} />
+                  <input
+                    type="hidden"
+                    name="requestId"
+                    value={goalCreated ? goalState.goalId : goalRequestId}
+                  />
+                  {goalCreated ? (
+                    <input
+                      type="hidden"
+                      name="expectedUpdatedAt"
+                      value={
+                        goalUpdatedAt ??
+                        (goalState.status === "success"
+                          ? goalState.updatedAt
+                          : "")
+                      }
+                    />
+                  ) : null}
                   <input
                     type="hidden"
                     name="topicId"
                     value={topicState.topicId}
                   />
-                  <input type="hidden" name="heroMediaUrl" value="" />
+                  <input
+                    type="hidden"
+                    name="heroMediaUrl"
+                    value={initialDraft?.goal?.heroMediaUrl ?? ""}
+                  />
                   <input
                     type="hidden"
                     name="sortOrder"
-                    value={initialDraft?.nextGoalSortOrder ?? 0}
+                    value={
+                      goalCreated
+                        ? (initialDraft?.goal?.sortOrder ?? 0)
+                        : (initialDraft?.nextGoalSortOrder ?? 0)
+                    }
                   />
 
                   <div className={styles.formGrid}>
                     <label className={styles.fullField}>
                       <span>Navn på målet</span>
                       <input
+                        ref={goalTitleRef}
                         name="title"
                         maxLength={120}
                         required
                         value={goalTitle}
-                        disabled={goalPending || goalCreated}
+                        disabled={goalBusy || (goalCreated && !goalEditing)}
                         aria-invalid={Boolean(goalErrors.title)}
                         onChange={(event) => setGoalTitle(event.target.value)}
                         placeholder="Fx Styr bolden tæt på kroppen"
@@ -1168,7 +1792,7 @@ export function TopicDraftWorkspace({
                         rows={4}
                         maxLength={1000}
                         value={goalSummary}
-                        disabled={goalPending || goalCreated}
+                        disabled={goalBusy || (goalCreated && !goalEditing)}
                         aria-invalid={Boolean(goalErrors.summary)}
                         onChange={(event) => setGoalSummary(event.target.value)}
                         placeholder="Beskriv et tydeligt og realistisk mål."
@@ -1183,7 +1807,7 @@ export function TopicDraftWorkspace({
                       <select
                         name="difficulty"
                         value={goalDifficulty}
-                        disabled={goalPending || goalCreated}
+                        disabled={goalBusy || (goalCreated && !goalEditing)}
                         aria-invalid={Boolean(goalErrors.difficulty)}
                         onChange={(event) =>
                           setGoalDifficulty(
@@ -1209,7 +1833,7 @@ export function TopicDraftWorkspace({
                         max="180"
                         inputMode="numeric"
                         value={goalMinutes}
-                        disabled={goalPending || goalCreated}
+                        disabled={goalBusy || (goalCreated && !goalEditing)}
                         aria-invalid={Boolean(goalErrors.estimatedMinutes)}
                         onChange={(event) => setGoalMinutes(event.target.value)}
                         placeholder="15"
@@ -1225,7 +1849,7 @@ export function TopicDraftWorkspace({
                         name="equipment"
                         rows={3}
                         value={goalEquipment}
-                        disabled={goalPending || goalCreated}
+                        disabled={goalBusy || (goalCreated && !goalEditing)}
                         aria-invalid={Boolean(goalErrors.equipment)}
                         onChange={(event) =>
                           setGoalEquipment(event.target.value)
@@ -1246,34 +1870,61 @@ export function TopicDraftWorkspace({
                   <div className={styles.draftFooter}>
                     <p
                       className={
-                        goalState.status === "success"
+                        visibleGoalState.status === "success"
                           ? styles.successMessage
-                          : goalState.status === "idle"
+                          : visibleGoalState.status === "idle"
                             ? styles.idleMessage
                             : styles.errorMessage
                       }
                       aria-live="polite"
                     >
-                      {goalState.status === "idle"
-                        ? "Målet gemmes under emnet som en upubliceret kladde."
-                        : goalState.message}
+                      {visibleGoalState.status === "idle"
+                        ? goalEditing
+                          ? "Gem ændringerne i den upublicerede målkladde."
+                          : "Målet gemmes under emnet som en upubliceret kladde."
+                        : visibleGoalState.message}
                     </p>
-                    {goalCreated ? (
-                      <button
-                        className={styles.primaryButton}
-                        type="button"
-                        onClick={() => openStep("exercise")}
-                      >
-                        Fortsæt til deløvelse
-                      </button>
+                    {goalCreated && !goalEditing ? (
+                      <>
+                        <button
+                          className={styles.secondaryButton}
+                          type="button"
+                          onClick={() => beginEditingStep("goal")}
+                        >
+                          Rediger målkladde
+                        </button>
+                        <button
+                          className={styles.primaryButton}
+                          type="button"
+                          onClick={() => openStep("exercise")}
+                        >
+                          Fortsæt til deløvelse
+                        </button>
+                      </>
                     ) : (
-                      <button
-                        className={styles.primaryButton}
-                        type="submit"
-                        disabled={goalPending || goalTitle.trim().length === 0}
-                      >
-                        {goalPending ? "Gemmer…" : "Gem målkladde"}
-                      </button>
+                      <>
+                        {goalEditing ? (
+                          <button
+                            className={styles.secondaryButton}
+                            type="button"
+                            disabled={goalBusy}
+                            onClick={() => cancelEditingStep("goal")}
+                          >
+                            Annuller ændringer
+                          </button>
+                        ) : null}
+                        <button
+                          className={styles.primaryButton}
+                          type="submit"
+                          disabled={goalBusy || goalTitle.trim().length === 0}
+                        >
+                          {goalBusy
+                            ? "Gemmer…"
+                            : goalEditing
+                              ? "Gem ændringer"
+                              : "Gem målkladde"}
+                        </button>
+                      </>
                     )}
                   </div>
                 </form>
@@ -1281,32 +1932,66 @@ export function TopicDraftWorkspace({
 
               {activeStep === "exercise" && goalState.status === "success" ? (
                 <form
-                  action={exerciseAction}
+                  action={
+                    exerciseCreated ? exerciseUpdateAction : exerciseAction
+                  }
                   className={styles.draftForm}
                   noValidate
+                  onChange={() => setNavigationWarning(null)}
+                  onSubmit={() => {
+                    pendingExerciseSnapshot.current = currentExerciseSnapshot;
+                    setNavigationWarning(null);
+                  }}
                 >
                   <input
                     type="hidden"
                     name="requestId"
-                    value={exerciseRequestId}
+                    value={
+                      exerciseCreated
+                        ? exerciseState.exerciseId
+                        : exerciseRequestId
+                    }
                   />
+                  {exerciseCreated ? (
+                    <input
+                      type="hidden"
+                      name="expectedUpdatedAt"
+                      value={
+                        exerciseUpdatedAt ??
+                        (exerciseState.status === "success"
+                          ? exerciseState.updatedAt
+                          : "")
+                      }
+                    />
+                  ) : null}
                   <input type="hidden" name="goalId" value={goalState.goalId} />
-                  <input type="hidden" name="videoUrl" value="" />
+                  <input
+                    type="hidden"
+                    name="videoUrl"
+                    value={initialDraft?.exercise?.videoUrl ?? ""}
+                  />
                   <input
                     type="hidden"
                     name="sortOrder"
-                    value={initialDraft?.nextExerciseSortOrder ?? 0}
+                    value={
+                      exerciseCreated
+                        ? (initialDraft?.exercise?.sortOrder ?? 0)
+                        : (initialDraft?.nextExerciseSortOrder ?? 0)
+                    }
                   />
 
                   <div className={styles.formGrid}>
                     <label className={styles.fullField}>
                       <span>Navn på deløvelsen</span>
                       <input
+                        ref={exerciseTitleRef}
                         name="title"
                         maxLength={120}
                         required
                         value={exerciseTitle}
-                        disabled={exercisePending || exerciseCreated}
+                        disabled={
+                          exerciseBusy || (exerciseCreated && !exerciseEditing)
+                        }
                         aria-invalid={Boolean(exerciseErrors.title)}
                         onChange={(event) =>
                           setExerciseTitle(event.target.value)
@@ -1326,7 +2011,9 @@ export function TopicDraftWorkspace({
                         maxLength={1500}
                         required
                         value={exerciseInstructions}
-                        disabled={exercisePending || exerciseCreated}
+                        disabled={
+                          exerciseBusy || (exerciseCreated && !exerciseEditing)
+                        }
                         aria-invalid={Boolean(exerciseErrors.instructions)}
                         onChange={(event) =>
                           setExerciseInstructions(event.target.value)
@@ -1341,9 +2028,12 @@ export function TopicDraftWorkspace({
                     <label>
                       <span>Sådan måles øvelsen</span>
                       <select
+                        ref={exerciseMeasurementRef}
                         name="measurement"
                         value={exerciseMeasurement}
-                        disabled={exercisePending || exerciseCreated}
+                        disabled={
+                          exerciseBusy || (exerciseCreated && !exerciseEditing)
+                        }
                         aria-invalid={Boolean(exerciseErrors.measurement)}
                         onChange={(event) => {
                           const measurement = event.target
@@ -1380,7 +2070,9 @@ export function TopicDraftWorkspace({
                         inputMode="numeric"
                         readOnly={exerciseMeasurement === "completion"}
                         value={exerciseTarget}
-                        disabled={exercisePending || exerciseCreated}
+                        disabled={
+                          exerciseBusy || (exerciseCreated && !exerciseEditing)
+                        }
                         aria-invalid={Boolean(exerciseErrors.targetValue)}
                         onChange={(event) =>
                           setExerciseTarget(event.target.value)
@@ -1405,7 +2097,9 @@ export function TopicDraftWorkspace({
                         max="180"
                         inputMode="numeric"
                         value={exerciseMinutes}
-                        disabled={exercisePending || exerciseCreated}
+                        disabled={
+                          exerciseBusy || (exerciseCreated && !exerciseEditing)
+                        }
                         aria-invalid={Boolean(
                           exerciseErrors.recommendedMinutes,
                         )}
@@ -1425,7 +2119,9 @@ export function TopicDraftWorkspace({
                         name="equipment"
                         rows={3}
                         value={exerciseEquipment}
-                        disabled={exercisePending || exerciseCreated}
+                        disabled={
+                          exerciseBusy || (exerciseCreated && !exerciseEditing)
+                        }
                         aria-invalid={Boolean(exerciseErrors.equipment)}
                         onChange={(event) =>
                           setExerciseEquipment(event.target.value)
@@ -1444,7 +2140,9 @@ export function TopicDraftWorkspace({
                         rows={3}
                         maxLength={1000}
                         value={exerciseSafety}
-                        disabled={exercisePending || exerciseCreated}
+                        disabled={
+                          exerciseBusy || (exerciseCreated && !exerciseEditing)
+                        }
                         aria-invalid={Boolean(exerciseErrors.safetyNote)}
                         onChange={(event) =>
                           setExerciseSafety(event.target.value)
@@ -1460,38 +2158,65 @@ export function TopicDraftWorkspace({
                   <div className={styles.draftFooter}>
                     <p
                       className={
-                        exerciseState.status === "success"
+                        visibleExerciseState.status === "success"
                           ? styles.successMessage
-                          : exerciseState.status === "idle"
+                          : visibleExerciseState.status === "idle"
                             ? styles.idleMessage
                             : styles.errorMessage
                       }
                       aria-live="polite"
                     >
-                      {exerciseState.status === "idle"
-                        ? "Deløvelsen gemmes under målet som en upubliceret kladde."
-                        : exerciseState.message}
+                      {visibleExerciseState.status === "idle"
+                        ? exerciseEditing
+                          ? "Gem ændringerne i den upublicerede deløvelseskladde."
+                          : "Deløvelsen gemmes under målet som en upubliceret kladde."
+                        : visibleExerciseState.message}
                     </p>
-                    {exerciseCreated ? (
-                      <button
-                        className={styles.primaryButton}
-                        type="button"
-                        onClick={() => openStep("wardrobe")}
-                      >
-                        Fortsæt til garderobe
-                      </button>
+                    {exerciseCreated && !exerciseEditing ? (
+                      <>
+                        <button
+                          className={styles.secondaryButton}
+                          type="button"
+                          onClick={() => beginEditingStep("exercise")}
+                        >
+                          Rediger deløvelse
+                        </button>
+                        <button
+                          className={styles.primaryButton}
+                          type="button"
+                          onClick={() => openStep("wardrobe")}
+                        >
+                          Fortsæt til garderobe
+                        </button>
+                      </>
                     ) : (
-                      <button
-                        className={styles.primaryButton}
-                        type="submit"
-                        disabled={
-                          exercisePending ||
-                          exerciseTitle.trim().length === 0 ||
-                          exerciseInstructions.trim().length === 0
-                        }
-                      >
-                        {exercisePending ? "Gemmer…" : "Gem deløvelse"}
-                      </button>
+                      <>
+                        {exerciseEditing ? (
+                          <button
+                            className={styles.secondaryButton}
+                            type="button"
+                            disabled={exerciseBusy}
+                            onClick={() => cancelEditingStep("exercise")}
+                          >
+                            Annuller ændringer
+                          </button>
+                        ) : null}
+                        <button
+                          className={styles.primaryButton}
+                          type="submit"
+                          disabled={
+                            exerciseBusy ||
+                            exerciseTitle.trim().length === 0 ||
+                            exerciseInstructions.trim().length === 0
+                          }
+                        >
+                          {exerciseBusy
+                            ? "Gemmer…"
+                            : exerciseEditing
+                              ? "Gem ændringer"
+                              : "Gem deløvelse"}
+                        </button>
+                      </>
                     )}
                   </div>
                 </form>
@@ -1539,34 +2264,71 @@ export function TopicDraftWorkspace({
                     <h3>Forløbets første kladder er klar</h3>
                     <p>
                       Alt er fortsat upubliceret. Du kan gå tilbage til hvert
-                      trin og se de gemte felter eller vende tilbage til
-                      oversigten.
+                      trin og redigere de gemte felter. AI kan hjælpe med et
+                      ekstra tjek, men ændrer og publicerer aldrig noget her.
                     </p>
+                    <button
+                      type="button"
+                      className={styles.secondaryButton}
+                      onClick={openReviewAssistant}
+                    >
+                      Hjælp mig med gennemgangen
+                    </button>
                   </div>
                   <div className={styles.reviewGrid}>
                     <article>
                       <span>1</span>
                       <div>
                         <small>Emne</small>
-                        <strong>{title}</strong>
+                        <strong>
+                          {savedTopicSnapshot?.title ?? "Gemt titel mangler"}
+                        </strong>
                         <p>Gemt som kladde</p>
                       </div>
+                      <button
+                        type="button"
+                        className={styles.secondaryButton}
+                        aria-label="Rediger emnekladden"
+                        onClick={() => beginEditingStep("topic")}
+                      >
+                        Rediger
+                      </button>
                     </article>
                     <article>
                       <span>2</span>
                       <div>
                         <small>Mål</small>
-                        <strong>{goalTitle}</strong>
+                        <strong>
+                          {savedGoalSnapshot?.title ?? "Gemt titel mangler"}
+                        </strong>
                         <p>Gemt under emnet</p>
                       </div>
+                      <button
+                        type="button"
+                        className={styles.secondaryButton}
+                        aria-label="Rediger målkladden"
+                        onClick={() => beginEditingStep("goal")}
+                      >
+                        Rediger
+                      </button>
                     </article>
                     <article>
                       <span>3</span>
                       <div>
                         <small>Deløvelse</small>
-                        <strong>{exerciseTitle}</strong>
+                        <strong>
+                          {savedExerciseSnapshot?.title ?? "Gemt titel mangler"}
+                        </strong>
                         <p>Gemt under målet</p>
                       </div>
+                      <button
+                        type="button"
+                        className={styles.secondaryButton}
+                        aria-label="Rediger deløvelseskladden"
+                        onClick={() => beginEditingStep("exercise")}
+                      >
+                        Rediger
+                      </button>
                     </article>
                     <article>
                       <span>4</span>
@@ -1575,8 +2337,80 @@ export function TopicDraftWorkspace({
                         <strong>{wardrobeItems.length} AI-eksempler</strong>
                         <p>Ikke gemt endnu</p>
                       </div>
+                      <button
+                        type="button"
+                        className={styles.secondaryButton}
+                        aria-label="Åbn garderobetrinnet"
+                        onClick={() => openStep("wardrobe")}
+                      >
+                        Åbn
+                      </button>
                     </article>
                   </div>
+                  {reviewResult ? (
+                    <section aria-labelledby="ai-review-title">
+                      <div className={styles.stepIntro}>
+                        <p className={styles.eyebrow}>AI-forslag · ikke gemt</p>
+                        <h3 id="ai-review-title">
+                          {reviewResult.verdict === "ready_for_human_review"
+                            ? "Klar til din menneskelige gennemgang"
+                            : "Noget bør kontrolleres først"}
+                        </h3>
+                        <p>
+                          AI-gennemgangen har ikke ændret kladden. Brug
+                          punkterne som hjælp, og rediger kun et trin, hvis du
+                          selv vælger det.
+                        </p>
+                      </div>
+                      <div className={styles.reviewGrid}>
+                        {(
+                          [
+                            ["topic", "Emne"],
+                            ["goal", "Mål"],
+                            ["exercise", "Deløvelse"],
+                            ["wardrobe", "Garderobe"],
+                          ] as const
+                        ).map(([key, label]) => {
+                          const check = reviewResult.checklist[key];
+                          return (
+                            <article key={key}>
+                              <span aria-hidden="true">
+                                {check.status === "ok"
+                                  ? "✓"
+                                  : check.status === "attention"
+                                    ? "!"
+                                    : "·"}
+                              </span>
+                              <div>
+                                <small>{label}</small>
+                                <strong>
+                                  {check.status === "ok"
+                                    ? "Ser tydeligt ud"
+                                    : check.status === "attention"
+                                      ? "Kræver opmærksomhed"
+                                      : "Valgfrit punkt"}
+                                </strong>
+                                <p>{check.note}</p>
+                              </div>
+                            </article>
+                          );
+                        })}
+                      </div>
+                      {reviewResult.nextActions.length > 0 ? (
+                        <div className={styles.stepIntro}>
+                          <p className={styles.eyebrow}>
+                            Forslag til næste tjek
+                          </p>
+                          <h3>Du beslutter, hvad der skal ske</h3>
+                          <ol>
+                            {reviewResult.nextActions.map((action, index) => (
+                              <li key={`${index}-${action}`}>{action}</li>
+                            ))}
+                          </ol>
+                        </div>
+                      ) : null}
+                    </section>
+                  ) : null}
                   <div className={styles.draftFooter}>
                     <p className={styles.successMessage}>
                       Ingen af kladderne er publiceret automatisk.

@@ -38,8 +38,21 @@ export type CreateAdminTopicDraftInput = {
   title: string;
 };
 
+/** Uses `requestId` as the id of the existing unpublished topic draft. */
+export type UpdateAdminTopicDraftInput = CreateAdminTopicDraftInput & {
+  /**
+   * The `updated_at` value returned by the last successful load or save. The
+   * update is rejected when another editor has changed the draft since then.
+   */
+  expectedUpdatedAt: string;
+};
+
 export type CreateAdminTopicDraftResult = {
   created: boolean;
+  topic: AdminTopicLibraryItem;
+};
+
+export type UpdateAdminTopicDraftResult = {
   topic: AdminTopicLibraryItem;
 };
 
@@ -48,14 +61,20 @@ export type AdminContentErrorCode =
   | "invalid_accent_color"
   | "invalid_authenticated_user_id"
   | "invalid_description"
+  | "invalid_expected_updated_at"
   | "invalid_icon"
   | "invalid_request_id"
   | "invalid_slug"
   | "invalid_title"
   | "invalid_topic_creation_result"
   | "invalid_topic_library_result"
+  | "invalid_topic_update_result"
+  | "topic_draft_not_editable"
+  | "topic_draft_conflict"
   | "topic_creation_conflict"
   | "topic_creation_failed"
+  | "topic_slug_conflict"
+  | "topic_update_failed"
   | "topic_library_load_failed";
 
 const ERROR_MESSAGES: Record<AdminContentErrorCode, string> = {
@@ -64,15 +83,21 @@ const ERROR_MESSAGES: Record<AdminContentErrorCode, string> = {
   invalid_authenticated_user_id:
     "The authenticated administrator id is invalid.",
   invalid_description: "The topic description is invalid.",
+  invalid_expected_updated_at: "The expected draft revision is invalid.",
   invalid_icon: "The topic icon is invalid.",
   invalid_request_id: "The topic draft request id is invalid.",
   invalid_slug: "The topic slug is invalid.",
   invalid_title: "The topic title is invalid.",
   invalid_topic_creation_result: "Topic creation returned an invalid result.",
   invalid_topic_library_result: "The topic library returned an invalid result.",
+  invalid_topic_update_result: "Topic update returned an invalid result.",
+  topic_draft_not_editable: "The topic draft is no longer editable.",
+  topic_draft_conflict: "The topic draft was changed by another editor.",
   topic_creation_conflict:
     "The topic draft request conflicts with existing content.",
   topic_creation_failed: "The topic draft could not be created.",
+  topic_slug_conflict: "A topic already uses this slug.",
+  topic_update_failed: "The topic draft could not be updated.",
   topic_library_load_failed: "The topic library could not be loaded.",
 };
 
@@ -103,6 +128,7 @@ const TOPIC_COLUMNS =
   "id, slug, title, description, icon, accent_color, sort_order, content_version, is_published, published_at, created_by, created_at, updated_at" as const;
 const TOPIC_LIBRARY_COLUMNS =
   `${TOPIC_COLUMNS}, goals(id, exercises(id))` as const;
+const TOPIC_SLUG_UNIQUE_CONSTRAINT = "topics_slug_key";
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -264,6 +290,18 @@ function isTimestamp(value: unknown): value is string {
   );
 }
 
+function normalizeExpectedUpdatedAt(value: unknown): string {
+  if (
+    !isTimestamp(value) ||
+    value.length > 64 ||
+    SINGLE_LINE_CONTROL_CHARACTER_PATTERN.test(value)
+  ) {
+    throw new AdminContentError("invalid_expected_updated_at");
+  }
+
+  return value;
+}
+
 function isSafeReturnedTitle(value: unknown): value is string {
   return (
     typeof value === "string" &&
@@ -402,9 +440,32 @@ function databaseErrorCode(error: unknown): string | null {
   return isRecord(error) && typeof error.code === "string" ? error.code : null;
 }
 
+function databaseConstraintName(error: unknown): string | null {
+  if (!isRecord(error)) {
+    return null;
+  }
+
+  if (typeof error.constraint === "string") {
+    return error.constraint;
+  }
+
+  if (typeof error.message !== "string") {
+    return null;
+  }
+
+  return (
+    /^duplicate key value violates unique constraint "([a-z0-9_]+)"$/u.exec(
+      error.message.trim(),
+    )?.[1] ?? null
+  );
+}
+
 function mapDatabaseFailure(
   error: unknown,
-  fallback: "topic_creation_failed" | "topic_library_load_failed",
+  fallback:
+    | "topic_creation_failed"
+    | "topic_library_load_failed"
+    | "topic_update_failed",
 ): AdminContentError {
   return new AdminContentError(
     databaseErrorCode(error) === "42501" ? "admin_access_denied" : fallback,
@@ -488,6 +549,27 @@ async function findTopicByRequestId(
     .maybeSingle();
 }
 
+async function updateTopicDraft(
+  client: BareTraenClient,
+  input: NormalizedTopicDraft,
+  expectedUpdatedAt: string,
+) {
+  return client
+    .from("topics")
+    .update({
+      accent_color: input.accentColor,
+      description: input.description,
+      icon: input.icon,
+      slug: input.slug,
+      title: input.title,
+    })
+    .eq("id", input.requestId)
+    .eq("is_published", false)
+    .eq("updated_at", expectedUpdatedAt)
+    .select(TOPIC_COLUMNS)
+    .maybeSingle();
+}
+
 function matchesTopicDraft(
   topic: AdminTopicLibraryItem,
   input: NormalizedTopicDraft,
@@ -508,9 +590,58 @@ function matchesTopicDraft(
   );
 }
 
+function matchesUpdatedTopicDraft(
+  topic: AdminTopicLibraryItem,
+  input: NormalizedTopicDraft,
+): boolean {
+  return (
+    topic.id === input.requestId &&
+    topic.slug === input.slug &&
+    topic.title === input.title &&
+    topic.description === input.description &&
+    topic.icon === input.icon &&
+    (topic.accentColor === null ? null : topic.accentColor.toUpperCase()) ===
+      input.accentColor &&
+    topic.status === "draft" &&
+    topic.publishedAt === null
+  );
+}
+
+async function recoverUpdatedTopicDraft(
+  client: BareTraenClient,
+  input: NormalizedTopicDraft,
+): Promise<UpdateAdminTopicDraftResult> {
+  let response: Awaited<ReturnType<typeof findTopicByRequestId>>;
+
+  try {
+    response = await findTopicByRequestId(client, input.requestId);
+  } catch {
+    throw new AdminContentError("topic_update_failed");
+  }
+
+  if (response.error) {
+    throw mapDatabaseFailure(response.error, "topic_update_failed");
+  }
+
+  const topic = parseTopicBase(response.data, 0, 0);
+
+  if (!topic || topic.status !== "draft") {
+    throw new AdminContentError("topic_draft_not_editable");
+  }
+
+  if (matchesUpdatedTopicDraft(topic, input)) {
+    return { topic };
+  }
+
+  throw new AdminContentError("topic_draft_conflict");
+}
+
 async function recoverIdempotentTopicDraft(
   client: BareTraenClient,
   input: NormalizedTopicDraft,
+  missingDraftCode:
+    | "topic_creation_conflict"
+    | "topic_slug_conflict" = "topic_creation_conflict",
 ): Promise<CreateAdminTopicDraftResult> {
   let response: Awaited<ReturnType<typeof findTopicByRequestId>>;
 
@@ -526,7 +657,11 @@ async function recoverIdempotentTopicDraft(
 
   const topic = parseTopicBase(response.data, 0, 0);
 
-  if (!topic || !matchesTopicDraft(topic, input)) {
+  if (!topic) {
+    throw new AdminContentError(missingDraftCode);
+  }
+
+  if (!matchesTopicDraft(topic, input)) {
     throw new AdminContentError("topic_creation_conflict");
   }
 
@@ -553,7 +688,13 @@ export async function createAdminTopicDraft(
 
   if (response.error) {
     if (databaseErrorCode(response.error) === "23505") {
-      return recoverIdempotentTopicDraft(client, normalized);
+      return recoverIdempotentTopicDraft(
+        client,
+        normalized,
+        databaseConstraintName(response.error) === TOPIC_SLUG_UNIQUE_CONSTRAINT
+          ? "topic_slug_conflict"
+          : "topic_creation_conflict",
+      );
     }
 
     throw mapDatabaseFailure(response.error, "topic_creation_failed");
@@ -566,4 +707,46 @@ export async function createAdminTopicDraft(
   }
 
   return { created: true, topic };
+}
+
+/**
+ * Updates one existing unpublished topic draft. The row id comes from the
+ * validated request id; publication state and provenance are never changed.
+ */
+export async function updateAdminTopicDraft(
+  client: BareTraenClient,
+  input: UpdateAdminTopicDraftInput,
+): Promise<UpdateAdminTopicDraftResult> {
+  const normalized = normalizeTopicDraft(input);
+  const expectedUpdatedAt = normalizeExpectedUpdatedAt(input.expectedUpdatedAt);
+  let response: Awaited<ReturnType<typeof updateTopicDraft>>;
+
+  try {
+    response = await updateTopicDraft(client, normalized, expectedUpdatedAt);
+  } catch {
+    throw new AdminContentError("topic_update_failed");
+  }
+
+  if (response.error) {
+    if (
+      databaseErrorCode(response.error) === "23505" &&
+      databaseConstraintName(response.error) === TOPIC_SLUG_UNIQUE_CONSTRAINT
+    ) {
+      throw new AdminContentError("topic_slug_conflict");
+    }
+
+    throw mapDatabaseFailure(response.error, "topic_update_failed");
+  }
+
+  if (response.data === null) {
+    return recoverUpdatedTopicDraft(client, normalized);
+  }
+
+  const topic = parseTopicBase(response.data, 0, 0);
+
+  if (!topic || !matchesUpdatedTopicDraft(topic, normalized)) {
+    throw new AdminContentError("invalid_topic_update_result");
+  }
+
+  return { topic };
 }
