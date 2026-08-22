@@ -6,6 +6,7 @@ import {
   isMissingWardrobeStorageError,
   loadResumableTopicDraft,
   parseResumeTopicId,
+  parseResumeTopicSelection,
 } from "./resume-topic-draft.ts";
 
 test("only the additive wardrobe-table deployment gap is tolerated", () => {
@@ -23,6 +24,8 @@ const topic = {
   description: "En syntetisk kladde",
   icon: "🌟",
   id: "10000000-0000-4000-8000-000000000001",
+  publishedAt: null,
+  status: "draft",
   title: "Balance",
   updatedAt: "2026-08-22T07:00:00.000Z",
 };
@@ -33,7 +36,9 @@ const goal = {
   estimatedMinutes: 10,
   heroMediaUrl: "https://media.example.test/goal.mp4",
   id: "20000000-0000-4000-8000-000000000001",
+  publishedAt: null,
   sortOrder: 3,
+  status: "draft",
   summary: "Find balancen",
   title: "Stå sikkert",
   updatedAt: "2026-08-22T07:01:00.000Z",
@@ -45,12 +50,14 @@ const exercise = {
   id: "30000000-0000-4000-8000-000000000001",
   instructions: "Stå på et ben.",
   measurement: "duration",
+  publishedAt: null,
   safetyNotes: "Brug en voksen ved behov.",
   targetValue: 10,
   title: "Flamingoen",
   updatedAt: "2026-08-22T07:02:00.000Z",
   videoUrl: "https://media.example.test/exercise.mp4",
   sortOrder: 4,
+  status: "draft",
 };
 
 const wardrobeItem = {
@@ -83,6 +90,61 @@ test("resume topic query accepts one non-nil UUID", () => {
   assert.equal(parseResumeTopicId("not-a-topic"), null);
   assert.equal(
     parseResumeTopicId("00000000-0000-0000-0000-000000000000"),
+    null,
+  );
+});
+
+test("resume selection strictly validates topic, goal, and exercise IDs", () => {
+  assert.deepEqual(parseResumeTopicSelection({}), {
+    exerciseId: null,
+    goalId: null,
+    startingStep: null,
+    topicId: null,
+  });
+  assert.deepEqual(parseResumeTopicSelection({ topic: topic.id }), {
+    exerciseId: null,
+    goalId: null,
+    startingStep: null,
+    topicId: topic.id,
+  });
+  assert.deepEqual(
+    parseResumeTopicSelection({ goal: goal.id, topic: topic.id }),
+    {
+      exerciseId: null,
+      goalId: goal.id,
+      startingStep: "goal",
+      topicId: topic.id,
+    },
+  );
+  assert.deepEqual(
+    parseResumeTopicSelection({
+      exercise: exercise.id,
+      goal: goal.id,
+      topic: topic.id,
+    }),
+    {
+      exerciseId: exercise.id,
+      goalId: goal.id,
+      startingStep: "exercise",
+      topicId: topic.id,
+    },
+  );
+
+  assert.equal(parseResumeTopicSelection({ goal: goal.id }), null);
+  assert.equal(
+    parseResumeTopicSelection({ exercise: exercise.id, topic: topic.id }),
+    null,
+  );
+  assert.equal(
+    parseResumeTopicSelection({ goal: [goal.id], topic: topic.id }),
+    null,
+  );
+  assert.equal(
+    parseResumeTopicSelection({
+      exercise: "not-an-exercise",
+      goal: goal.id,
+      topic: topic.id,
+    }),
     null,
   );
 });
@@ -122,6 +184,57 @@ test("resume starts at the first unsaved authoring step", () => {
     }),
     "wardrobe",
   );
+  assert.equal(
+    getResumeStartingStep({
+      topic: {
+        ...topic,
+        publishedAt: "2026-08-22T06:00:00.000Z",
+        status: "published",
+      },
+      goal: {
+        ...goal,
+        publishedAt: "2026-08-22T06:00:00.000Z",
+        status: "published",
+      },
+      exercise: {
+        ...exercise,
+        publishedAt: "2026-08-22T06:00:00.000Z",
+        status: "published",
+      },
+      wardrobeItems: [],
+      nextExerciseSortOrder: 5,
+      nextGoalSortOrder: 4,
+    }),
+    "topic",
+  );
+  assert.equal(
+    getResumeStartingStep(
+      {
+        topic: { ...topic, status: "published" },
+        goal,
+        exercise,
+        wardrobeItems: [],
+        nextExerciseSortOrder: 5,
+        nextGoalSortOrder: 4,
+      },
+      "goal",
+    ),
+    "goal",
+  );
+  assert.equal(
+    getResumeStartingStep(
+      {
+        topic: { ...topic, status: "published" },
+        goal,
+        exercise,
+        wardrobeItems: [],
+        nextExerciseSortOrder: 5,
+        nextGoalSortOrder: 4,
+      },
+      "exercise",
+    ),
+    "exercise",
+  );
 });
 
 test("resume loads unpublished drafts and avoids occupied content positions", async () => {
@@ -133,6 +246,8 @@ test("resume loads unpublished drafts and avoids occupied content positions", as
         description: topic.description,
         icon: topic.icon,
         id: topic.id,
+        is_published: false,
+        published_at: null,
         title: topic.title,
         updated_at: topic.updatedAt,
       },
@@ -145,6 +260,8 @@ test("resume loads unpublished drafts and avoids occupied content positions", as
         estimated_minutes: goal.estimatedMinutes,
         hero_media_url: goal.heroMediaUrl,
         id: goal.id,
+        is_published: false,
+        published_at: null,
         sort_order: goal.sortOrder,
         summary: goal.summary,
         title: goal.title,
@@ -187,6 +304,8 @@ test("resume loads unpublished drafts and avoids occupied content positions", as
         id: exercise.id,
         instructions: exercise.instructions,
         measurement: exercise.measurement,
+        is_published: false,
+        published_at: null,
         safety_notes: exercise.safetyNotes,
         target_value: exercise.targetValue,
         title: exercise.title,
@@ -251,21 +370,7 @@ test("resume loads unpublished drafts and avoids occupied content positions", as
     calls.filter(
       (call) => call.operation === "eq" && call.column === "is_published",
     ),
-    [
-      {
-        column: "is_published",
-        operation: "eq",
-        table: "topics",
-        value: false,
-      },
-      { column: "is_published", operation: "eq", table: "goals", value: false },
-      {
-        column: "is_published",
-        operation: "eq",
-        table: "exercises",
-        value: false,
-      },
-    ],
+    [],
   );
   assert.deepEqual(
     calls.find((call) => call.operation === "rpc"),
@@ -277,6 +382,244 @@ test("resume loads unpublished drafts and avoids occupied content positions", as
   );
 });
 
+test("resume derives topic, goal, and exercise statuses independently", async () => {
+  const publishedAt = "2026-08-22T06:00:00.000Z";
+  const calls = [];
+  const responses = [
+    {
+      data: {
+        accent_color: topic.accentColor,
+        description: topic.description,
+        icon: topic.icon,
+        id: topic.id,
+        is_published: true,
+        published_at: publishedAt,
+        title: topic.title,
+        updated_at: topic.updatedAt,
+      },
+      error: null,
+    },
+    {
+      data: {
+        difficulty: goal.difficulty,
+        equipment: goal.equipment,
+        estimated_minutes: goal.estimatedMinutes,
+        hero_media_url: goal.heroMediaUrl,
+        id: goal.id,
+        is_published: false,
+        published_at: null,
+        sort_order: goal.sortOrder,
+        summary: goal.summary,
+        title: goal.title,
+        updated_at: goal.updatedAt,
+      },
+      error: null,
+    },
+    { data: { sort_order: goal.sortOrder }, error: null },
+    { data: [], error: null },
+    {
+      data: {
+        equipment: exercise.equipment,
+        estimated_minutes: exercise.estimatedMinutes,
+        id: exercise.id,
+        instructions: exercise.instructions,
+        is_published: true,
+        measurement: exercise.measurement,
+        published_at: publishedAt,
+        safety_notes: exercise.safetyNotes,
+        sort_order: exercise.sortOrder,
+        target_value: exercise.targetValue,
+        title: exercise.title,
+        updated_at: exercise.updatedAt,
+        video_url: exercise.videoUrl,
+      },
+      error: null,
+    },
+    { data: { sort_order: exercise.sortOrder }, error: null },
+  ];
+  let responseIndex = 0;
+  const client = {
+    from(table) {
+      const response = responses[responseIndex++];
+      const query = {
+        eq(column, value) {
+          calls.push({ column, operation: "eq", table, value });
+          return query;
+        },
+        limit() {
+          return query;
+        },
+        maybeSingle: async () => response,
+        order() {
+          return query;
+        },
+        select() {
+          return query;
+        },
+        then(onFulfilled, onRejected) {
+          return Promise.resolve(response).then(onFulfilled, onRejected);
+        },
+      };
+
+      return query;
+    },
+    rpc() {
+      return Promise.resolve(responses[responseIndex++]);
+    },
+  };
+
+  const result = await loadResumableTopicDraft(client, topic.id);
+
+  assert.equal(result.topic.status, "published");
+  assert.equal(result.topic.publishedAt, publishedAt);
+  assert.equal(result.goal.status, "draft");
+  assert.equal(result.goal.publishedAt, null);
+  assert.equal(result.exercise.status, "published");
+  assert.equal(result.exercise.publishedAt, publishedAt);
+  assert.deepEqual(
+    calls.filter(
+      (call) => call.operation === "eq" && call.column === "is_published",
+    ),
+    [],
+  );
+});
+
+test("resume selects the requested goal and exercise within their parents", async () => {
+  const requestedGoalId = "20000000-0000-4000-8000-000000000002";
+  const requestedExerciseId = "30000000-0000-4000-8000-000000000002";
+  const calls = [];
+  const responses = [
+    {
+      data: {
+        accent_color: topic.accentColor,
+        description: topic.description,
+        icon: topic.icon,
+        id: topic.id,
+        is_published: true,
+        published_at: "2026-08-22T06:00:00.000Z",
+        title: topic.title,
+        updated_at: topic.updatedAt,
+      },
+      error: null,
+    },
+    {
+      data: {
+        difficulty: goal.difficulty,
+        equipment: goal.equipment,
+        estimated_minutes: goal.estimatedMinutes,
+        hero_media_url: goal.heroMediaUrl,
+        id: requestedGoalId,
+        is_published: false,
+        published_at: null,
+        sort_order: 7,
+        summary: goal.summary,
+        title: "Det valgte mål",
+        updated_at: goal.updatedAt,
+      },
+      error: null,
+    },
+    { data: { sort_order: 7 }, error: null },
+    { data: [], error: null },
+    {
+      data: {
+        equipment: exercise.equipment,
+        estimated_minutes: exercise.estimatedMinutes,
+        id: requestedExerciseId,
+        instructions: exercise.instructions,
+        is_published: true,
+        measurement: exercise.measurement,
+        published_at: "2026-08-22T06:00:00.000Z",
+        safety_notes: exercise.safetyNotes,
+        sort_order: 8,
+        target_value: exercise.targetValue,
+        title: "Den valgte deløvelse",
+        updated_at: exercise.updatedAt,
+        video_url: exercise.videoUrl,
+      },
+      error: null,
+    },
+    { data: { sort_order: 8 }, error: null },
+  ];
+  let responseIndex = 0;
+  const client = {
+    from(table) {
+      const response = responses[responseIndex++];
+      const query = {
+        eq(column, value) {
+          calls.push({ column, operation: "eq", table, value });
+          return query;
+        },
+        limit() {
+          return query;
+        },
+        maybeSingle: async () => response,
+        order() {
+          return query;
+        },
+        select() {
+          return query;
+        },
+      };
+      return query;
+    },
+    rpc() {
+      return Promise.resolve(responses[responseIndex++]);
+    },
+  };
+
+  const result = await loadResumableTopicDraft(client, topic.id, {
+    exerciseId: requestedExerciseId,
+    goalId: requestedGoalId,
+  });
+
+  assert.equal(result.goal.id, requestedGoalId);
+  assert.equal(result.goal.status, "draft");
+  assert.equal(result.exercise.id, requestedExerciseId);
+  assert.equal(result.exercise.status, "published");
+  assert.deepEqual(
+    calls.filter((call) => call.operation === "eq"),
+    [
+      { column: "id", operation: "eq", table: "topics", value: topic.id },
+      {
+        column: "topic_id",
+        operation: "eq",
+        table: "goals",
+        value: topic.id,
+      },
+      {
+        column: "id",
+        operation: "eq",
+        table: "goals",
+        value: requestedGoalId,
+      },
+      {
+        column: "topic_id",
+        operation: "eq",
+        table: "goals",
+        value: topic.id,
+      },
+      {
+        column: "goal_id",
+        operation: "eq",
+        table: "exercises",
+        value: requestedGoalId,
+      },
+      {
+        column: "id",
+        operation: "eq",
+        table: "exercises",
+        value: requestedExerciseId,
+      },
+      {
+        column: "goal_id",
+        operation: "eq",
+        table: "exercises",
+        value: requestedGoalId,
+      },
+    ],
+  );
+});
+
 test("resume tolerates the exact missing admin wardrobe RPC during deployment", async () => {
   const responses = [
     {
@@ -285,6 +628,8 @@ test("resume tolerates the exact missing admin wardrobe RPC during deployment", 
         description: topic.description,
         icon: topic.icon,
         id: topic.id,
+        is_published: false,
+        published_at: null,
         title: topic.title,
         updated_at: topic.updatedAt,
       },

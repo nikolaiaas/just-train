@@ -1,6 +1,6 @@
 .workspace {
   min-width: 0;
-  padding: 0 clamp(24px, 4vw, 52px) clamp(32px, 5vw, 64px);
+  padding: clamp(24px, 4vw, 52px) clamp(24px, 4vw, 52px) clamp(32px, 5vw, 64px);
   scroll-margin-top: 20px;
 }
 
@@ -13,7 +13,7 @@
   margin-bottom: 20px;
 }
 
-.workspaceHeader h2 {
+.workspaceHeader h1 {
   margin: 7px 0 0;
   color: #183249;
   font-size: clamp(25px, 2.4vw, 34px);

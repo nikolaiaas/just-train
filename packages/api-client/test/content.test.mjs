@@ -42,6 +42,7 @@ const validInput = Object.freeze({
 
 const validUpdateInput = Object.freeze({
   ...validInput,
+  expectedStatus: "draft",
   expectedUpdatedAt: createdRow.updated_at,
 });
 
@@ -502,6 +503,49 @@ test("updates only editable topic fields while preserving publication and proven
   );
 });
 
+test("updates a published topic without changing its publication metadata", async () => {
+  const publishedAt = "2026-08-21T19:30:00.000Z";
+  const updatedRow = {
+    ...createdRow,
+    description: "En live opdatering.",
+    is_published: true,
+    published_at: publishedAt,
+  };
+  const calls = [];
+  const client = {
+    from(table) {
+      calls.push({ operation: "from", table });
+      return awaitableQuery({ data: updatedRow, error: null }, calls);
+    },
+  };
+
+  const result = await updateAdminTopicDraft(client, {
+    ...validUpdateInput,
+    description: updatedRow.description,
+    expectedStatus: "published",
+  });
+
+  assert.equal(result.topic.status, "published");
+  assert.equal(result.topic.publishedAt, publishedAt);
+  assert.equal(result.topic.contentVersion, createdRow.content_version);
+  const updateCall = calls.find((call) => call.operation === "update");
+  assert.equal("is_published" in updateCall.value, false);
+  assert.equal("published_at" in updateCall.value, false);
+  assert.equal("content_version" in updateCall.value, false);
+  assert.deepEqual(
+    calls.filter((call) => call.operation === "eq"),
+    [
+      { operation: "eq", column: "id", value: requestId },
+      { operation: "eq", column: "is_published", value: true },
+      {
+        operation: "eq",
+        column: "updated_at",
+        value: createdRow.updated_at,
+      },
+    ],
+  );
+});
+
 test("rejects topic updates that collide or no longer target an editable draft", async () => {
   for (const [response, code] of [
     [
@@ -580,8 +624,33 @@ test("rejects a topic update without a valid expected revision", async () => {
 
   for (const expectedUpdatedAt of [undefined, "", "not-a-timestamp"]) {
     await assert.rejects(
-      updateAdminTopicDraft(client, { ...validInput, expectedUpdatedAt }),
+      updateAdminTopicDraft(client, {
+        ...validUpdateInput,
+        expectedUpdatedAt,
+      }),
       (error) => assertContentError(error, "invalid_expected_updated_at"),
+    );
+  }
+
+  assert.equal(calls, 0);
+});
+
+test("rejects a topic update without a valid expected publication state", async () => {
+  let calls = 0;
+  const client = {
+    from() {
+      calls += 1;
+      throw new Error("must not query");
+    },
+  };
+
+  for (const expectedStatus of [undefined, "", "review"]) {
+    await assert.rejects(
+      updateAdminTopicDraft(client, {
+        ...validUpdateInput,
+        expectedStatus,
+      }),
+      (error) => assertContentError(error, "invalid_expected_status"),
     );
   }
 

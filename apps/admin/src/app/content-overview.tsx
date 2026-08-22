@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useDeferredValue, useRef, useState } from "react";
+import { useDeferredValue, useState } from "react";
 import {
   countDraftTopics,
   topicStatusCopy,
@@ -108,11 +108,7 @@ export function ContentOverview({
 }: ContentOverviewProps) {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<"all" | TopicStatus>("all");
-  const [selectedTopic, setSelectedTopic] = useState<Topic | null>(
-    topics[0] ?? null,
-  );
   const deferredQuery = useDeferredValue(query);
-  const topicDialogRef = useRef<HTMLDialogElement>(null);
 
   const normalizedQuery = deferredQuery.trim().toLocaleLowerCase("da-DK");
   const filteredTopics = topics.filter((topic) => {
@@ -137,11 +133,6 @@ export function ContentOverview({
       label: "kladder",
     },
   ];
-
-  function openTopic(topic: Topic) {
-    setSelectedTopic(topic);
-    window.requestAnimationFrame(() => topicDialogRef.current?.showModal());
-  }
 
   return (
     <section className={styles.content} id="emner" aria-labelledby="page-title">
@@ -256,22 +247,26 @@ export function ContentOverview({
                       </span>
                     </th>
                     <td data-label="Træningsmål">
-                      <strong>{topic.goals} mål</strong>
-                      <small>{topic.exercises} øvelser</small>
+                      <span className={styles.topicCounts}>
+                        <strong>{topic.goals} mål</strong>
+                        <small>
+                          {topic.exercises}{" "}
+                          {topic.exercises === 1 ? "øvelse" : "øvelser"}
+                        </small>
+                      </span>
                     </td>
                     <td data-label="Status">
                       <StatusBadge status={topic.status} />
                     </td>
                     <td className={styles.actionCell}>
-                      <button
-                        type="button"
+                      <Link
                         className={styles.openButton}
-                        onClick={() => openTopic(topic)}
+                        href={`/emner/${encodeURIComponent(topic.id)}`}
                         aria-label={`Åbn ${topic.name}`}
                       >
                         Åbn
                         <ArrowIcon />
-                      </button>
+                      </Link>
                     </td>
                   </tr>
                 ))}
@@ -310,55 +305,6 @@ export function ContentOverview({
           </div>
         )}
       </section>
-
-      <dialog
-        ref={topicDialogRef}
-        className={styles.dialog}
-        aria-labelledby="topic-dialog-title"
-      >
-        {selectedTopic ? (
-          <form method="dialog" className={styles.dialogContent}>
-            <span className={styles.dialogTopicIcon} aria-hidden="true">
-              {selectedTopic.emoji}
-            </span>
-            <p className={styles.eyebrow}>Emneoversigt</p>
-            <h2 id="topic-dialog-title">{selectedTopic.name}</h2>
-            <p>{selectedTopic.description}</p>
-            <dl className={styles.dialogStats}>
-              <div>
-                <dt>Mål</dt>
-                <dd>{selectedTopic.goals}</dd>
-              </div>
-              <div>
-                <dt>Øvelser</dt>
-                <dd>{selectedTopic.exercises}</dd>
-              </div>
-              <div>
-                <dt>Status</dt>
-                <dd>{statusContent[selectedTopic.status].label}</dd>
-              </div>
-            </dl>
-            <p className={styles.fixtureMessage}>
-              {selectedTopic.status === "draft"
-                ? "Fortsæt fra det første trin, der endnu ikke er gemt. Allerede gemte trin vises låst."
-                : "Detaljeredigering af mål og deløvelser er næste trin i administrationsforløbet."}
-            </p>
-            <div className={styles.dialogActions}>
-              <button className={styles.secondaryButton} value="close">
-                Luk
-              </button>
-              {selectedTopic.status === "draft" ? (
-                <Link
-                  className={styles.primaryButton}
-                  href={`/emner/ny?topic=${encodeURIComponent(selectedTopic.id)}`}
-                >
-                  Fortsæt kladde
-                </Link>
-              ) : null}
-            </div>
-          </form>
-        ) : null}
-      </dialog>
     </section>
   );
 }

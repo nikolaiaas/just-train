@@ -1,6 +1,6 @@
 {
   "version": 3,
-  "updatedAt": "2026-08-22T09:25:28.000Z",
+  "updatedAt": "2026-08-22T11:17:08.000Z",
   "items": [
     {
       "id": "hosted-preview-safety",
@@ -166,7 +166,7 @@
       "id": "admin-goal-exercise-editor",
       "title": "Redigér mål og deløvelser i administrationen",
       "details": "Byg den referencebaserede editor til mål, rækkefølge og deløvelser med validering af forklaring, måletype, måltal, træningstid, udstyr og sikkerhedstekst. AI-forslag skal vises som før/efter/hvorfor og kræve et aktivt valg.",
-      "implementationNotes": "Første vertikale snit er nu bygget og browsertestet: redaktøren kan oprette og rette ét upubliceret mål og én upubliceret deløvelse under emnet med tid, udstyr, måling, måltal og sikkerhedstekst. Opdateringer er afgrænset til upublicerede rækker og bevarer forælder, media og rækkefølge. Revisionskontrol afviser en reelt forældet fane uden at overskrive nyere arbejde, mens en identisk gentagelse efter et tabt svar stadig lykkes. Slugs er afgrænset til deres forælder, dubletnavne får feltfeedback, og AI-forslag vises som før/forslag/hvorfor og kopieres kun ved et aktivt valg. Flere mål/deløvelser, manuel rækkefølge og video mangler fortsat.",
+      "implementationNotes": "Redaktøren kan oprette det første mål og den første deløvelse under et emne og rette alle eksisterende mål og deløvelser via sikre, emnespecifikke links. Hvert indholdstrins egen publiceringsstatus styrer, om gemte ændringer er live eller forbliver kladde. Revisionskontrol afviser en reelt forældet fane uden at overskrive nyere arbejde, mens en identisk gentagelse efter et tabt svar stadig lykkes. Slugs er afgrænset til deres forælder, dubletnavne får feltfeedback, og AI-forslag vises som før/forslag/hvorfor og kopieres kun ved et aktivt valg. Oprettelse af flere mål/deløvelser, manuel rækkefølge og video mangler fortsat.",
       "evidence": [],
       "status": "doing",
       "priority": 4,
@@ -458,6 +458,17 @@
       "priority": 15,
       "createdAt": "2026-08-21T20:22:21.000Z",
       "updatedAt": "2026-08-22T08:06:55.000Z"
+    },
+    {
+      "id": "admin-routes-and-topic-revisions",
+      "title": "Del administrationen op i tydelige emnesider",
+      "details": "Giv Emner og AI-prompter hver sin route, tilføj en detaljeside pr. emne med garderoben under emnet, gør publicerede emner direkte redigerbare og ret tabel- og mobiljusteringen i emneoversigten.",
+      "implementationNotes": "Emner og AI-prompter har nu hver sin route i en fælles administrationsramme. Alle emner åbner en detaljeside med mål, deløvelser og emnespecifik garderobe, hvor afviste garderobeforslag er skjult og kladde, godkendt og publiceret vises tydeligt. Publicerede emner, mål og alle eksisterende deløvelser kan åbnes direkte fra detaljesiden og redigeres live med status- og revisionskontrol; den tredje Fodbold-deløvelse er gemt og gendannet i en syntetisk browsertest. Tabeljustering, mobilopdeling, kontrast, lange tekster, listestruktur og 44 px-handlinger er rettet. Fuld typecheck, lint, test, build og formattering er grøn. Til denne private legeapp bruges bevidst direkte ændringer uden versionskopier.",
+      "evidence": [],
+      "status": "done",
+      "priority": 16,
+      "createdAt": "2026-08-22T10:35:52.000Z",
+      "updatedAt": "2026-08-22T11:17:08.000Z"
     }
   ]
 }

@@ -1,0 +1,809 @@
+.page {
+  display: grid;
+  min-width: 0;
+  gap: 24px;
+  padding: clamp(22px, 4vw, 48px);
+}
+
+.breadcrumbs {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  color: #536a76;
+  font-size: 13px;
+}
+
+.breadcrumbs a {
+  color: #08746f;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.breadcrumbs a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.breadcrumbs span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 28px;
+  padding: clamp(22px, 3vw, 32px);
+  border: 1px solid #dce4e6;
+  border-radius: 22px;
+  background: #fffefa;
+  box-shadow: 0 14px 34px rgba(24, 50, 73, 0.07);
+}
+
+.heroMain {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  gap: 18px;
+}
+
+.topicIcon {
+  display: grid;
+  width: 64px;
+  height: 64px;
+  place-items: center;
+  flex: 0 0 64px;
+  border: 1px solid rgba(24, 50, 73, 0.1);
+  border-radius: 18px;
+  font-size: 30px;
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.75);
+}
+
+.heroCopy {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.titleLine,
+.exerciseTitleLine,
+.rewardTitleLine {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.titleLine {
+  justify-content: flex-start;
+}
+
+.eyebrow,
+.itemKicker {
+  margin: 0;
+  color: #637784;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.hero h1 {
+  margin: 7px 0 0;
+  color: #183249;
+  font-size: clamp(30px, 4vw, 43px);
+  font-weight: 650;
+  letter-spacing: -0.035em;
+  line-height: 1.08;
+}
+
+.description {
+  max-width: 700px;
+  margin: 11px 0 0;
+  color: #5d7080;
+  font-size: 15px;
+  line-height: 1.6;
+  white-space: pre-line;
+}
+
+.editButton {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  padding: 10px 15px;
+  border: 1px solid #08746f;
+  border-radius: 12px;
+  background: #08746f;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    transform 160ms ease;
+}
+
+.editButton svg {
+  width: 17px;
+  height: 17px;
+}
+
+.editButton:hover {
+  border-color: #065f5b;
+  background: #065f5b;
+  transform: translateY(-1px);
+}
+
+.statusBadge {
+  display: inline-flex;
+  min-height: 26px;
+  align-items: center;
+  gap: 7px;
+  width: max-content;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.statusDot {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.statusPublished {
+  background: #e3f3ed;
+  color: #176a54;
+}
+
+.statusApproved {
+  background: #e3eff7;
+  color: #275f82;
+}
+
+.statusDraft {
+  background: #fff0cf;
+  color: #8a6112;
+}
+
+.summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid #dce4e6;
+  border-radius: 17px;
+  background: #fffefa;
+}
+
+.summary > div {
+  min-width: 0;
+  padding: 17px 19px;
+  border-right: 1px solid #e3e9ea;
+}
+
+.summary > div:last-child {
+  border-right: 0;
+}
+
+.summary dt,
+.goalFacts dt,
+.exerciseFacts dt {
+  margin: 0 0 6px;
+  color: #536a76;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.summary dd,
+.goalFacts dd,
+.exerciseFacts dd {
+  margin: 0;
+  color: #29485a;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.45;
+}
+
+.section {
+  min-width: 0;
+  padding: clamp(20px, 3vw, 30px);
+  border: 1px solid #dce4e6;
+  border-radius: 22px;
+  background: #fffefa;
+}
+
+.sectionHeading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.sectionHeading > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.sectionHeading h2 {
+  margin: 5px 0 0;
+  color: #183249;
+  font-size: clamp(22px, 3vw, 28px);
+  font-weight: 650;
+  letter-spacing: -0.025em;
+}
+
+.sectionIntro {
+  max-width: 650px;
+  margin: 7px 0 0;
+  color: #637784;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.countPill {
+  display: inline-flex;
+  min-height: 30px;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: #edf3f3;
+  color: #4e6875;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.goalList,
+.exerciseList,
+.wardrobeGrid,
+.chipList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.goalList {
+  display: grid;
+  gap: 18px;
+}
+
+.goalCard {
+  overflow: hidden;
+  border: 1px solid #dce4e6;
+  border-radius: 18px;
+  background: #fbfcf9;
+}
+
+.goalHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 20px 21px 17px;
+}
+
+.goalHeader h3 {
+  margin: 5px 0 0;
+  color: #183249;
+  font-size: 20px;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+}
+
+.goalHeader > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.goalHeader p:last-child {
+  max-width: 700px;
+  margin: 6px 0 0;
+  color: #627581;
+  font-size: 13px;
+  line-height: 1.55;
+  white-space: pre-line;
+}
+
+.itemActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.inlineEditButton {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 12px;
+  border: 1px solid #bdd4d2;
+  border-radius: 11px;
+  background: #fff;
+  color: #08746f;
+  font-size: 12px;
+  font-weight: 750;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    transform 160ms ease;
+}
+
+.inlineEditButton:hover {
+  border-color: #08746f;
+  background: #edf8f6;
+  transform: translateY(-1px);
+}
+
+.goalFacts {
+  display: grid;
+  grid-template-columns: minmax(110px, 0.7fr) minmax(120px, 0.7fr) minmax(
+      220px,
+      2fr
+    );
+  gap: 1px;
+  margin: 0;
+  border-block: 1px solid #e2e8e8;
+  background: #e2e8e8;
+}
+
+.goalFacts > div {
+  min-width: 0;
+  padding: 13px 18px;
+  background: #f6f8f5;
+}
+
+.chipList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chipList li {
+  max-width: 100%;
+  padding: 4px 8px;
+  border: 1px solid #d8e3e3;
+  border-radius: 999px;
+  background: #fff;
+  color: #506b77;
+  font-size: 11px;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.mutedValue {
+  color: #5d717d;
+  font-weight: 500;
+}
+
+.exerciseSection {
+  padding: 19px 21px 21px;
+}
+
+.exerciseHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.exerciseHeading h4 {
+  margin: 0;
+  color: #29485a;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.exerciseHeading span {
+  color: #536a76;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.exerciseList {
+  display: grid;
+  gap: 10px;
+}
+
+.exerciseCard {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 12px;
+  padding: 15px;
+  border: 1px solid #e0e7e8;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.exerciseNumber {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: 10px;
+  background: #e8f5f2;
+  color: #08746f;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.exerciseContent {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.exerciseTitleLine h5 {
+  margin: 2px 0 0;
+  color: #183249;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.exerciseContent > p {
+  margin: 7px 0 0;
+  color: #607480;
+  font-size: 13px;
+  line-height: 1.55;
+  white-space: pre-line;
+}
+
+.exerciseFacts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin: 13px 0;
+}
+
+.safetyNote {
+  display: flex;
+  gap: 8px;
+  margin-top: 13px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #fff7e4;
+  color: #70561f;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.safetyNote strong {
+  flex: 0 0 auto;
+}
+
+.inlineEmpty {
+  margin: 0;
+  padding: 15px;
+  border: 1px dashed #cfdadc;
+  border-radius: 12px;
+  color: #536a76;
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.wardrobeGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.wardrobeCard {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  gap: 13px;
+  padding: 16px;
+  border: 1px solid #dfe6e7;
+  border-radius: 15px;
+  background: #fbfcf9;
+}
+
+.rewardIcon {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  flex: 0 0 44px;
+  border-radius: 13px;
+  background: #e8f5f2;
+  font-size: 23px;
+}
+
+.rewardContent {
+  min-width: 0;
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+
+.rewardTitleLine {
+  align-items: flex-start;
+}
+
+.rewardTitleLine h3 {
+  min-width: 0;
+  margin: 2px 0 0;
+  color: #183249;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.rewardMeta {
+  margin: 5px 0 0;
+  color: #536a76;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.unlockRule {
+  margin: 9px 0 0;
+  color: #506b77;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.unlockRule strong {
+  color: #08746f;
+  font-size: 16px;
+}
+
+.unlockRule span {
+  color: #536a76;
+  font-weight: 650;
+}
+
+.emptyState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  min-height: 122px;
+  padding: 22px;
+  border: 1px dashed #cad7d9;
+  border-radius: 15px;
+  background: #fafbf8;
+  text-align: left;
+}
+
+.emptyState > span {
+  font-size: 28px;
+}
+
+.emptyState h3 {
+  margin: 0;
+  color: #29485a;
+  font-size: 15px;
+}
+
+.emptyState p {
+  max-width: 520px;
+  margin: 5px 0 0;
+  color: #536a76;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.routeMessage {
+  display: grid;
+  min-height: 360px;
+  place-items: center;
+  padding: 32px;
+}
+
+.routeMessageCard {
+  max-width: 520px;
+  padding: 30px;
+  border: 1px solid #dce4e6;
+  border-radius: 20px;
+  background: #fffefa;
+  text-align: center;
+  box-shadow: 0 14px 34px rgba(24, 50, 73, 0.07);
+}
+
+.routeMessageCard > span {
+  font-size: 34px;
+}
+
+.routeMessageCard h1 {
+  margin: 12px 0 0;
+  color: #183249;
+  font-size: 24px;
+}
+
+.routeMessageCard p {
+  margin: 9px 0 20px;
+  color: #637784;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.routeMessageActions {
+  display: flex;
+  justify-content: center;
+  gap: 9px;
+}
+
+.routeMessageActions a,
+.routeMessageActions button {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 14px;
+  border: 1px solid #08746f;
+  border-radius: 11px;
+  background: #08746f;
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.routeMessageActions a:last-child:not(:first-child) {
+  border-color: #cbd8da;
+  background: #fff;
+  color: #29485a;
+}
+
+@media (max-width: 900px) {
+  .hero {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .editButton {
+    width: max-content;
+  }
+
+  .summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .summary > div:nth-child(2) {
+    border-right: 0;
+  }
+
+  .summary > div:nth-child(-n + 2) {
+    border-bottom: 1px solid #e3e9ea;
+  }
+
+  .goalFacts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .equipmentFact {
+    grid-column: 1 / -1;
+  }
+
+  .wardrobeGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 620px) {
+  .page {
+    gap: 16px;
+    padding: 18px 14px 28px;
+  }
+
+  .hero,
+  .section {
+    border-radius: 17px;
+  }
+
+  .heroMain {
+    flex-direction: column;
+  }
+
+  .topicIcon {
+    width: 54px;
+    height: 54px;
+    flex-basis: 54px;
+    border-radius: 15px;
+    font-size: 26px;
+  }
+
+  .editButton {
+    width: 100%;
+  }
+
+  .summary {
+    grid-template-columns: 1fr;
+  }
+
+  .summary > div,
+  .summary > div:nth-child(2) {
+    border-right: 0;
+    border-bottom: 1px solid #e3e9ea;
+  }
+
+  .summary > div:last-child {
+    border-bottom: 0;
+  }
+
+  .sectionHeading,
+  .goalHeader {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .goalFacts {
+    grid-template-columns: 1fr;
+  }
+
+  .equipmentFact {
+    grid-column: auto;
+  }
+
+  .exerciseSection,
+  .goalHeader {
+    padding-inline: 15px;
+  }
+
+  .exerciseCard {
+    grid-template-columns: 1fr;
+  }
+
+  .exerciseTitleLine,
+  .rewardTitleLine {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .itemActions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .safetyNote {
+    flex-direction: column;
+  }
+
+  .emptyState {
+    align-items: center;
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .routeMessageActions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .editButton,
+  .inlineEditButton {
+    transition: none;
+  }
+}

@@ -38,11 +38,13 @@ export type CreateAdminTopicDraftInput = {
   title: string;
 };
 
-/** Uses `requestId` as the id of the existing unpublished topic draft. */
+/** Uses `requestId` as the id of the existing topic. */
 export type UpdateAdminTopicDraftInput = CreateAdminTopicDraftInput & {
+  /** The publication state returned by the last successful load or save. */
+  expectedStatus: AdminTopicStatus;
   /**
    * The `updated_at` value returned by the last successful load or save. The
-   * update is rejected when another editor has changed the draft since then.
+   * update is rejected when another editor has changed the topic since then.
    */
   expectedUpdatedAt: string;
 };
@@ -61,6 +63,7 @@ export type AdminContentErrorCode =
   | "invalid_accent_color"
   | "invalid_authenticated_user_id"
   | "invalid_description"
+  | "invalid_expected_status"
   | "invalid_expected_updated_at"
   | "invalid_icon"
   | "invalid_request_id"
@@ -83,6 +86,7 @@ const ERROR_MESSAGES: Record<AdminContentErrorCode, string> = {
   invalid_authenticated_user_id:
     "The authenticated administrator id is invalid.",
   invalid_description: "The topic description is invalid.",
+  invalid_expected_status: "The expected topic publication state is invalid.",
   invalid_expected_updated_at: "The expected draft revision is invalid.",
   invalid_icon: "The topic icon is invalid.",
   invalid_request_id: "The topic draft request id is invalid.",
@@ -297,6 +301,14 @@ function normalizeExpectedUpdatedAt(value: unknown): string {
     SINGLE_LINE_CONTROL_CHARACTER_PATTERN.test(value)
   ) {
     throw new AdminContentError("invalid_expected_updated_at");
+  }
+
+  return value;
+}
+
+function normalizeExpectedStatus(value: unknown): AdminTopicStatus {
+  if (value !== "draft" && value !== "published") {
+    throw new AdminContentError("invalid_expected_status");
   }
 
   return value;
@@ -552,6 +564,7 @@ async function findTopicByRequestId(
 async function updateTopicDraft(
   client: BareTraenClient,
   input: NormalizedTopicDraft,
+  expectedStatus: AdminTopicStatus,
   expectedUpdatedAt: string,
 ) {
   return client
@@ -564,7 +577,7 @@ async function updateTopicDraft(
       title: input.title,
     })
     .eq("id", input.requestId)
-    .eq("is_published", false)
+    .eq("is_published", expectedStatus === "published")
     .eq("updated_at", expectedUpdatedAt)
     .select(TOPIC_COLUMNS)
     .maybeSingle();
@@ -593,6 +606,7 @@ function matchesTopicDraft(
 function matchesUpdatedTopicDraft(
   topic: AdminTopicLibraryItem,
   input: NormalizedTopicDraft,
+  expectedStatus: AdminTopicStatus,
 ): boolean {
   return (
     topic.id === input.requestId &&
@@ -602,14 +616,14 @@ function matchesUpdatedTopicDraft(
     topic.icon === input.icon &&
     (topic.accentColor === null ? null : topic.accentColor.toUpperCase()) ===
       input.accentColor &&
-    topic.status === "draft" &&
-    topic.publishedAt === null
+    topic.status === expectedStatus
   );
 }
 
 async function recoverUpdatedTopicDraft(
   client: BareTraenClient,
   input: NormalizedTopicDraft,
+  expectedStatus: AdminTopicStatus,
 ): Promise<UpdateAdminTopicDraftResult> {
   let response: Awaited<ReturnType<typeof findTopicByRequestId>>;
 
@@ -625,11 +639,11 @@ async function recoverUpdatedTopicDraft(
 
   const topic = parseTopicBase(response.data, 0, 0);
 
-  if (!topic || topic.status !== "draft") {
+  if (!topic || topic.status !== expectedStatus) {
     throw new AdminContentError("topic_draft_not_editable");
   }
 
-  if (matchesUpdatedTopicDraft(topic, input)) {
+  if (matchesUpdatedTopicDraft(topic, input, expectedStatus)) {
     return { topic };
   }
 
@@ -710,8 +724,9 @@ export async function createAdminTopicDraft(
 }
 
 /**
- * Updates one existing unpublished topic draft. The row id comes from the
- * validated request id; publication state and provenance are never changed.
+ * Updates one existing topic. The row id comes from the validated request id;
+ * publication state, publication timestamp, version, and provenance are never
+ * changed.
  */
 export async function updateAdminTopicDraft(
   client: BareTraenClient,
@@ -719,10 +734,16 @@ export async function updateAdminTopicDraft(
 ): Promise<UpdateAdminTopicDraftResult> {
   const normalized = normalizeTopicDraft(input);
   const expectedUpdatedAt = normalizeExpectedUpdatedAt(input.expectedUpdatedAt);
+  const expectedStatus = normalizeExpectedStatus(input.expectedStatus);
   let response: Awaited<ReturnType<typeof updateTopicDraft>>;
 
   try {
-    response = await updateTopicDraft(client, normalized, expectedUpdatedAt);
+    response = await updateTopicDraft(
+      client,
+      normalized,
+      expectedStatus,
+      expectedUpdatedAt,
+    );
   } catch {
     throw new AdminContentError("topic_update_failed");
   }
@@ -739,12 +760,12 @@ export async function updateAdminTopicDraft(
   }
 
   if (response.data === null) {
-    return recoverUpdatedTopicDraft(client, normalized);
+    return recoverUpdatedTopicDraft(client, normalized, expectedStatus);
   }
 
   const topic = parseTopicBase(response.data, 0, 0);
 
-  if (!topic || !matchesUpdatedTopicDraft(topic, normalized)) {
+  if (!topic || !matchesUpdatedTopicDraft(topic, normalized, expectedStatus)) {
     throw new AdminContentError("invalid_topic_update_result");
   }
 

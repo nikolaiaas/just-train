@@ -157,6 +157,15 @@ function readExpectedUpdatedAt(formData: FormData): string {
   return values.length === 1 && typeof values[0] === "string" ? values[0] : "";
 }
 
+function readPublicationStatus(formData: FormData): "draft" | "published" {
+  const values = formData.getAll("publicationStatus");
+  const value = values.length === 1 ? values[0] : null;
+
+  if (value === "draft" || value === "published") return value;
+
+  throw new Error("The content publication status is invalid.");
+}
+
 export async function createAdminTopicDraft(
   _previousState: CreateTopicState,
   formData: FormData,
@@ -212,7 +221,7 @@ export async function createAdminTopicDraft(
       title: validation.value.title,
     });
 
-    revalidatePath("/");
+    revalidatePath("/emner");
 
     return {
       status: "success",
@@ -272,10 +281,12 @@ export async function updateAdminTopicDraft(
   }
 
   try {
+    const expectedStatus = readPublicationStatus(formData);
     const result = await updateTopicDraft(session.client, {
       authenticatedUserId: session.access.profile.id,
       accentColor: validation.value.accentColor,
       description: validation.value.description,
+      expectedStatus,
       expectedUpdatedAt: readExpectedUpdatedAt(formData),
       icon: validation.value.icon,
       requestId: validation.value.requestId,
@@ -283,12 +294,16 @@ export async function updateAdminTopicDraft(
       title: validation.value.title,
     });
 
-    revalidatePath("/");
+    revalidatePath("/emner");
+    revalidatePath(`/emner/${result.topic.id}`);
     revalidatePath("/emner/ny");
 
     return {
       status: "success",
-      message: "Emnekladden er opdateret.",
+      message:
+        expectedStatus === "published"
+          ? "Det publicerede emne er opdateret. Ændringen er synlig med det samme."
+          : "Emnekladden er opdateret.",
       topicId: result.topic.id,
       updatedAt: result.topic.updatedAt,
     };
@@ -356,7 +371,7 @@ export async function createAdminGoalDraft(
       topicId: validation.value.topicId,
     });
 
-    revalidatePath("/");
+    revalidatePath("/emner");
     revalidatePath("/emner/ny");
 
     return {
@@ -417,11 +432,13 @@ export async function updateAdminGoalDraft(
   }
 
   try {
+    const expectedStatus = readPublicationStatus(formData);
     const result = await updateGoalDraft(session.client, {
       authenticatedUserId: session.access.profile.id,
       difficulty: validation.value.difficulty,
       equipment: validation.value.equipment,
       estimatedMinutes: validation.value.estimatedMinutes,
+      expectedStatus,
       expectedUpdatedAt: readExpectedUpdatedAt(formData),
       heroMediaUrl: validation.value.heroMediaUrl,
       requestId: validation.value.requestId,
@@ -432,12 +449,15 @@ export async function updateAdminGoalDraft(
       topicId: validation.value.topicId,
     });
 
-    revalidatePath("/");
+    revalidatePath("/emner");
     revalidatePath("/emner/ny");
 
     return {
       status: "success",
-      message: "Målkladden er opdateret.",
+      message:
+        expectedStatus === "published"
+          ? "Det publicerede mål er opdateret. Ændringen er synlig med det samme."
+          : "Målkladden er opdateret.",
       goalId: result.goal.id,
       updatedAt: result.goal.updatedAt,
     };
@@ -507,7 +527,7 @@ export async function createAdminExerciseDraft(
       videoUrl: validation.value.videoUrl,
     });
 
-    revalidatePath("/");
+    revalidatePath("/emner");
     revalidatePath("/emner/ny");
 
     return {
@@ -568,10 +588,12 @@ export async function updateAdminExerciseDraft(
   }
 
   try {
+    const expectedStatus = readPublicationStatus(formData);
     const result = await updateExerciseDraft(session.client, {
       authenticatedUserId: session.access.profile.id,
       equipment: validation.value.equipment,
       estimatedMinutes: validation.value.recommendedMinutes,
+      expectedStatus,
       expectedUpdatedAt: readExpectedUpdatedAt(formData),
       goalId: validation.value.goalId,
       instructions: validation.value.instructions,
@@ -585,12 +607,15 @@ export async function updateAdminExerciseDraft(
       videoUrl: validation.value.videoUrl,
     });
 
-    revalidatePath("/");
+    revalidatePath("/emner");
     revalidatePath("/emner/ny");
 
     return {
       status: "success",
-      message: "Deløvelseskladden er opdateret.",
+      message:
+        expectedStatus === "published"
+          ? "Den publicerede deløvelse er opdateret. Ændringen er synlig med det samme."
+          : "Deløvelseskladden er opdateret.",
       exerciseId: result.exercise.id,
       updatedAt: result.exercise.updatedAt,
     };
@@ -735,7 +760,7 @@ export async function createAdminWardrobeItemDraft(
       unlockRule: validation.value.unlockRule,
     });
 
-    revalidatePath("/");
+    revalidatePath("/emner");
     revalidatePath("/emner/ny");
 
     return {
@@ -784,7 +809,7 @@ export async function updateAdminWardrobeItemDraft(
       unlockRule: validation.value.unlockRule,
     });
 
-    revalidatePath("/");
+    revalidatePath("/emner");
     revalidatePath("/emner/ny");
 
     return {
@@ -825,7 +850,7 @@ export async function decideAdminWardrobeItemDraft(
       wardrobeItemId: validation.value.itemId,
     });
 
-    revalidatePath("/");
+    revalidatePath("/emner");
     revalidatePath("/emner/ny");
 
     return {

@@ -5,6 +5,8 @@ export type AdminContentDifficulty = "beginner" | "intermediate" | "advanced";
 export type AdminExerciseMeasurement =
   "completion" | "repetitions" | "duration";
 
+export type AdminContentStatus = "draft" | "published";
+
 export type AdminWardrobeCategory = "clothing" | "equipment" | "effect";
 
 export type AdminWardrobeRarity = "common" | "rare" | "special";
@@ -19,16 +21,16 @@ export type AdminWardrobeDecision = Exclude<
 export type AdminGoalDraft = {
   contentVersion: number;
   createdAt: string;
-  createdBy: string;
+  createdBy: string | null;
   difficulty: AdminContentDifficulty;
   equipment: string[];
   estimatedMinutes: number | null;
   heroMediaUrl: string | null;
   id: string;
-  publishedAt: null;
+  publishedAt: string | null;
   slug: string;
   sortOrder: number;
-  status: "draft";
+  status: AdminContentStatus;
   summary: string;
   title: string;
   topicId: string;
@@ -38,18 +40,18 @@ export type AdminGoalDraft = {
 export type AdminExerciseDraft = {
   contentVersion: number;
   createdAt: string;
-  createdBy: string;
+  createdBy: string | null;
   equipment: string[];
   estimatedMinutes: number | null;
   goalId: string;
   id: string;
   instructions: string;
   measurement: AdminExerciseMeasurement;
-  publishedAt: null;
+  publishedAt: string | null;
   safetyNotes: string;
   slug: string;
   sortOrder: number;
-  status: "draft";
+  status: AdminContentStatus;
   targetValue: number | null;
   title: string;
   updatedAt: string;
@@ -128,14 +130,18 @@ export type CreateAdminWardrobeItemDraftInput = {
   unlockRule: string;
 };
 
-/** Uses `requestId` as the id of the existing unpublished goal draft. */
+/** Uses `requestId` as the id of the existing goal. */
 export type UpdateAdminGoalDraftInput = CreateAdminGoalDraftInput & {
+  /** The publication state returned by the last successful load or save. */
+  expectedStatus: AdminContentStatus;
   /** The revision returned by the last successful load or save. */
   expectedUpdatedAt: string;
 };
 
-/** Uses `requestId` as the id of the existing unpublished exercise draft. */
+/** Uses `requestId` as the id of the existing exercise. */
 export type UpdateAdminExerciseDraftInput = CreateAdminExerciseDraftInput & {
+  /** The publication state returned by the last successful load or save. */
+  expectedStatus: AdminContentStatus;
   /** The revision returned by the last successful load or save. */
   expectedUpdatedAt: string;
 };
@@ -206,6 +212,7 @@ export type AdminContentStepErrorCode =
   | "invalid_difficulty"
   | "invalid_equipment"
   | "invalid_estimated_minutes"
+  | "invalid_expected_status"
   | "invalid_expected_updated_at"
   | "invalid_exercise_creation_result"
   | "invalid_exercise_update_result"
@@ -264,6 +271,7 @@ const ERROR_MESSAGES: Record<AdminContentStepErrorCode, string> = {
   invalid_difficulty: "The training goal difficulty is invalid.",
   invalid_equipment: "The training goal equipment is invalid.",
   invalid_estimated_minutes: "The training goal estimated duration is invalid.",
+  invalid_expected_status: "The expected content publication state is invalid.",
   invalid_expected_updated_at: "The expected draft revision is invalid.",
   invalid_exercise_creation_result:
     "Exercise creation returned an invalid result.",
@@ -835,6 +843,14 @@ function normalizeExpectedUpdatedAt(value: unknown): string {
   return value;
 }
 
+function normalizeExpectedStatus(value: unknown): AdminContentStatus {
+  if (value !== "draft" && value !== "published") {
+    throw new AdminContentStepError("invalid_expected_status");
+  }
+
+  return value;
+}
+
 function isReturnedSingleLine(
   value: unknown,
   maximumLength: number,
@@ -912,6 +928,8 @@ function parseGoalDraft(value: unknown): AdminGoalDraft | null {
     return null;
   }
 
+  const publishedAt = value.published_at;
+
   if (
     !isUuid(value.id) ||
     !isUuid(value.topic_id) ||
@@ -931,10 +949,11 @@ function parseGoalDraft(value: unknown): AdminGoalDraft | null {
     !Number.isInteger(value.sort_order) ||
     (value.sort_order as number) < 0 ||
     (value.sort_order as number) > MAX_SORT_ORDER ||
-    value.content_version !== 1 ||
-    value.is_published !== false ||
-    value.published_at !== null ||
-    !isUuid(value.created_by) ||
+    !Number.isInteger(value.content_version) ||
+    (value.content_version as number) < 1 ||
+    typeof value.is_published !== "boolean" ||
+    (value.is_published ? !isTimestamp(publishedAt) : publishedAt !== null) ||
+    (value.created_by !== null && !isUuid(value.created_by)) ||
     !isTimestamp(value.created_at) ||
     !isTimestamp(value.updated_at)
   ) {
@@ -942,18 +961,18 @@ function parseGoalDraft(value: unknown): AdminGoalDraft | null {
   }
 
   return {
-    contentVersion: 1,
+    contentVersion: value.content_version as number,
     createdAt: value.created_at,
-    createdBy: value.created_by.toLowerCase(),
+    createdBy: value.created_by?.toLowerCase() ?? null,
     difficulty: value.difficulty as AdminContentDifficulty,
     equipment: [...value.equipment],
     estimatedMinutes: value.estimated_minutes as number | null,
     heroMediaUrl: value.hero_media_url,
     id: value.id.toLowerCase(),
-    publishedAt: null,
+    publishedAt: publishedAt as string | null,
     slug: value.slug,
     sortOrder: value.sort_order as number,
-    status: "draft",
+    status: value.is_published ? "published" : "draft",
     summary: value.summary,
     title: value.title,
     topicId: value.topic_id.toLowerCase(),
@@ -965,6 +984,8 @@ function parseExerciseDraft(value: unknown): AdminExerciseDraft | null {
   if (!isRecord(value)) {
     return null;
   }
+
+  const publishedAt = value.published_at;
 
   if (
     !isUuid(value.id) ||
@@ -987,10 +1008,11 @@ function parseExerciseDraft(value: unknown): AdminExerciseDraft | null {
     !Number.isInteger(value.sort_order) ||
     (value.sort_order as number) < 0 ||
     (value.sort_order as number) > MAX_SORT_ORDER ||
-    value.content_version !== 1 ||
-    value.is_published !== false ||
-    value.published_at !== null ||
-    !isUuid(value.created_by) ||
+    !Number.isInteger(value.content_version) ||
+    (value.content_version as number) < 1 ||
+    typeof value.is_published !== "boolean" ||
+    (value.is_published ? !isTimestamp(publishedAt) : publishedAt !== null) ||
+    (value.created_by !== null && !isUuid(value.created_by)) ||
     !isTimestamp(value.created_at) ||
     !isTimestamp(value.updated_at)
   ) {
@@ -998,20 +1020,20 @@ function parseExerciseDraft(value: unknown): AdminExerciseDraft | null {
   }
 
   return {
-    contentVersion: 1,
+    contentVersion: value.content_version as number,
     createdAt: value.created_at,
-    createdBy: value.created_by.toLowerCase(),
+    createdBy: value.created_by?.toLowerCase() ?? null,
     equipment: [...value.equipment],
     estimatedMinutes: value.estimated_minutes as number | null,
     goalId: value.goal_id.toLowerCase(),
     id: value.id.toLowerCase(),
     instructions: value.instructions,
     measurement: value.measurement as AdminExerciseMeasurement,
-    publishedAt: null,
+    publishedAt: publishedAt as string | null,
     safetyNotes: value.safety_notes,
     slug: value.slug,
     sortOrder: value.sort_order as number,
-    status: "draft",
+    status: value.is_published ? "published" : "draft",
     targetValue: value.target_value as number | null,
     title: value.title,
     updatedAt: value.updated_at,
@@ -1299,6 +1321,7 @@ async function loadWardrobeItemDraft(
 async function updateGoalDraft(
   client: BareTraenClient,
   input: NormalizedGoalDraft,
+  expectedStatus: AdminContentStatus,
   expectedUpdatedAt: string,
 ) {
   return client
@@ -1315,7 +1338,7 @@ async function updateGoalDraft(
     })
     .eq("id", input.requestId)
     .eq("topic_id", input.topicId)
-    .eq("is_published", false)
+    .eq("is_published", expectedStatus === "published")
     .eq("updated_at", expectedUpdatedAt)
     .select(GOAL_COLUMNS)
     .maybeSingle();
@@ -1324,6 +1347,7 @@ async function updateGoalDraft(
 async function updateExerciseDraft(
   client: BareTraenClient,
   input: NormalizedExerciseDraft,
+  expectedStatus: AdminContentStatus,
   expectedUpdatedAt: string,
 ) {
   return client
@@ -1342,7 +1366,7 @@ async function updateExerciseDraft(
     })
     .eq("id", input.requestId)
     .eq("goal_id", input.goalId)
-    .eq("is_published", false)
+    .eq("is_published", expectedStatus === "published")
     .eq("updated_at", expectedUpdatedAt)
     .select(EXERCISE_COLUMNS)
     .maybeSingle();
@@ -1464,6 +1488,7 @@ function matchesWardrobeItemDraft(
 function matchesUpdatedGoalDraft(
   goal: AdminGoalDraft,
   input: NormalizedGoalDraft,
+  expectedStatus: AdminContentStatus,
 ): boolean {
   return (
     goal.id === input.requestId &&
@@ -1477,14 +1502,14 @@ function matchesUpdatedGoalDraft(
     goal.equipment.every((item, index) => item === input.equipment[index]) &&
     goal.heroMediaUrl === input.heroMediaUrl &&
     goal.sortOrder === input.sortOrder &&
-    goal.status === "draft" &&
-    goal.publishedAt === null
+    goal.status === expectedStatus
   );
 }
 
 function matchesUpdatedExerciseDraft(
   exercise: AdminExerciseDraft,
   input: NormalizedExerciseDraft,
+  expectedStatus: AdminContentStatus,
 ): boolean {
   return (
     exercise.id === input.requestId &&
@@ -1501,8 +1526,7 @@ function matchesUpdatedExerciseDraft(
     exercise.targetValue === input.targetValue &&
     exercise.videoUrl === input.videoUrl &&
     exercise.sortOrder === input.sortOrder &&
-    exercise.status === "draft" &&
-    exercise.publishedAt === null &&
+    exercise.status === expectedStatus &&
     exercise.safetyNotes === input.safetyNotes
   );
 }
@@ -1544,6 +1568,7 @@ function matchesWardrobeDecision(
 async function recoverUpdatedGoalDraft(
   client: BareTraenClient,
   input: NormalizedGoalDraft,
+  expectedStatus: AdminContentStatus,
 ): Promise<UpdateAdminGoalDraftResult> {
   let response: Awaited<ReturnType<typeof findGoalByRequestId>>;
 
@@ -1559,11 +1584,11 @@ async function recoverUpdatedGoalDraft(
 
   const goal = parseGoalDraft(response.data);
 
-  if (!goal) {
+  if (!goal || goal.status !== expectedStatus) {
     throw new AdminContentStepError("goal_draft_not_editable");
   }
 
-  if (matchesUpdatedGoalDraft(goal, input)) {
+  if (matchesUpdatedGoalDraft(goal, input, expectedStatus)) {
     return { goal };
   }
 
@@ -1573,6 +1598,7 @@ async function recoverUpdatedGoalDraft(
 async function recoverUpdatedExerciseDraft(
   client: BareTraenClient,
   input: NormalizedExerciseDraft,
+  expectedStatus: AdminContentStatus,
 ): Promise<UpdateAdminExerciseDraftResult> {
   let response: Awaited<ReturnType<typeof findExerciseByRequestId>>;
 
@@ -1588,11 +1614,11 @@ async function recoverUpdatedExerciseDraft(
 
   const exercise = parseExerciseDraft(response.data);
 
-  if (!exercise) {
+  if (!exercise || exercise.status !== expectedStatus) {
     throw new AdminContentStepError("exercise_draft_not_editable");
   }
 
-  if (matchesUpdatedExerciseDraft(exercise, input)) {
+  if (matchesUpdatedExerciseDraft(exercise, input, expectedStatus)) {
     return { exercise };
   }
 
@@ -1854,17 +1880,26 @@ export async function createAdminWardrobeItemDraft(
   return { created: true, item: lookup.item };
 }
 
-/** Updates one existing unpublished goal without changing its parent or author. */
+/**
+ * Updates one existing goal without changing its parent, author, publication
+ * state, publication timestamp, or content version.
+ */
 export async function updateAdminGoalDraft(
   client: BareTraenClient,
   input: UpdateAdminGoalDraftInput,
 ): Promise<UpdateAdminGoalDraftResult> {
   const normalized = normalizeGoalDraft(input);
   const expectedUpdatedAt = normalizeExpectedUpdatedAt(input.expectedUpdatedAt);
+  const expectedStatus = normalizeExpectedStatus(input.expectedStatus);
   let response: Awaited<ReturnType<typeof updateGoalDraft>>;
 
   try {
-    response = await updateGoalDraft(client, normalized, expectedUpdatedAt);
+    response = await updateGoalDraft(
+      client,
+      normalized,
+      expectedStatus,
+      expectedUpdatedAt,
+    );
   } catch {
     throw new AdminContentStepError("goal_update_failed");
   }
@@ -1881,12 +1916,12 @@ export async function updateAdminGoalDraft(
   }
 
   if (response.data === null) {
-    return recoverUpdatedGoalDraft(client, normalized);
+    return recoverUpdatedGoalDraft(client, normalized, expectedStatus);
   }
 
   const goal = parseGoalDraft(response.data);
 
-  if (!goal || !matchesUpdatedGoalDraft(goal, normalized)) {
+  if (!goal || !matchesUpdatedGoalDraft(goal, normalized, expectedStatus)) {
     throw new AdminContentStepError("invalid_goal_update_result");
   }
 
@@ -1894,8 +1929,8 @@ export async function updateAdminGoalDraft(
 }
 
 /**
- * Updates one existing unpublished exercise without changing its parent or
- * author.
+ * Updates one existing exercise without changing its parent, author,
+ * publication state, publication timestamp, or content version.
  */
 export async function updateAdminExerciseDraft(
   client: BareTraenClient,
@@ -1903,10 +1938,16 @@ export async function updateAdminExerciseDraft(
 ): Promise<UpdateAdminExerciseDraftResult> {
   const normalized = normalizeExerciseDraft(input);
   const expectedUpdatedAt = normalizeExpectedUpdatedAt(input.expectedUpdatedAt);
+  const expectedStatus = normalizeExpectedStatus(input.expectedStatus);
   let response: Awaited<ReturnType<typeof updateExerciseDraft>>;
 
   try {
-    response = await updateExerciseDraft(client, normalized, expectedUpdatedAt);
+    response = await updateExerciseDraft(
+      client,
+      normalized,
+      expectedStatus,
+      expectedUpdatedAt,
+    );
   } catch {
     throw new AdminContentStepError("exercise_update_failed");
   }
@@ -1923,12 +1964,15 @@ export async function updateAdminExerciseDraft(
   }
 
   if (response.data === null) {
-    return recoverUpdatedExerciseDraft(client, normalized);
+    return recoverUpdatedExerciseDraft(client, normalized, expectedStatus);
   }
 
   const exercise = parseExerciseDraft(response.data);
 
-  if (!exercise || !matchesUpdatedExerciseDraft(exercise, normalized)) {
+  if (
+    !exercise ||
+    !matchesUpdatedExerciseDraft(exercise, normalized, expectedStatus)
+  ) {
     throw new AdminContentStepError("invalid_exercise_update_result");
   }
 

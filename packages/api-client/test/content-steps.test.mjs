@@ -124,11 +124,13 @@ const validWardrobeInput = Object.freeze({
 
 const validGoalUpdateInput = Object.freeze({
   ...validGoalInput,
+  expectedStatus: "draft",
   expectedUpdatedAt: goalRow.updated_at,
 });
 
 const validExerciseUpdateInput = Object.freeze({
   ...validExerciseInput,
+  expectedStatus: "draft",
   expectedUpdatedAt: exerciseRow.updated_at,
 });
 
@@ -865,6 +867,58 @@ test("updates exercise fields without changing its parent, author, or publicatio
   );
 });
 
+test("updates published goals and exercises without changing publication metadata", async () => {
+  const publishedAt = "2026-08-21T20:30:00.000Z";
+
+  for (const [update, input, row, resultKey] of [
+    [
+      updateAdminGoalDraft,
+      validGoalUpdateInput,
+      {
+        ...goalRow,
+        content_version: 3,
+        is_published: true,
+        published_at: publishedAt,
+      },
+      "goal",
+    ],
+    [
+      updateAdminExerciseDraft,
+      validExerciseUpdateInput,
+      {
+        ...exerciseRow,
+        content_version: 3,
+        is_published: true,
+        published_at: publishedAt,
+      },
+      "exercise",
+    ],
+  ]) {
+    const { calls, ...client } = clientForResponses([
+      { data: row, error: null },
+    ]);
+
+    const result = await update(client, {
+      ...input,
+      expectedStatus: "published",
+    });
+
+    assert.equal(result[resultKey].status, "published");
+    assert.equal(result[resultKey].publishedAt, publishedAt);
+    assert.equal(result[resultKey].contentVersion, 3);
+    const updateCall = calls.find((call) => call.operation === "update");
+    assert.equal("is_published" in updateCall.value, false);
+    assert.equal("published_at" in updateCall.value, false);
+    assert.equal("content_version" in updateCall.value, false);
+    assert.deepEqual(
+      calls.find(
+        (call) => call.operation === "eq" && call.column === "is_published",
+      ),
+      { operation: "eq", column: "is_published", value: true },
+    );
+  }
+});
+
 test("updates wardrobe content and resets its editorial status to draft", async () => {
   const updatedRow = {
     ...wardrobeItemRow,
@@ -1176,6 +1230,30 @@ test("rejects updates without a valid expected revision before querying", async 
       await assert.rejects(
         update(client, { ...input, expectedUpdatedAt }),
         (error) => assertStepError(error, "invalid_expected_updated_at"),
+      );
+    }
+  }
+
+  assert.equal(calls, 0);
+});
+
+test("rejects updates without a valid expected publication state", async () => {
+  let calls = 0;
+  const client = {
+    from() {
+      calls += 1;
+      throw new Error("must not query");
+    },
+  };
+
+  for (const [update, input] of [
+    [updateAdminGoalDraft, validGoalUpdateInput],
+    [updateAdminExerciseDraft, validExerciseUpdateInput],
+  ]) {
+    for (const expectedStatus of [undefined, "", "review"]) {
+      await assert.rejects(
+        update(client, { ...input, expectedStatus }),
+        (error) => assertStepError(error, "invalid_expected_status"),
       );
     }
   }

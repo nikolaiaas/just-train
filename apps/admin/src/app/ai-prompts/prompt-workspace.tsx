@@ -183,7 +183,7 @@ export function AiPromptWorkspace({ catalog }: { catalog: AiPromptCatalog }) {
       <header className={styles.workspaceHeader}>
         <div>
           <p className={styles.kicker}>AI-konfiguration</p>
-          <h2 id="ai-prompts-title">Prompter og versioner</h2>
+          <h1 id="ai-prompts-title">Prompter og versioner</h1>
           <p>
             Gennemgå den aktive prompt, udgiv en ny immutable version og følg
             den fulde historik. Nye AI-handlinger dukker op som separate kort.
