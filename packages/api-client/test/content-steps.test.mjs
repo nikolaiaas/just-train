@@ -5,14 +5,18 @@ import {
   AdminContentStepError,
   createAdminExerciseDraft,
   createAdminGoalDraft,
+  createAdminWardrobeItemDraft,
+  decideAdminWardrobeItemDraft,
   updateAdminExerciseDraft,
   updateAdminGoalDraft,
+  updateAdminWardrobeItemDraft,
 } from "../src/content-steps.ts";
 
 const adminId = "10000000-0000-4000-8000-000000000003";
 const topicId = "40000000-0000-4000-8000-000000000001";
 const goalId = "50000000-0000-4000-8000-000000000001";
 const exerciseId = "60000000-0000-4000-8000-000000000001";
+const wardrobeItemId = "70000000-0000-4000-8000-000000000001";
 
 const goalRow = Object.freeze({
   content_version: 1,
@@ -54,6 +58,26 @@ const exerciseRow = Object.freeze({
   video_url: "https://media.example.test/exercise.mp4",
 });
 
+const wardrobeItemRow = Object.freeze({
+  category: "clothing",
+  content_version: 1,
+  created_at: "2026-08-21T21:02:00.000Z",
+  created_by: adminId,
+  editorial_note: "Et roligt, brandfrit valg.",
+  editorial_status: "draft",
+  icon: "🧢",
+  id: wardrobeItemId,
+  is_published: false,
+  name: "Stjernetrøje",
+  points: 120,
+  published_at: null,
+  rarity: "rare",
+  sort_order: 30,
+  topic_id: topicId,
+  unlock_rule: null,
+  updated_at: "2026-08-21T21:02:00.000Z",
+});
+
 const validGoalInput = Object.freeze({
   authenticatedUserId: adminId,
   difficulty: "beginner",
@@ -84,14 +108,43 @@ const validExerciseInput = Object.freeze({
   videoUrl: "https://media.example.test/exercise.mp4",
 });
 
+const validWardrobeInput = Object.freeze({
+  authenticatedUserId: adminId,
+  category: "clothing",
+  editorialNote: "Et roligt, brandfrit valg.",
+  icon: "🧢",
+  name: "Stjernetrøje",
+  points: 120,
+  rarity: "rare",
+  requestId: wardrobeItemId,
+  sortOrder: 30,
+  topicId,
+  unlockRule: "",
+});
+
 const validGoalUpdateInput = Object.freeze({
   ...validGoalInput,
+  expectedStatus: "draft",
   expectedUpdatedAt: goalRow.updated_at,
 });
 
 const validExerciseUpdateInput = Object.freeze({
   ...validExerciseInput,
+  expectedStatus: "draft",
   expectedUpdatedAt: exerciseRow.updated_at,
+});
+
+const validWardrobeUpdateInput = Object.freeze({
+  ...validWardrobeInput,
+  expectedUpdatedAt: wardrobeItemRow.updated_at,
+});
+
+const validWardrobeDecisionInput = Object.freeze({
+  authenticatedUserId: adminId,
+  decision: "approved",
+  expectedUpdatedAt: wardrobeItemRow.updated_at,
+  topicId,
+  wardrobeItemId,
 });
 
 function queryFor(response, calls) {
@@ -121,13 +174,21 @@ function queryFor(response, calls) {
 function clientForResponses(responses, calls = []) {
   let request = 0;
 
+  function nextResponse() {
+    const response = responses[Math.min(request, responses.length - 1)];
+    request += 1;
+    return response;
+  }
+
   return {
     calls,
     from(table) {
       calls.push({ operation: "from", table });
-      const response = responses[Math.min(request, responses.length - 1)];
-      request += 1;
-      return queryFor(response, calls);
+      return queryFor(nextResponse(), calls);
+    },
+    async rpc(name, args) {
+      calls.push({ operation: "rpc", name, args });
+      return nextResponse();
     },
   };
 }
@@ -136,6 +197,24 @@ function assertStepError(error, code) {
   assert.ok(error instanceof AdminContentStepError);
   assert.equal(error.code, code);
   return true;
+}
+
+function assertWardrobeRpcCall(
+  calls,
+  itemId = wardrobeItemId,
+  parentTopicId = topicId,
+) {
+  assert.deepEqual(
+    calls.find((call) => call.operation === "rpc"),
+    {
+      operation: "rpc",
+      name: "list_admin_wardrobe_item_drafts",
+      args: {
+        p_topic_id: parentTopicId,
+        p_wardrobe_item_id: itemId,
+      },
+    },
+  );
 }
 
 function expectedGoal(overrides = {}) {
@@ -180,6 +259,29 @@ function expectedExercise(overrides = {}) {
     title: "Slalom med bold",
     updatedAt: exerciseRow.updated_at,
     videoUrl: exerciseRow.video_url,
+    ...overrides,
+  };
+}
+
+function expectedWardrobeItem(overrides = {}) {
+  return {
+    category: "clothing",
+    contentVersion: 1,
+    createdAt: wardrobeItemRow.created_at,
+    createdBy: adminId,
+    editorialNote: wardrobeItemRow.editorial_note,
+    editorialStatus: "draft",
+    icon: "🧢",
+    id: wardrobeItemId,
+    name: "Stjernetrøje",
+    points: 120,
+    publishedAt: null,
+    rarity: "rare",
+    sortOrder: 30,
+    status: "draft",
+    topicId,
+    unlockRule: "",
+    updatedAt: wardrobeItemRow.updated_at,
     ...overrides,
   };
 }
@@ -266,6 +368,78 @@ test("creates a normalized unpublished exercise below its training goal", async 
   assert.match(calls[2].columns, /goal_id.*measurement.*created_by/);
 });
 
+test("creates a normalized unpublished wardrobe item below its topic", async () => {
+  const { calls, ...client } = clientForResponses([
+    { data: { id: wardrobeItemId }, error: null },
+    { data: [wardrobeItemRow], error: null },
+  ]);
+
+  const result = await createAdminWardrobeItemDraft(client, {
+    ...validWardrobeInput,
+    authenticatedUserId: adminId.toUpperCase(),
+    editorialNote: "  Et roligt, brandfrit valg.  ",
+    icon: "  🧢  ",
+    name: "  Stjernetrøje  ",
+    requestId: wardrobeItemId.toUpperCase(),
+    topicId: topicId.toUpperCase(),
+    unlockRule: "  ",
+  });
+
+  assert.deepEqual(result, {
+    created: true,
+    item: expectedWardrobeItem(),
+  });
+  assert.deepEqual(calls[0], {
+    operation: "from",
+    table: "wardrobe_items",
+  });
+  assert.deepEqual(calls[1], {
+    operation: "insert",
+    value: {
+      category: "clothing",
+      created_by: adminId,
+      editorial_note: wardrobeItemRow.editorial_note,
+      icon: "🧢",
+      id: wardrobeItemId,
+      name: "Stjernetrøje",
+      points: 120,
+      rarity: "rare",
+      sort_order: 30,
+      topic_id: topicId,
+      unlock_rule: null,
+    },
+  });
+  assert.deepEqual(calls[2], { operation: "select", columns: "id" });
+  assertWardrobeRpcCall(calls);
+});
+
+test("maps an unlock-only wardrobe item to nullable database fields", async () => {
+  const unlockRow = {
+    ...wardrobeItemRow,
+    editorial_note: null,
+    points: null,
+    unlock_rule: "Gennemfør tre træninger",
+  };
+  const { calls, ...client } = clientForResponses([
+    { data: { id: wardrobeItemId }, error: null },
+    { data: [unlockRow], error: null },
+  ]);
+
+  const result = await createAdminWardrobeItemDraft(client, {
+    ...validWardrobeInput,
+    editorialNote: "",
+    points: 0,
+    unlockRule: " Gennemfør tre træninger ",
+  });
+
+  assert.equal(result.item.points, 0);
+  assert.equal(result.item.unlockRule, "Gennemfør tre træninger");
+  assert.equal(result.item.editorialNote, "");
+  assert.deepEqual(calls[1].value.points, null);
+  assert.deepEqual(calls[1].value.unlock_rule, "Gennemfør tre træninger");
+  assert.deepEqual(calls[1].value.editorial_note, null);
+});
+
 test("rejects invalid goal input before accessing Supabase", async () => {
   let calls = 0;
   const client = {
@@ -348,6 +522,80 @@ test("rejects invalid exercise input and enforces measurement targets", async ()
   assert.equal(calls, 0);
 });
 
+test("rejects invalid wardrobe content before accessing Supabase", async () => {
+  let calls = 0;
+  const client = {
+    from() {
+      calls += 1;
+      throw new Error("must not query");
+    },
+  };
+  const cases = [
+    [{ authenticatedUserId: "not-a-uuid" }, "invalid_authenticated_user_id"],
+    [{ requestId: "not-a-uuid" }, "invalid_request_id"],
+    [{ topicId: "not-a-uuid" }, "invalid_topic_id"],
+    [{ name: "  " }, "invalid_wardrobe_name"],
+    [{ name: "x".repeat(81) }, "invalid_wardrobe_name"],
+    [{ icon: "x".repeat(17) }, "invalid_wardrobe_icon"],
+    [{ category: "hat" }, "invalid_wardrobe_category"],
+    [{ rarity: "legendary" }, "invalid_wardrobe_rarity"],
+    [{ points: -1 }, "invalid_wardrobe_points"],
+    [{ points: 1_001 }, "invalid_wardrobe_points"],
+    [{ points: 0, unlockRule: "" }, "invalid_wardrobe_unlock_rule"],
+    [
+      { points: 20, unlockRule: "Gennemfør en træning" },
+      "invalid_wardrobe_unlock_rule",
+    ],
+    [
+      { points: 0, unlockRule: "x".repeat(201) },
+      "invalid_wardrobe_unlock_rule",
+    ],
+    [{ editorialNote: "x".repeat(501) }, "invalid_wardrobe_editorial_note"],
+    [{ sortOrder: -1 }, "invalid_sort_order"],
+  ];
+
+  for (const [patch, code] of cases) {
+    await assert.rejects(
+      createAdminWardrobeItemDraft(client, {
+        ...validWardrobeInput,
+        ...patch,
+      }),
+      (error) => assertStepError(error, code),
+    );
+  }
+
+  assert.equal(calls, 0);
+});
+
+test("rejects invalid wardrobe decisions before accessing Supabase", async () => {
+  let calls = 0;
+  const client = {
+    from() {
+      calls += 1;
+      throw new Error("must not query");
+    },
+  };
+  const cases = [
+    [{ authenticatedUserId: "not-a-uuid" }, "invalid_authenticated_user_id"],
+    [{ wardrobeItemId: "not-a-uuid" }, "invalid_wardrobe_item_id"],
+    [{ topicId: "not-a-uuid" }, "invalid_topic_id"],
+    [{ decision: "draft" }, "invalid_wardrobe_decision"],
+    [{ expectedUpdatedAt: "not-a-timestamp" }, "invalid_expected_updated_at"],
+  ];
+
+  for (const [patch, code] of cases) {
+    await assert.rejects(
+      decideAdminWardrobeItemDraft(client, {
+        ...validWardrobeDecisionInput,
+        ...patch,
+      }),
+      (error) => assertStepError(error, code),
+    );
+  }
+
+  assert.equal(calls, 0);
+});
+
 test("allows completion exercises only with a null target", async () => {
   const completionRow = {
     ...exerciseRow,
@@ -415,6 +663,39 @@ test("recovers exact duplicate request ids without overwriting content", async (
       },
     );
   }
+});
+
+test("recovers an exact wardrobe request-id retry without overwriting it", async () => {
+  const { calls, ...client } = clientForResponses([
+    { data: null, error: { code: "23505" } },
+    { data: [wardrobeItemRow], error: null },
+  ]);
+
+  const result = await createAdminWardrobeItemDraft(client, validWardrobeInput);
+
+  assert.deepEqual(result, {
+    created: false,
+    item: expectedWardrobeItem(),
+  });
+  assert.equal(calls.filter((call) => call.operation === "insert").length, 1);
+  assert.equal(calls.filter((call) => call.operation === "update").length, 0);
+  assert.equal(calls.filter((call) => call.operation === "eq").length, 0);
+  assertWardrobeRpcCall(calls);
+});
+
+test("rejects wardrobe request-id reuse with different content", async () => {
+  const { calls: _calls, ...client } = clientForResponses([
+    { data: null, error: { code: "23505" } },
+    {
+      data: [{ ...wardrobeItemRow, name: "Et andet navn" }],
+      error: null,
+    },
+  ]);
+
+  await assert.rejects(
+    createAdminWardrobeItemDraft(client, validWardrobeInput),
+    (error) => assertStepError(error, "wardrobe_creation_conflict"),
+  );
 });
 
 test("rejects request-id reuse and unrelated unique collisions as conflicts", async () => {
@@ -586,6 +867,209 @@ test("updates exercise fields without changing its parent, author, or publicatio
   );
 });
 
+test("updates published goals and exercises without changing publication metadata", async () => {
+  const publishedAt = "2026-08-21T20:30:00.000Z";
+
+  for (const [update, input, row, resultKey] of [
+    [
+      updateAdminGoalDraft,
+      validGoalUpdateInput,
+      {
+        ...goalRow,
+        content_version: 3,
+        is_published: true,
+        published_at: publishedAt,
+      },
+      "goal",
+    ],
+    [
+      updateAdminExerciseDraft,
+      validExerciseUpdateInput,
+      {
+        ...exerciseRow,
+        content_version: 3,
+        is_published: true,
+        published_at: publishedAt,
+      },
+      "exercise",
+    ],
+  ]) {
+    const { calls, ...client } = clientForResponses([
+      { data: row, error: null },
+    ]);
+
+    const result = await update(client, {
+      ...input,
+      expectedStatus: "published",
+    });
+
+    assert.equal(result[resultKey].status, "published");
+    assert.equal(result[resultKey].publishedAt, publishedAt);
+    assert.equal(result[resultKey].contentVersion, 3);
+    const updateCall = calls.find((call) => call.operation === "update");
+    assert.equal("is_published" in updateCall.value, false);
+    assert.equal("published_at" in updateCall.value, false);
+    assert.equal("content_version" in updateCall.value, false);
+    assert.deepEqual(
+      calls.find(
+        (call) => call.operation === "eq" && call.column === "is_published",
+      ),
+      { operation: "eq", column: "is_published", value: true },
+    );
+  }
+});
+
+test("updates wardrobe content and resets its editorial status to draft", async () => {
+  const updatedRow = {
+    ...wardrobeItemRow,
+    category: "effect",
+    editorial_note: null,
+    editorial_status: "draft",
+    icon: "✨",
+    name: "Stjernestøv",
+    points: null,
+    rarity: "special",
+    sort_order: 40,
+    unlock_rule: "Gennemfør fem træninger",
+  };
+  const { calls, ...client } = clientForResponses([
+    { data: { id: wardrobeItemId }, error: null },
+    { data: [updatedRow], error: null },
+  ]);
+
+  const result = await updateAdminWardrobeItemDraft(client, {
+    ...validWardrobeUpdateInput,
+    category: "effect",
+    editorialNote: "",
+    icon: "✨",
+    name: "Stjernestøv",
+    points: 0,
+    rarity: "special",
+    sortOrder: 40,
+    unlockRule: "Gennemfør fem træninger",
+  });
+
+  assert.deepEqual(
+    result.item,
+    expectedWardrobeItem({
+      category: "effect",
+      editorialNote: "",
+      icon: "✨",
+      name: "Stjernestøv",
+      points: 0,
+      rarity: "special",
+      sortOrder: 40,
+      unlockRule: "Gennemfør fem træninger",
+    }),
+  );
+  const updateCall = calls.find((call) => call.operation === "update");
+  assert.deepEqual(updateCall.value, {
+    category: "effect",
+    editorial_note: null,
+    icon: "✨",
+    name: "Stjernestøv",
+    points: null,
+    rarity: "special",
+    sort_order: 40,
+    unlock_rule: "Gennemfør fem træninger",
+  });
+  assert.equal("topic_id" in updateCall.value, false);
+  assert.equal("created_by" in updateCall.value, false);
+  assert.equal("is_published" in updateCall.value, false);
+  assert.deepEqual(
+    calls.filter((call) => call.operation === "eq"),
+    [
+      { operation: "eq", column: "id", value: wardrobeItemId },
+      { operation: "eq", column: "topic_id", value: topicId },
+      { operation: "eq", column: "is_published", value: false },
+      {
+        operation: "eq",
+        column: "updated_at",
+        value: wardrobeItemRow.updated_at,
+      },
+    ],
+  );
+  assert.deepEqual(
+    calls.filter((call) => call.operation === "select"),
+    [{ operation: "select", columns: "id" }],
+  );
+  assertWardrobeRpcCall(calls);
+});
+
+test("approves or rejects an unpublished wardrobe item optimistically", async () => {
+  for (const decision of ["approved", "rejected"]) {
+    const decidedRow = {
+      ...wardrobeItemRow,
+      editorial_status: decision,
+      updated_at: "2026-08-21T21:03:00.000Z",
+    };
+    const { calls, ...client } = clientForResponses([
+      { data: { id: wardrobeItemId }, error: null },
+      { data: [decidedRow], error: null },
+    ]);
+
+    const result = await decideAdminWardrobeItemDraft(client, {
+      ...validWardrobeDecisionInput,
+      decision,
+    });
+
+    assert.equal(result.item.editorialStatus, decision);
+    assert.deepEqual(calls.find((call) => call.operation === "update").value, {
+      editorial_status: decision,
+    });
+    assert.deepEqual(
+      calls.filter((call) => call.operation === "eq"),
+      [
+        { operation: "eq", column: "id", value: wardrobeItemId },
+        { operation: "eq", column: "topic_id", value: topicId },
+        { operation: "eq", column: "is_published", value: false },
+        {
+          operation: "eq",
+          column: "updated_at",
+          value: wardrobeItemRow.updated_at,
+        },
+      ],
+    );
+    assert.deepEqual(
+      calls.filter((call) => call.operation === "select"),
+      [{ operation: "select", columns: "id" }],
+    );
+    assertWardrobeRpcCall(calls);
+  }
+});
+
+test("preserves nullable wardrobe provenance after create, update, and review", async () => {
+  for (const [mutate, input, row] of [
+    [
+      createAdminWardrobeItemDraft,
+      validWardrobeInput,
+      { ...wardrobeItemRow, created_by: null },
+    ],
+    [
+      updateAdminWardrobeItemDraft,
+      validWardrobeUpdateInput,
+      { ...wardrobeItemRow, created_by: null },
+    ],
+    [
+      decideAdminWardrobeItemDraft,
+      validWardrobeDecisionInput,
+      {
+        ...wardrobeItemRow,
+        created_by: null,
+        editorial_status: "approved",
+      },
+    ],
+  ]) {
+    const { calls: _calls, ...client } = clientForResponses([
+      { data: { id: wardrobeItemId }, error: null },
+      { data: [row], error: null },
+    ]);
+
+    const result = await mutate(client, input);
+    assert.equal(result.item.createdBy, null);
+  }
+});
+
 test("rejects updates that collide or no longer target editable drafts", async () => {
   for (const [update, input, response, code] of [
     [
@@ -654,6 +1138,80 @@ test("recovers exact update retries and rejects genuinely stale drafts", async (
   }
 });
 
+test("recovers exact wardrobe update retries and rejects stale content", async () => {
+  for (const [persistedRow, expectedCode] of [
+    [wardrobeItemRow, null],
+    [
+      { ...wardrobeItemRow, name: "Ændret i en anden fane" },
+      "wardrobe_draft_conflict",
+    ],
+  ]) {
+    const { calls: _calls, ...client } = clientForResponses([
+      { data: null, error: null },
+      { data: [persistedRow], error: null },
+    ]);
+
+    if (expectedCode) {
+      await assert.rejects(
+        updateAdminWardrobeItemDraft(client, validWardrobeUpdateInput),
+        (error) => assertStepError(error, expectedCode),
+      );
+    } else {
+      const result = await updateAdminWardrobeItemDraft(
+        client,
+        validWardrobeUpdateInput,
+      );
+      assert.equal(result.item.updatedAt, persistedRow.updated_at);
+    }
+  }
+});
+
+test("recovers exact wardrobe decision retries and rejects stale reviews", async () => {
+  for (const [persistedStatus, expectedCode] of [
+    ["approved", null],
+    ["rejected", "wardrobe_draft_conflict"],
+  ]) {
+    const persistedRow = {
+      ...wardrobeItemRow,
+      editorial_status: persistedStatus,
+      updated_at: "2026-08-21T21:03:00.000Z",
+    };
+    const { calls: _calls, ...client } = clientForResponses([
+      { data: null, error: null },
+      { data: [persistedRow], error: null },
+    ]);
+
+    if (expectedCode) {
+      await assert.rejects(
+        decideAdminWardrobeItemDraft(client, validWardrobeDecisionInput),
+        (error) => assertStepError(error, expectedCode),
+      );
+    } else {
+      const result = await decideAdminWardrobeItemDraft(
+        client,
+        validWardrobeDecisionInput,
+      );
+      assert.equal(result.item.editorialStatus, "approved");
+    }
+  }
+});
+
+test("reports missing wardrobe rows as no longer editable", async () => {
+  for (const [mutate, input] of [
+    [updateAdminWardrobeItemDraft, validWardrobeUpdateInput],
+    [decideAdminWardrobeItemDraft, validWardrobeDecisionInput],
+  ]) {
+    const { calls: _calls, ...client } = clientForResponses([
+      { data: null, error: null },
+      { data: [], error: null },
+    ]);
+
+    await assert.rejects(mutate(client, input), (error) =>
+      assertStepError(error, "wardrobe_draft_not_editable"),
+    );
+  }
+});
+
 test("rejects updates without a valid expected revision before querying", async () => {
   let calls = 0;
   const client = {
@@ -666,11 +1224,36 @@ test("rejects updates without a valid expected revision before querying", async 
   for (const [update, input] of [
     [updateAdminGoalDraft, validGoalInput],
     [updateAdminExerciseDraft, validExerciseInput],
+    [updateAdminWardrobeItemDraft, validWardrobeInput],
   ]) {
     for (const expectedUpdatedAt of [undefined, "", "not-a-timestamp"]) {
       await assert.rejects(
         update(client, { ...input, expectedUpdatedAt }),
         (error) => assertStepError(error, "invalid_expected_updated_at"),
+      );
+    }
+  }
+
+  assert.equal(calls, 0);
+});
+
+test("rejects updates without a valid expected publication state", async () => {
+  let calls = 0;
+  const client = {
+    from() {
+      calls += 1;
+      throw new Error("must not query");
+    },
+  };
+
+  for (const [update, input] of [
+    [updateAdminGoalDraft, validGoalUpdateInput],
+    [updateAdminExerciseDraft, validExerciseUpdateInput],
+  ]) {
+    for (const expectedStatus of [undefined, "", "review"]) {
+      await assert.rejects(
+        update(client, { ...input, expectedStatus }),
+        (error) => assertStepError(error, "invalid_expected_status"),
       );
     }
   }
@@ -704,12 +1287,55 @@ test("validates returned rows instead of trusting Supabase output", async () => 
       { ...exerciseRow, video_url: "javascript:alert(1)" },
       "invalid_exercise_creation_result",
     ],
+    [
+      createAdminWardrobeItemDraft,
+      validWardrobeInput,
+      { ...wardrobeItemRow, points: 0 },
+      "invalid_wardrobe_creation_result",
+    ],
+    [
+      createAdminWardrobeItemDraft,
+      validWardrobeInput,
+      { ...wardrobeItemRow, editorial_status: "pending" },
+      "invalid_wardrobe_creation_result",
+    ],
   ]) {
-    const { calls: _calls, ...client } = clientForResponses([
-      { data: invalidRow, error: null },
-    ]);
+    const responses =
+      create === createAdminWardrobeItemDraft
+        ? [
+            { data: { id: wardrobeItemId }, error: null },
+            { data: [invalidRow], error: null },
+          ]
+        : [{ data: invalidRow, error: null }];
+    const { calls: _calls, ...client } = clientForResponses(responses);
 
     await assert.rejects(create(client, input), (error) =>
+      assertStepError(error, code),
+    );
+  }
+});
+
+test("validates wardrobe mutation results instead of trusting them", async () => {
+  for (const [mutate, input, row, code] of [
+    [
+      updateAdminWardrobeItemDraft,
+      validWardrobeUpdateInput,
+      { ...wardrobeItemRow, editorial_status: "approved" },
+      "invalid_wardrobe_update_result",
+    ],
+    [
+      decideAdminWardrobeItemDraft,
+      validWardrobeDecisionInput,
+      { ...wardrobeItemRow, is_published: true },
+      "invalid_wardrobe_decision_result",
+    ],
+  ]) {
+    const { calls: _calls, ...client } = clientForResponses([
+      { data: { id: wardrobeItemId }, error: null },
+      { data: [row], error: null },
+    ]);
+
+    await assert.rejects(mutate(client, input), (error) =>
       assertStepError(error, code),
     );
   }
@@ -719,6 +1345,11 @@ test("sanitizes database and transport failures", async () => {
   for (const [create, input, fallback] of [
     [createAdminGoalDraft, validGoalInput, "goal_creation_failed"],
     [createAdminExerciseDraft, validExerciseInput, "exercise_creation_failed"],
+    [
+      createAdminWardrobeItemDraft,
+      validWardrobeInput,
+      "wardrobe_creation_failed",
+    ],
   ]) {
     for (const [response, code] of [
       [

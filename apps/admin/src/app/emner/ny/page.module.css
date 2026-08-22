@@ -152,7 +152,9 @@
 }
 
 .secondaryButton,
-.primaryButton {
+.primaryButton,
+.tertiaryDangerButton,
+.cardButton {
   display: inline-flex;
   min-height: 44px;
   align-items: center;
@@ -162,6 +164,13 @@
   font-size: 13px;
   font-weight: 680;
   text-decoration: none;
+}
+
+.secondaryButton:disabled,
+.tertiaryDangerButton:disabled,
+.cardButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .secondaryButton {
@@ -191,6 +200,24 @@
 .primaryButton:disabled {
   cursor: not-allowed;
   opacity: 0.55;
+}
+
+.tertiaryDangerButton {
+  border: 1px solid #d7aaa5;
+  background: #fff7f5;
+  color: #9d443b;
+}
+
+.tertiaryDangerButton:hover:not(:disabled) {
+  border-color: #bd7168;
+  background: #ffefec;
+  cursor: pointer;
+}
+
+.inlineActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
 }
 
 .steps {
@@ -353,7 +380,7 @@
 
 .modePicker {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 5px;
   margin: 14px 16px 0;
   padding: 4px;
@@ -850,6 +877,22 @@
   margin: 5px 0 0;
 }
 
+.cardButton {
+  min-height: 44px;
+  margin-top: 10px;
+  padding: 7px 10px;
+  border: 1px solid #77c4bd;
+  background: #fff;
+  color: #08746f;
+  font-size: 11px;
+}
+
+.cardButton:hover:not(:disabled) {
+  border-color: #08746f;
+  background: #e8f5f2;
+  cursor: pointer;
+}
+
 .exampleBadge {
   margin-top: 8px;
   padding: 3px 6px;
@@ -863,6 +906,202 @@
   color: #75848f;
   font-size: 9px;
   line-height: 1.5;
+}
+
+.savedWardrobeSection,
+.wardrobeEditor {
+  margin-top: 22px;
+  border: 1px solid #d8e1e5;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.savedWardrobeSection {
+  padding: 18px;
+}
+
+.savedWardrobeSection > header,
+.wardrobeEditor > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.savedWardrobeSection > header h3,
+.wardrobeEditor > header h3 {
+  margin: 4px 0 0;
+  color: #183249;
+  font-size: 16px;
+}
+
+.savedWardrobeSection > header > span,
+.wardrobeEditor > header > span {
+  flex: 0 0 auto;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: #eef1f1;
+  color: #5d7080;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.emptyWardrobeMessage {
+  margin: 16px 0 0;
+  padding: 18px;
+  border: 1px dashed #cbd8dd;
+  border-radius: 12px;
+  background: #fafbf9;
+  color: #687b87;
+  font-size: 11px;
+  line-height: 1.55;
+  text-align: center;
+}
+
+.savedWardrobeList {
+  display: grid;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.savedWardrobeItem {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 13px;
+  align-items: center;
+  padding: 13px;
+  border: 1px solid #e0e7e9;
+  border-radius: 12px;
+  background: #fbfcfa;
+}
+
+.savedWardrobeItem > .wardrobeIcon {
+  margin: 0;
+}
+
+.savedWardrobeBody {
+  min-width: 0;
+}
+
+.savedWardrobeHeading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.savedWardrobeHeading strong {
+  overflow-wrap: anywhere;
+  color: #183249;
+  font-size: 12px;
+}
+
+.savedWardrobeBody small,
+.savedWardrobeBody p {
+  color: #75848f;
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+.savedWardrobeBody small {
+  display: block;
+  margin-top: 3px;
+}
+
+.savedWardrobeBody p {
+  margin: 4px 0 0;
+}
+
+.editorialBadge {
+  padding: 3px 7px;
+  border-radius: 999px;
+  font-size: 8px;
+  font-weight: 720;
+}
+
+.editorialBadge_draft {
+  background: #fff2cf;
+  color: #895d00;
+}
+
+.editorialBadge_approved {
+  background: #e1f3e8;
+  color: #23764c;
+}
+
+.editorialBadge_rejected {
+  background: #f9e4e1;
+  color: #9d443b;
+}
+
+.wardrobeItemActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+.wardrobeItemActions form {
+  margin: 0;
+}
+
+.wardrobeItemActions .secondaryButton,
+.wardrobeItemActions .primaryButton,
+.wardrobeItemActions .tertiaryDangerButton {
+  min-height: 44px;
+  padding: 7px 10px;
+  font-size: 11px;
+}
+
+.wardrobeEditor {
+  overflow: hidden;
+}
+
+.wardrobeEditor > header {
+  padding: 18px 20px;
+  border-bottom: 1px solid #e0e7e9;
+  background: #f7f9f7;
+}
+
+.unlockFieldset {
+  grid-column: 1 / -1;
+  min-width: 0;
+  margin: 0;
+  padding: 13px;
+  border: 1px solid #d8e1e5;
+  border-radius: 12px;
+}
+
+.unlockFieldset legend {
+  padding: 0 5px;
+  color: #29485a;
+  font-size: 11px;
+  font-weight: 680;
+}
+
+.unlockChoice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-bottom: 12px;
+}
+
+.draftForm .unlockChoice label {
+  display: flex;
+  min-height: 38px;
+  align-items: center;
+  grid-template-columns: auto 1fr;
+  gap: 7px;
+  padding: 8px 11px;
+  border: 1px solid #d8e1e5;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.draftForm .unlockChoice input {
+  width: auto;
+  margin: 0;
+  padding: 0;
 }
 
 .stepContent {
@@ -1136,6 +1375,40 @@
 
   .wardrobeGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .inlineActions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .inlineActions > button {
+    width: 100%;
+  }
+
+  .savedWardrobeItem {
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .wardrobeItemActions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+
+  .savedWardrobeSection > header,
+  .wardrobeEditor > header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .panelHeader {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .panelHeader > div {
+    width: 100%;
   }
 
   .suggestionCard {

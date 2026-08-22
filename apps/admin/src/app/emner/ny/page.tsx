@@ -7,14 +7,18 @@ import { getAdminAccessSession } from "@/lib/auth/dal";
 import { TopicDraftWorkspace } from "./topic-draft-workspace";
 import {
   loadResumableTopicDraft,
-  parseResumeTopicId,
+  parseResumeTopicSelection,
 } from "./resume-topic-draft";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 type NewTopicPageProps = {
-  searchParams: Promise<{ topic?: string | string[] }>;
+  searchParams: Promise<{
+    exercise?: string | string[];
+    goal?: string | string[];
+    topic?: string | string[];
+  }>;
 };
 
 export default async function NewTopicPage({
@@ -34,22 +38,24 @@ export default async function NewTopicPage({
   }
 
   if (session.access.kind === "denied" || !session.client) {
-    redirect("/");
+    redirect("/emner");
   }
 
-  const requestedTopic = query.topic;
-  const topicId = parseResumeTopicId(requestedTopic);
+  const selection = parseResumeTopicSelection(query);
 
-  if (requestedTopic !== undefined && !topicId) {
-    redirect("/");
+  if (!selection) {
+    redirect("/emner");
   }
 
-  const initialDraft = topicId
-    ? await loadResumableTopicDraft(session.client, topicId)
+  const initialDraft = selection.topicId
+    ? await loadResumableTopicDraft(session.client, selection.topicId, {
+        exerciseId: selection.exerciseId,
+        goalId: selection.goalId,
+      })
     : null;
 
-  if (topicId && !initialDraft) {
-    redirect("/");
+  if (selection.topicId && !initialDraft) {
+    redirect("/emner");
   }
 
   return (
@@ -58,8 +64,10 @@ export default async function NewTopicPage({
       exerciseRequestId={randomUUID()}
       goalRequestId={randomUUID()}
       initialDraft={initialDraft}
+      initialStep={selection.startingStep}
       profileName={session.access.profile.displayName}
       topicRequestId={randomUUID()}
+      wardrobeRequestId={randomUUID()}
     />
   );
 }

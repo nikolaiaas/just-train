@@ -28,6 +28,17 @@ export type ExerciseEditorSnapshot = {
   title: string;
 };
 
+export type WardrobeEditorSnapshot = {
+  category: "clothing" | "equipment" | "effect";
+  editorialNote: string;
+  icon: string;
+  name: string;
+  points: string;
+  rarity: "common" | "rare" | "special";
+  unlockMode: "points" | "rule";
+  unlockRule: string;
+};
+
 const assistantContextGreetings: Record<WorkspaceStep, string> = {
   topic:
     "Jeg hjælper med emnets navn, beskrivelse, ikon og farve. Du vælger selv, om et forslag skal bruges.",
@@ -35,7 +46,7 @@ const assistantContextGreetings: Record<WorkspaceStep, string> = {
   exercise:
     "Jeg hjælper med en tryg deløvelse, måling og sikkerhed. Du vælger selv, om et forslag skal bruges.",
   wardrobe:
-    "Jeg kan foreslå syntetiske, brandfrie garderobeeksempler. De bliver ikke gemt automatisk.",
+    "Jeg kan foreslå syntetiske, brandfrie garderobeeksempler. De er ikke gemt, før du vælger og tilpasser hvert forslag.",
   review:
     "Jeg kan gennemgå den samlede kladde og pege på noget, du bør kontrollere. Intet ændres eller publiceres automatisk.",
 };
@@ -96,6 +107,42 @@ export function exerciseSnapshotHasChanges(
     current.safety !== saved.safety ||
     current.target !== saved.target ||
     current.title !== saved.title
+  );
+}
+
+export function wardrobeSnapshotHasChanges(
+  current: WardrobeEditorSnapshot,
+  saved: WardrobeEditorSnapshot | null,
+): boolean {
+  if (saved === null) return true;
+
+  const normalizePoints = (value: string) => {
+    const trimmed = value.trim();
+    if (!/^\d+$/u.test(trimmed)) return trimmed;
+
+    const parsed = Number(trimmed);
+    return Number.isSafeInteger(parsed) ? parsed.toString() : trimmed;
+  };
+  const normalizeSnapshot = (snapshot: WardrobeEditorSnapshot) => ({
+    ...snapshot,
+    editorialNote: snapshot.editorialNote.replace(/\r\n?/gu, "\n").trim(),
+    icon: snapshot.icon.trim(),
+    name: snapshot.name.trim(),
+    points: normalizePoints(snapshot.points),
+    unlockRule: snapshot.unlockRule.replace(/\s+/gu, " ").trim(),
+  });
+  const normalizedCurrent = normalizeSnapshot(current);
+  const normalizedSaved = normalizeSnapshot(saved);
+
+  return (
+    normalizedCurrent.category !== normalizedSaved.category ||
+    normalizedCurrent.editorialNote !== normalizedSaved.editorialNote ||
+    normalizedCurrent.icon !== normalizedSaved.icon ||
+    normalizedCurrent.name !== normalizedSaved.name ||
+    normalizedCurrent.points !== normalizedSaved.points ||
+    normalizedCurrent.rarity !== normalizedSaved.rarity ||
+    normalizedCurrent.unlockMode !== normalizedSaved.unlockMode ||
+    normalizedCurrent.unlockRule !== normalizedSaved.unlockRule
   );
 }
 

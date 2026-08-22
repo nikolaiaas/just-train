@@ -5,19 +5,32 @@ export type AdminContentDifficulty = "beginner" | "intermediate" | "advanced";
 export type AdminExerciseMeasurement =
   "completion" | "repetitions" | "duration";
 
+export type AdminContentStatus = "draft" | "published";
+
+export type AdminWardrobeCategory = "clothing" | "equipment" | "effect";
+
+export type AdminWardrobeRarity = "common" | "rare" | "special";
+
+export type AdminWardrobeEditorialStatus = "draft" | "approved" | "rejected";
+
+export type AdminWardrobeDecision = Exclude<
+  AdminWardrobeEditorialStatus,
+  "draft"
+>;
+
 export type AdminGoalDraft = {
   contentVersion: number;
   createdAt: string;
-  createdBy: string;
+  createdBy: string | null;
   difficulty: AdminContentDifficulty;
   equipment: string[];
   estimatedMinutes: number | null;
   heroMediaUrl: string | null;
   id: string;
-  publishedAt: null;
+  publishedAt: string | null;
   slug: string;
   sortOrder: number;
-  status: "draft";
+  status: AdminContentStatus;
   summary: string;
   title: string;
   topicId: string;
@@ -27,22 +40,42 @@ export type AdminGoalDraft = {
 export type AdminExerciseDraft = {
   contentVersion: number;
   createdAt: string;
-  createdBy: string;
+  createdBy: string | null;
   equipment: string[];
   estimatedMinutes: number | null;
   goalId: string;
   id: string;
   instructions: string;
   measurement: AdminExerciseMeasurement;
-  publishedAt: null;
+  publishedAt: string | null;
   safetyNotes: string;
   slug: string;
   sortOrder: number;
-  status: "draft";
+  status: AdminContentStatus;
   targetValue: number | null;
   title: string;
   updatedAt: string;
   videoUrl: string | null;
+};
+
+export type AdminWardrobeItemDraft = {
+  category: AdminWardrobeCategory;
+  contentVersion: number;
+  createdAt: string;
+  createdBy: string | null;
+  editorialNote: string;
+  editorialStatus: AdminWardrobeEditorialStatus;
+  icon: string;
+  id: string;
+  name: string;
+  points: number;
+  publishedAt: null;
+  rarity: AdminWardrobeRarity;
+  sortOrder: number;
+  status: "draft";
+  topicId: string;
+  unlockRule: string;
+  updatedAt: string;
 };
 
 export type CreateAdminGoalDraftInput = {
@@ -79,16 +112,55 @@ export type CreateAdminExerciseDraftInput = {
   videoUrl: string | null;
 };
 
-/** Uses `requestId` as the id of the existing unpublished goal draft. */
+export type CreateAdminWardrobeItemDraftInput = {
+  /** Resolved from the authenticated admin session by trusted server code. */
+  authenticatedUserId: string;
+  category: AdminWardrobeCategory;
+  editorialNote: string;
+  icon: string;
+  name: string;
+  /** `0` means the item uses `unlockRule` instead of a point price. */
+  points: number;
+  rarity: AdminWardrobeRarity;
+  /** A stable request UUID that also becomes the new wardrobe-item id. */
+  requestId: string;
+  sortOrder: number;
+  topicId: string;
+  /** Empty when the item has a positive point price. */
+  unlockRule: string;
+};
+
+/** Uses `requestId` as the id of the existing goal. */
 export type UpdateAdminGoalDraftInput = CreateAdminGoalDraftInput & {
+  /** The publication state returned by the last successful load or save. */
+  expectedStatus: AdminContentStatus;
   /** The revision returned by the last successful load or save. */
   expectedUpdatedAt: string;
 };
 
-/** Uses `requestId` as the id of the existing unpublished exercise draft. */
+/** Uses `requestId` as the id of the existing exercise. */
 export type UpdateAdminExerciseDraftInput = CreateAdminExerciseDraftInput & {
+  /** The publication state returned by the last successful load or save. */
+  expectedStatus: AdminContentStatus;
   /** The revision returned by the last successful load or save. */
   expectedUpdatedAt: string;
+};
+
+/** Uses `requestId` as the id of the existing unpublished wardrobe item. */
+export type UpdateAdminWardrobeItemDraftInput =
+  CreateAdminWardrobeItemDraftInput & {
+    /** The revision returned by the last successful load or save. */
+    expectedUpdatedAt: string;
+  };
+
+export type DecideAdminWardrobeItemDraftInput = {
+  /** Resolved from the authenticated admin session by trusted server code. */
+  authenticatedUserId: string;
+  decision: AdminWardrobeDecision;
+  /** The revision returned by the last successful load or save. */
+  expectedUpdatedAt: string;
+  topicId: string;
+  wardrobeItemId: string;
 };
 
 export type CreateAdminGoalDraftResult = {
@@ -101,12 +173,25 @@ export type CreateAdminExerciseDraftResult = {
   exercise: AdminExerciseDraft;
 };
 
+export type CreateAdminWardrobeItemDraftResult = {
+  created: boolean;
+  item: AdminWardrobeItemDraft;
+};
+
 export type UpdateAdminGoalDraftResult = {
   goal: AdminGoalDraft;
 };
 
 export type UpdateAdminExerciseDraftResult = {
   exercise: AdminExerciseDraft;
+};
+
+export type UpdateAdminWardrobeItemDraftResult = {
+  item: AdminWardrobeItemDraft;
+};
+
+export type DecideAdminWardrobeItemDraftResult = {
+  item: AdminWardrobeItemDraft;
 };
 
 export type AdminContentStepErrorCode =
@@ -127,6 +212,7 @@ export type AdminContentStepErrorCode =
   | "invalid_difficulty"
   | "invalid_equipment"
   | "invalid_estimated_minutes"
+  | "invalid_expected_status"
   | "invalid_expected_updated_at"
   | "invalid_exercise_creation_result"
   | "invalid_exercise_update_result"
@@ -144,7 +230,25 @@ export type AdminContentStepErrorCode =
   | "invalid_target_value"
   | "invalid_title"
   | "invalid_topic_id"
-  | "invalid_video_url";
+  | "invalid_video_url"
+  | "invalid_wardrobe_category"
+  | "invalid_wardrobe_creation_result"
+  | "invalid_wardrobe_decision"
+  | "invalid_wardrobe_decision_result"
+  | "invalid_wardrobe_editorial_note"
+  | "invalid_wardrobe_icon"
+  | "invalid_wardrobe_item_id"
+  | "invalid_wardrobe_name"
+  | "invalid_wardrobe_points"
+  | "invalid_wardrobe_rarity"
+  | "invalid_wardrobe_unlock_rule"
+  | "invalid_wardrobe_update_result"
+  | "wardrobe_creation_conflict"
+  | "wardrobe_creation_failed"
+  | "wardrobe_draft_conflict"
+  | "wardrobe_draft_not_editable"
+  | "wardrobe_review_failed"
+  | "wardrobe_update_failed";
 
 const ERROR_MESSAGES: Record<AdminContentStepErrorCode, string> = {
   admin_access_denied: "The account cannot administer training content.",
@@ -167,6 +271,7 @@ const ERROR_MESSAGES: Record<AdminContentStepErrorCode, string> = {
   invalid_difficulty: "The training goal difficulty is invalid.",
   invalid_equipment: "The training goal equipment is invalid.",
   invalid_estimated_minutes: "The training goal estimated duration is invalid.",
+  invalid_expected_status: "The expected content publication state is invalid.",
   invalid_expected_updated_at: "The expected draft revision is invalid.",
   invalid_exercise_creation_result:
     "Exercise creation returned an invalid result.",
@@ -188,6 +293,28 @@ const ERROR_MESSAGES: Record<AdminContentStepErrorCode, string> = {
   invalid_title: "The content title is invalid.",
   invalid_topic_id: "The training goal topic id is invalid.",
   invalid_video_url: "The exercise video URL is invalid.",
+  invalid_wardrobe_category: "The wardrobe item category is invalid.",
+  invalid_wardrobe_creation_result:
+    "Wardrobe item creation returned an invalid result.",
+  invalid_wardrobe_decision: "The wardrobe review decision is invalid.",
+  invalid_wardrobe_decision_result:
+    "Wardrobe review returned an invalid result.",
+  invalid_wardrobe_editorial_note: "The wardrobe editorial note is invalid.",
+  invalid_wardrobe_icon: "The wardrobe item icon is invalid.",
+  invalid_wardrobe_item_id: "The wardrobe item id is invalid.",
+  invalid_wardrobe_name: "The wardrobe item name is invalid.",
+  invalid_wardrobe_points: "The wardrobe item point price is invalid.",
+  invalid_wardrobe_rarity: "The wardrobe item rarity is invalid.",
+  invalid_wardrobe_unlock_rule: "The wardrobe unlock rule is invalid.",
+  invalid_wardrobe_update_result:
+    "Wardrobe item update returned an invalid result.",
+  wardrobe_creation_conflict:
+    "The wardrobe item request conflicts with existing content.",
+  wardrobe_creation_failed: "The wardrobe item could not be created.",
+  wardrobe_draft_conflict: "The wardrobe item was changed by another editor.",
+  wardrobe_draft_not_editable: "The wardrobe item is no longer editable.",
+  wardrobe_review_failed: "The wardrobe review decision could not be saved.",
+  wardrobe_update_failed: "The wardrobe item could not be updated.",
 };
 
 export class AdminContentStepError extends Error {
@@ -217,6 +344,25 @@ const MEASUREMENTS = new Set<AdminExerciseMeasurement>([
   "repetitions",
   "duration",
 ]);
+const WARDROBE_CATEGORIES = new Set<AdminWardrobeCategory>([
+  "clothing",
+  "equipment",
+  "effect",
+]);
+const WARDROBE_RARITIES = new Set<AdminWardrobeRarity>([
+  "common",
+  "rare",
+  "special",
+]);
+const WARDROBE_EDITORIAL_STATUSES = new Set<AdminWardrobeEditorialStatus>([
+  "draft",
+  "approved",
+  "rejected",
+]);
+const WARDROBE_DECISIONS = new Set<AdminWardrobeDecision>([
+  "approved",
+  "rejected",
+]);
 const MAX_TITLE_LENGTH = 120;
 const MAX_SLUG_LENGTH = 120;
 const MAX_SUMMARY_LENGTH = 1_000;
@@ -228,6 +374,11 @@ const MAX_URL_LENGTH = 2_048;
 const MAX_SORT_ORDER = 2_147_483_647;
 const MAX_REPETITION_TARGET = 10_000;
 const MAX_DURATION_TARGET_SECONDS = 86_400;
+const MAX_WARDROBE_NAME_LENGTH = 80;
+const MAX_WARDROBE_ICON_LENGTH = 16;
+const MAX_WARDROBE_POINTS = 1_000;
+const MAX_WARDROBE_UNLOCK_RULE_LENGTH = 200;
+const MAX_WARDROBE_EDITORIAL_NOTE_LENGTH = 500;
 
 const GOAL_COLUMNS =
   "id, topic_id, slug, title, summary, difficulty, estimated_minutes, equipment, hero_media_url, sort_order, content_version, is_published, published_at, created_by, created_at, updated_at" as const;
@@ -247,6 +398,24 @@ type NormalizedExerciseDraft = Omit<
   "measurement"
 > & {
   measurement: AdminExerciseMeasurement;
+};
+
+type NormalizedWardrobeItemDraft = Omit<
+  CreateAdminWardrobeItemDraftInput,
+  "category" | "editorialNote" | "points" | "rarity" | "unlockRule"
+> & {
+  category: AdminWardrobeCategory;
+  editorialNote: string | null;
+  points: number | null;
+  rarity: AdminWardrobeRarity;
+  unlockRule: string | null;
+};
+
+type NormalizedWardrobeDecision = Omit<
+  DecideAdminWardrobeItemDraftInput,
+  "decision"
+> & {
+  decision: AdminWardrobeDecision;
 };
 
 function isRecord(value: unknown): value is UnknownRecord {
@@ -271,7 +440,8 @@ function normalizeUuid(
     | "invalid_authenticated_user_id"
     | "invalid_goal_id"
     | "invalid_request_id"
-    | "invalid_topic_id",
+    | "invalid_topic_id"
+    | "invalid_wardrobe_item_id",
 ): string {
   if (!isUuid(value)) {
     throw new AdminContentStepError(code);
@@ -282,7 +452,12 @@ function normalizeUuid(
 
 function normalizeSingleLine(
   value: unknown,
-  code: "invalid_equipment" | "invalid_slug" | "invalid_title",
+  code:
+    | "invalid_equipment"
+    | "invalid_slug"
+    | "invalid_title"
+    | "invalid_wardrobe_icon"
+    | "invalid_wardrobe_name",
   maximumLength: number,
 ): string {
   if (typeof value !== "string") {
@@ -318,7 +493,12 @@ function normalizeSlug(value: unknown): string {
 
 function normalizeMultiline(
   value: unknown,
-  code: "invalid_instructions" | "invalid_safety_notes" | "invalid_summary",
+  code:
+    | "invalid_instructions"
+    | "invalid_safety_notes"
+    | "invalid_summary"
+    | "invalid_wardrobe_editorial_note"
+    | "invalid_wardrobe_unlock_rule",
   maximumLength: number,
 ): string {
   if (typeof value !== "string") {
@@ -543,6 +723,106 @@ function normalizeExerciseDraft(
   };
 }
 
+function normalizeWardrobeCategory(value: unknown): AdminWardrobeCategory {
+  if (
+    typeof value !== "string" ||
+    !WARDROBE_CATEGORIES.has(value as AdminWardrobeCategory)
+  ) {
+    throw new AdminContentStepError("invalid_wardrobe_category");
+  }
+
+  return value as AdminWardrobeCategory;
+}
+
+function normalizeWardrobeRarity(value: unknown): AdminWardrobeRarity {
+  if (
+    typeof value !== "string" ||
+    !WARDROBE_RARITIES.has(value as AdminWardrobeRarity)
+  ) {
+    throw new AdminContentStepError("invalid_wardrobe_rarity");
+  }
+
+  return value as AdminWardrobeRarity;
+}
+
+function normalizeWardrobeItemDraft(
+  input: CreateAdminWardrobeItemDraftInput,
+): NormalizedWardrobeItemDraft {
+  if (
+    !Number.isInteger(input.points) ||
+    input.points < 0 ||
+    input.points > MAX_WARDROBE_POINTS
+  ) {
+    throw new AdminContentStepError("invalid_wardrobe_points");
+  }
+
+  const unlockRule = normalizeMultiline(
+    input.unlockRule,
+    "invalid_wardrobe_unlock_rule",
+    MAX_WARDROBE_UNLOCK_RULE_LENGTH,
+  );
+
+  if ((input.points === 0 && !unlockRule) || (input.points > 0 && unlockRule)) {
+    throw new AdminContentStepError("invalid_wardrobe_unlock_rule");
+  }
+
+  const editorialNote = normalizeMultiline(
+    input.editorialNote,
+    "invalid_wardrobe_editorial_note",
+    MAX_WARDROBE_EDITORIAL_NOTE_LENGTH,
+  );
+
+  return {
+    authenticatedUserId: normalizeUuid(
+      input.authenticatedUserId,
+      "invalid_authenticated_user_id",
+    ),
+    category: normalizeWardrobeCategory(input.category),
+    editorialNote: editorialNote || null,
+    icon: normalizeSingleLine(
+      input.icon,
+      "invalid_wardrobe_icon",
+      MAX_WARDROBE_ICON_LENGTH,
+    ),
+    name: normalizeSingleLine(
+      input.name,
+      "invalid_wardrobe_name",
+      MAX_WARDROBE_NAME_LENGTH,
+    ),
+    points: input.points || null,
+    rarity: normalizeWardrobeRarity(input.rarity),
+    requestId: normalizeUuid(input.requestId, "invalid_request_id"),
+    sortOrder: normalizeSortOrder(input.sortOrder),
+    topicId: normalizeUuid(input.topicId, "invalid_topic_id"),
+    unlockRule: unlockRule || null,
+  };
+}
+
+function normalizeWardrobeDecision(
+  input: DecideAdminWardrobeItemDraftInput,
+): NormalizedWardrobeDecision {
+  if (
+    typeof input.decision !== "string" ||
+    !WARDROBE_DECISIONS.has(input.decision as AdminWardrobeDecision)
+  ) {
+    throw new AdminContentStepError("invalid_wardrobe_decision");
+  }
+
+  return {
+    authenticatedUserId: normalizeUuid(
+      input.authenticatedUserId,
+      "invalid_authenticated_user_id",
+    ),
+    decision: input.decision as AdminWardrobeDecision,
+    expectedUpdatedAt: normalizeExpectedUpdatedAt(input.expectedUpdatedAt),
+    topicId: normalizeUuid(input.topicId, "invalid_topic_id"),
+    wardrobeItemId: normalizeUuid(
+      input.wardrobeItemId,
+      "invalid_wardrobe_item_id",
+    ),
+  };
+}
+
 function isTimestamp(value: unknown): value is string {
   return (
     typeof value === "string" &&
@@ -558,6 +838,14 @@ function normalizeExpectedUpdatedAt(value: unknown): string {
     SINGLE_LINE_CONTROL_CHARACTER_PATTERN.test(value)
   ) {
     throw new AdminContentStepError("invalid_expected_updated_at");
+  }
+
+  return value;
+}
+
+function normalizeExpectedStatus(value: unknown): AdminContentStatus {
+  if (value !== "draft" && value !== "published") {
+    throw new AdminContentStepError("invalid_expected_status");
   }
 
   return value;
@@ -640,6 +928,8 @@ function parseGoalDraft(value: unknown): AdminGoalDraft | null {
     return null;
   }
 
+  const publishedAt = value.published_at;
+
   if (
     !isUuid(value.id) ||
     !isUuid(value.topic_id) ||
@@ -659,10 +949,11 @@ function parseGoalDraft(value: unknown): AdminGoalDraft | null {
     !Number.isInteger(value.sort_order) ||
     (value.sort_order as number) < 0 ||
     (value.sort_order as number) > MAX_SORT_ORDER ||
-    value.content_version !== 1 ||
-    value.is_published !== false ||
-    value.published_at !== null ||
-    !isUuid(value.created_by) ||
+    !Number.isInteger(value.content_version) ||
+    (value.content_version as number) < 1 ||
+    typeof value.is_published !== "boolean" ||
+    (value.is_published ? !isTimestamp(publishedAt) : publishedAt !== null) ||
+    (value.created_by !== null && !isUuid(value.created_by)) ||
     !isTimestamp(value.created_at) ||
     !isTimestamp(value.updated_at)
   ) {
@@ -670,18 +961,18 @@ function parseGoalDraft(value: unknown): AdminGoalDraft | null {
   }
 
   return {
-    contentVersion: 1,
+    contentVersion: value.content_version as number,
     createdAt: value.created_at,
-    createdBy: value.created_by.toLowerCase(),
+    createdBy: value.created_by?.toLowerCase() ?? null,
     difficulty: value.difficulty as AdminContentDifficulty,
     equipment: [...value.equipment],
     estimatedMinutes: value.estimated_minutes as number | null,
     heroMediaUrl: value.hero_media_url,
     id: value.id.toLowerCase(),
-    publishedAt: null,
+    publishedAt: publishedAt as string | null,
     slug: value.slug,
     sortOrder: value.sort_order as number,
-    status: "draft",
+    status: value.is_published ? "published" : "draft",
     summary: value.summary,
     title: value.title,
     topicId: value.topic_id.toLowerCase(),
@@ -693,6 +984,8 @@ function parseExerciseDraft(value: unknown): AdminExerciseDraft | null {
   if (!isRecord(value)) {
     return null;
   }
+
+  const publishedAt = value.published_at;
 
   if (
     !isUuid(value.id) ||
@@ -715,10 +1008,11 @@ function parseExerciseDraft(value: unknown): AdminExerciseDraft | null {
     !Number.isInteger(value.sort_order) ||
     (value.sort_order as number) < 0 ||
     (value.sort_order as number) > MAX_SORT_ORDER ||
-    value.content_version !== 1 ||
-    value.is_published !== false ||
-    value.published_at !== null ||
-    !isUuid(value.created_by) ||
+    !Number.isInteger(value.content_version) ||
+    (value.content_version as number) < 1 ||
+    typeof value.is_published !== "boolean" ||
+    (value.is_published ? !isTimestamp(publishedAt) : publishedAt !== null) ||
+    (value.created_by !== null && !isUuid(value.created_by)) ||
     !isTimestamp(value.created_at) ||
     !isTimestamp(value.updated_at)
   ) {
@@ -726,25 +1020,120 @@ function parseExerciseDraft(value: unknown): AdminExerciseDraft | null {
   }
 
   return {
-    contentVersion: 1,
+    contentVersion: value.content_version as number,
     createdAt: value.created_at,
-    createdBy: value.created_by.toLowerCase(),
+    createdBy: value.created_by?.toLowerCase() ?? null,
     equipment: [...value.equipment],
     estimatedMinutes: value.estimated_minutes as number | null,
     goalId: value.goal_id.toLowerCase(),
     id: value.id.toLowerCase(),
     instructions: value.instructions,
     measurement: value.measurement as AdminExerciseMeasurement,
-    publishedAt: null,
+    publishedAt: publishedAt as string | null,
     safetyNotes: value.safety_notes,
     slug: value.slug,
     sortOrder: value.sort_order as number,
-    status: "draft",
+    status: value.is_published ? "published" : "draft",
     targetValue: value.target_value as number | null,
     title: value.title,
     updatedAt: value.updated_at,
     videoUrl: value.video_url,
   };
+}
+
+function parseWardrobeItemDraft(value: unknown): AdminWardrobeItemDraft | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const pointsAreValid =
+    value.points === null ||
+    (Number.isInteger(value.points) &&
+      (value.points as number) >= 1 &&
+      (value.points as number) <= MAX_WARDROBE_POINTS);
+  const unlockRuleIsValid =
+    value.unlock_rule === null ||
+    (isReturnedMultiline(value.unlock_rule, MAX_WARDROBE_UNLOCK_RULE_LENGTH) &&
+      value.unlock_rule.length > 0);
+  const rewardRuleIsValid =
+    pointsAreValid &&
+    unlockRuleIsValid &&
+    ((value.points === null && value.unlock_rule !== null) ||
+      (value.points !== null && value.unlock_rule === null));
+  const editorialNoteIsValid =
+    value.editorial_note === null ||
+    (isReturnedMultiline(
+      value.editorial_note,
+      MAX_WARDROBE_EDITORIAL_NOTE_LENGTH,
+    ) &&
+      value.editorial_note.length > 0);
+
+  if (
+    !isUuid(value.id) ||
+    !isUuid(value.topic_id) ||
+    !isReturnedSingleLine(value.name, MAX_WARDROBE_NAME_LENGTH) ||
+    !isReturnedSingleLine(value.icon, MAX_WARDROBE_ICON_LENGTH) ||
+    typeof value.category !== "string" ||
+    !WARDROBE_CATEGORIES.has(value.category as AdminWardrobeCategory) ||
+    typeof value.rarity !== "string" ||
+    !WARDROBE_RARITIES.has(value.rarity as AdminWardrobeRarity) ||
+    !rewardRuleIsValid ||
+    !editorialNoteIsValid ||
+    typeof value.editorial_status !== "string" ||
+    !WARDROBE_EDITORIAL_STATUSES.has(
+      value.editorial_status as AdminWardrobeEditorialStatus,
+    ) ||
+    !Number.isInteger(value.sort_order) ||
+    (value.sort_order as number) < 0 ||
+    (value.sort_order as number) > MAX_SORT_ORDER ||
+    !Number.isInteger(value.content_version) ||
+    (value.content_version as number) < 1 ||
+    value.is_published !== false ||
+    value.published_at !== null ||
+    (value.created_by !== null && !isUuid(value.created_by)) ||
+    !isTimestamp(value.created_at) ||
+    !isTimestamp(value.updated_at)
+  ) {
+    return null;
+  }
+
+  return {
+    category: value.category as AdminWardrobeCategory,
+    contentVersion: value.content_version as number,
+    createdAt: value.created_at,
+    createdBy: value.created_by?.toLowerCase() ?? null,
+    editorialNote: (value.editorial_note as string | null) ?? "",
+    editorialStatus: value.editorial_status as AdminWardrobeEditorialStatus,
+    icon: value.icon,
+    id: value.id.toLowerCase(),
+    name: value.name,
+    points: (value.points as number | null) ?? 0,
+    publishedAt: null,
+    rarity: value.rarity as AdminWardrobeRarity,
+    sortOrder: value.sort_order as number,
+    status: "draft",
+    topicId: value.topic_id.toLowerCase(),
+    unlockRule: (value.unlock_rule as string | null) ?? "",
+    updatedAt: value.updated_at,
+  };
+}
+
+type WardrobeItemLookup =
+  | { kind: "found"; item: AdminWardrobeItemDraft }
+  | { kind: "invalid" }
+  | { kind: "missing" };
+
+function parseWardrobeItemLookup(value: unknown): WardrobeItemLookup {
+  if (!Array.isArray(value) || value.length > 1) {
+    return { kind: "invalid" };
+  }
+
+  if (value.length === 0) {
+    return { kind: "missing" };
+  }
+
+  const item = parseWardrobeItemDraft(value[0]);
+  return item ? { kind: "found", item } : { kind: "invalid" };
 }
 
 function isValidReturnedTarget(value: unknown, measurement: unknown): boolean {
@@ -792,7 +1181,10 @@ function mapDatabaseFailure(
     | "exercise_creation_failed"
     | "exercise_update_failed"
     | "goal_creation_failed"
-    | "goal_update_failed",
+    | "goal_update_failed"
+    | "wardrobe_creation_failed"
+    | "wardrobe_review_failed"
+    | "wardrobe_update_failed",
 ): AdminContentStepError {
   return new AdminContentStepError(
     databaseErrorCode(error) === "42501" ? "admin_access_denied" : fallback,
@@ -868,9 +1260,68 @@ async function findExerciseByRequestId(
     .maybeSingle();
 }
 
+async function insertWardrobeItemDraft(
+  client: BareTraenClient,
+  input: NormalizedWardrobeItemDraft,
+) {
+  return client
+    .from("wardrobe_items")
+    .insert({
+      category: input.category,
+      created_by: input.authenticatedUserId,
+      editorial_note: input.editorialNote,
+      icon: input.icon,
+      id: input.requestId,
+      name: input.name,
+      points: input.points,
+      rarity: input.rarity,
+      sort_order: input.sortOrder,
+      topic_id: input.topicId,
+      unlock_rule: input.unlockRule,
+    })
+    .select("id")
+    .maybeSingle();
+}
+
+async function findWardrobeItemByRequestId(
+  client: BareTraenClient,
+  topicId: string,
+  requestId: string,
+) {
+  return client.rpc("list_admin_wardrobe_item_drafts", {
+    p_topic_id: topicId,
+    p_wardrobe_item_id: requestId,
+  });
+}
+
+async function loadWardrobeItemDraft(
+  client: BareTraenClient,
+  topicId: string,
+  requestId: string,
+  fallback:
+    | "wardrobe_creation_failed"
+    | "wardrobe_review_failed"
+    | "wardrobe_update_failed",
+): Promise<WardrobeItemLookup> {
+  let response: Awaited<ReturnType<typeof findWardrobeItemByRequestId>>;
+
+  try {
+    response = await findWardrobeItemByRequestId(client, topicId, requestId);
+  } catch {
+    throw new AdminContentStepError(fallback);
+  }
+
+  if (response.error) {
+    throw mapDatabaseFailure(response.error, fallback);
+  }
+
+  return parseWardrobeItemLookup(response.data);
+}
+
 async function updateGoalDraft(
   client: BareTraenClient,
   input: NormalizedGoalDraft,
+  expectedStatus: AdminContentStatus,
   expectedUpdatedAt: string,
 ) {
   return client
@@ -887,7 +1338,7 @@ async function updateGoalDraft(
     })
     .eq("id", input.requestId)
     .eq("topic_id", input.topicId)
-    .eq("is_published", false)
+    .eq("is_published", expectedStatus === "published")
     .eq("updated_at", expectedUpdatedAt)
     .select(GOAL_COLUMNS)
     .maybeSingle();
@@ -896,6 +1347,7 @@ async function updateGoalDraft(
 async function updateExerciseDraft(
   client: BareTraenClient,
   input: NormalizedExerciseDraft,
+  expectedStatus: AdminContentStatus,
   expectedUpdatedAt: string,
 ) {
   return client
@@ -914,9 +1366,49 @@ async function updateExerciseDraft(
     })
     .eq("id", input.requestId)
     .eq("goal_id", input.goalId)
-    .eq("is_published", false)
+    .eq("is_published", expectedStatus === "published")
     .eq("updated_at", expectedUpdatedAt)
     .select(EXERCISE_COLUMNS)
+    .maybeSingle();
+}
+
+async function updateWardrobeItemDraft(
+  client: BareTraenClient,
+  input: NormalizedWardrobeItemDraft,
+  expectedUpdatedAt: string,
+) {
+  return client
+    .from("wardrobe_items")
+    .update({
+      category: input.category,
+      editorial_note: input.editorialNote,
+      icon: input.icon,
+      name: input.name,
+      points: input.points,
+      rarity: input.rarity,
+      sort_order: input.sortOrder,
+      unlock_rule: input.unlockRule,
+    })
+    .eq("id", input.requestId)
+    .eq("topic_id", input.topicId)
+    .eq("is_published", false)
+    .eq("updated_at", expectedUpdatedAt)
+    .select("id")
+    .maybeSingle();
+}
+
+async function decideWardrobeItemDraft(
+  client: BareTraenClient,
+  input: NormalizedWardrobeDecision,
+) {
+  return client
+    .from("wardrobe_items")
+    .update({ editorial_status: input.decision })
+    .eq("id", input.wardrobeItemId)
+    .eq("topic_id", input.topicId)
+    .eq("is_published", false)
+    .eq("updated_at", input.expectedUpdatedAt)
+    .select("id")
     .maybeSingle();
 }
 
@@ -970,9 +1462,33 @@ function matchesExerciseDraft(
   );
 }
 
+function matchesWardrobeItemDraft(
+  item: AdminWardrobeItemDraft,
+  input: NormalizedWardrobeItemDraft,
+): boolean {
+  return (
+    item.id === input.requestId &&
+    item.topicId === input.topicId &&
+    item.name === input.name &&
+    item.icon === input.icon &&
+    item.category === input.category &&
+    item.rarity === input.rarity &&
+    item.points === (input.points ?? 0) &&
+    item.unlockRule === (input.unlockRule ?? "") &&
+    item.editorialNote === (input.editorialNote ?? "") &&
+    item.editorialStatus === "draft" &&
+    item.sortOrder === input.sortOrder &&
+    item.contentVersion === 1 &&
+    item.status === "draft" &&
+    item.publishedAt === null &&
+    (item.createdBy === null || item.createdBy === input.authenticatedUserId)
+  );
+}
+
 function matchesUpdatedGoalDraft(
   goal: AdminGoalDraft,
   input: NormalizedGoalDraft,
+  expectedStatus: AdminContentStatus,
 ): boolean {
   return (
     goal.id === input.requestId &&
@@ -986,14 +1502,14 @@ function matchesUpdatedGoalDraft(
     goal.equipment.every((item, index) => item === input.equipment[index]) &&
     goal.heroMediaUrl === input.heroMediaUrl &&
     goal.sortOrder === input.sortOrder &&
-    goal.status === "draft" &&
-    goal.publishedAt === null
+    goal.status === expectedStatus
   );
 }
 
 function matchesUpdatedExerciseDraft(
   exercise: AdminExerciseDraft,
   input: NormalizedExerciseDraft,
+  expectedStatus: AdminContentStatus,
 ): boolean {
   return (
     exercise.id === input.requestId &&
@@ -1010,15 +1526,49 @@ function matchesUpdatedExerciseDraft(
     exercise.targetValue === input.targetValue &&
     exercise.videoUrl === input.videoUrl &&
     exercise.sortOrder === input.sortOrder &&
-    exercise.status === "draft" &&
-    exercise.publishedAt === null &&
+    exercise.status === expectedStatus &&
     exercise.safetyNotes === input.safetyNotes
+  );
+}
+
+function matchesUpdatedWardrobeItemDraft(
+  item: AdminWardrobeItemDraft,
+  input: NormalizedWardrobeItemDraft,
+): boolean {
+  return (
+    item.id === input.requestId &&
+    item.topicId === input.topicId &&
+    item.name === input.name &&
+    item.icon === input.icon &&
+    item.category === input.category &&
+    item.rarity === input.rarity &&
+    item.points === (input.points ?? 0) &&
+    item.unlockRule === (input.unlockRule ?? "") &&
+    item.editorialNote === (input.editorialNote ?? "") &&
+    item.editorialStatus === "draft" &&
+    item.sortOrder === input.sortOrder &&
+    item.status === "draft" &&
+    item.publishedAt === null
+  );
+}
+
+function matchesWardrobeDecision(
+  item: AdminWardrobeItemDraft,
+  input: NormalizedWardrobeDecision,
+): boolean {
+  return (
+    item.id === input.wardrobeItemId &&
+    item.topicId === input.topicId &&
+    item.editorialStatus === input.decision &&
+    item.status === "draft" &&
+    item.publishedAt === null
   );
 }
 
 async function recoverUpdatedGoalDraft(
   client: BareTraenClient,
   input: NormalizedGoalDraft,
+  expectedStatus: AdminContentStatus,
 ): Promise<UpdateAdminGoalDraftResult> {
   let response: Awaited<ReturnType<typeof findGoalByRequestId>>;
 
@@ -1034,11 +1584,11 @@ async function recoverUpdatedGoalDraft(
 
   const goal = parseGoalDraft(response.data);
 
-  if (!goal) {
+  if (!goal || goal.status !== expectedStatus) {
     throw new AdminContentStepError("goal_draft_not_editable");
   }
 
-  if (matchesUpdatedGoalDraft(goal, input)) {
+  if (matchesUpdatedGoalDraft(goal, input, expectedStatus)) {
     return { goal };
   }
 
@@ -1048,6 +1598,7 @@ async function recoverUpdatedGoalDraft(
 async function recoverUpdatedExerciseDraft(
   client: BareTraenClient,
   input: NormalizedExerciseDraft,
+  expectedStatus: AdminContentStatus,
 ): Promise<UpdateAdminExerciseDraftResult> {
   let response: Awaited<ReturnType<typeof findExerciseByRequestId>>;
 
@@ -1063,15 +1614,59 @@ async function recoverUpdatedExerciseDraft(
 
   const exercise = parseExerciseDraft(response.data);
 
-  if (!exercise) {
+  if (!exercise || exercise.status !== expectedStatus) {
     throw new AdminContentStepError("exercise_draft_not_editable");
   }
 
-  if (matchesUpdatedExerciseDraft(exercise, input)) {
+  if (matchesUpdatedExerciseDraft(exercise, input, expectedStatus)) {
     return { exercise };
   }
 
   throw new AdminContentStepError("exercise_draft_conflict");
+}
+
+async function recoverUpdatedWardrobeItemDraft(
+  client: BareTraenClient,
+  input: NormalizedWardrobeItemDraft,
+): Promise<UpdateAdminWardrobeItemDraftResult> {
+  const lookup = await loadWardrobeItemDraft(
+    client,
+    input.topicId,
+    input.requestId,
+    "wardrobe_update_failed",
+  );
+
+  if (lookup.kind !== "found") {
+    throw new AdminContentStepError("wardrobe_draft_not_editable");
+  }
+
+  if (matchesUpdatedWardrobeItemDraft(lookup.item, input)) {
+    return { item: lookup.item };
+  }
+
+  throw new AdminContentStepError("wardrobe_draft_conflict");
+}
+
+async function recoverWardrobeDecision(
+  client: BareTraenClient,
+  input: NormalizedWardrobeDecision,
+): Promise<DecideAdminWardrobeItemDraftResult> {
+  const lookup = await loadWardrobeItemDraft(
+    client,
+    input.topicId,
+    input.wardrobeItemId,
+    "wardrobe_review_failed",
+  );
+
+  if (lookup.kind !== "found") {
+    throw new AdminContentStepError("wardrobe_draft_not_editable");
+  }
+
+  if (matchesWardrobeDecision(lookup.item, input)) {
+    return { item: lookup.item };
+  }
+
+  throw new AdminContentStepError("wardrobe_draft_conflict");
 }
 
 async function recoverGoalDraft(
@@ -1135,6 +1730,27 @@ async function recoverExerciseDraft(
   }
 
   return { created: false, exercise };
+}
+
+async function recoverWardrobeItemDraft(
+  client: BareTraenClient,
+  input: NormalizedWardrobeItemDraft,
+): Promise<CreateAdminWardrobeItemDraftResult> {
+  const lookup = await loadWardrobeItemDraft(
+    client,
+    input.topicId,
+    input.requestId,
+    "wardrobe_creation_failed",
+  );
+
+  if (
+    lookup.kind !== "found" ||
+    !matchesWardrobeItemDraft(lookup.item, input)
+  ) {
+    throw new AdminContentStepError("wardrobe_creation_conflict");
+  }
+
+  return { created: false, item: lookup.item };
 }
 
 /**
@@ -1218,17 +1834,72 @@ export async function createAdminExerciseDraft(
   return { created: true, exercise };
 }
 
-/** Updates one existing unpublished goal without changing its parent or author. */
+/**
+ * Creates one unpublished wardrobe item below a topic. An exact retry with the
+ * same request UUID returns the existing item without overwriting it.
+ */
+export async function createAdminWardrobeItemDraft(
+  client: BareTraenClient,
+  input: CreateAdminWardrobeItemDraftInput,
+): Promise<CreateAdminWardrobeItemDraftResult> {
+  const normalized = normalizeWardrobeItemDraft(input);
+  let response: Awaited<ReturnType<typeof insertWardrobeItemDraft>>;
+
+  try {
+    response = await insertWardrobeItemDraft(client, normalized);
+  } catch {
+    throw new AdminContentStepError("wardrobe_creation_failed");
+  }
+
+  if (response.error) {
+    if (databaseErrorCode(response.error) === "23505") {
+      return recoverWardrobeItemDraft(client, normalized);
+    }
+
+    throw mapDatabaseFailure(response.error, "wardrobe_creation_failed");
+  }
+
+  if (!isRecord(response.data) || response.data.id !== normalized.requestId) {
+    throw new AdminContentStepError("invalid_wardrobe_creation_result");
+  }
+
+  const lookup = await loadWardrobeItemDraft(
+    client,
+    normalized.topicId,
+    normalized.requestId,
+    "wardrobe_creation_failed",
+  );
+
+  if (
+    lookup.kind !== "found" ||
+    !matchesWardrobeItemDraft(lookup.item, normalized)
+  ) {
+    throw new AdminContentStepError("invalid_wardrobe_creation_result");
+  }
+
+  return { created: true, item: lookup.item };
+}
+
+/**
+ * Updates one existing goal without changing its parent, author, publication
+ * state, publication timestamp, or content version.
+ */
 export async function updateAdminGoalDraft(
   client: BareTraenClient,
   input: UpdateAdminGoalDraftInput,
 ): Promise<UpdateAdminGoalDraftResult> {
   const normalized = normalizeGoalDraft(input);
   const expectedUpdatedAt = normalizeExpectedUpdatedAt(input.expectedUpdatedAt);
+  const expectedStatus = normalizeExpectedStatus(input.expectedStatus);
   let response: Awaited<ReturnType<typeof updateGoalDraft>>;
 
   try {
-    response = await updateGoalDraft(client, normalized, expectedUpdatedAt);
+    response = await updateGoalDraft(
+      client,
+      normalized,
+      expectedStatus,
+      expectedUpdatedAt,
+    );
   } catch {
     throw new AdminContentStepError("goal_update_failed");
   }
@@ -1245,12 +1916,12 @@ export async function updateAdminGoalDraft(
   }
 
   if (response.data === null) {
-    return recoverUpdatedGoalDraft(client, normalized);
+    return recoverUpdatedGoalDraft(client, normalized, expectedStatus);
   }
 
   const goal = parseGoalDraft(response.data);
 
-  if (!goal || !matchesUpdatedGoalDraft(goal, normalized)) {
+  if (!goal || !matchesUpdatedGoalDraft(goal, normalized, expectedStatus)) {
     throw new AdminContentStepError("invalid_goal_update_result");
   }
 
@@ -1258,8 +1929,8 @@ export async function updateAdminGoalDraft(
 }
 
 /**
- * Updates one existing unpublished exercise without changing its parent or
- * author.
+ * Updates one existing exercise without changing its parent, author,
+ * publication state, publication timestamp, or content version.
  */
 export async function updateAdminExerciseDraft(
   client: BareTraenClient,
@@ -1267,10 +1938,16 @@ export async function updateAdminExerciseDraft(
 ): Promise<UpdateAdminExerciseDraftResult> {
   const normalized = normalizeExerciseDraft(input);
   const expectedUpdatedAt = normalizeExpectedUpdatedAt(input.expectedUpdatedAt);
+  const expectedStatus = normalizeExpectedStatus(input.expectedStatus);
   let response: Awaited<ReturnType<typeof updateExerciseDraft>>;
 
   try {
-    response = await updateExerciseDraft(client, normalized, expectedUpdatedAt);
+    response = await updateExerciseDraft(
+      client,
+      normalized,
+      expectedStatus,
+      expectedUpdatedAt,
+    );
   } catch {
     throw new AdminContentStepError("exercise_update_failed");
   }
@@ -1287,14 +1964,117 @@ export async function updateAdminExerciseDraft(
   }
 
   if (response.data === null) {
-    return recoverUpdatedExerciseDraft(client, normalized);
+    return recoverUpdatedExerciseDraft(client, normalized, expectedStatus);
   }
 
   const exercise = parseExerciseDraft(response.data);
 
-  if (!exercise || !matchesUpdatedExerciseDraft(exercise, normalized)) {
+  if (
+    !exercise ||
+    !matchesUpdatedExerciseDraft(exercise, normalized, expectedStatus)
+  ) {
     throw new AdminContentStepError("invalid_exercise_update_result");
   }
 
   return { exercise };
+}
+
+/**
+ * Updates one existing unpublished wardrobe item and returns it to editorial
+ * draft state. The topic, author, publication state, and version are unchanged.
+ */
+export async function updateAdminWardrobeItemDraft(
+  client: BareTraenClient,
+  input: UpdateAdminWardrobeItemDraftInput,
+): Promise<UpdateAdminWardrobeItemDraftResult> {
+  const normalized = normalizeWardrobeItemDraft(input);
+  const expectedUpdatedAt = normalizeExpectedUpdatedAt(input.expectedUpdatedAt);
+  let response: Awaited<ReturnType<typeof updateWardrobeItemDraft>>;
+
+  try {
+    response = await updateWardrobeItemDraft(
+      client,
+      normalized,
+      expectedUpdatedAt,
+    );
+  } catch {
+    throw new AdminContentStepError("wardrobe_update_failed");
+  }
+
+  if (response.error) {
+    throw mapDatabaseFailure(response.error, "wardrobe_update_failed");
+  }
+
+  if (response.data === null) {
+    return recoverUpdatedWardrobeItemDraft(client, normalized);
+  }
+
+  if (!isRecord(response.data) || response.data.id !== normalized.requestId) {
+    throw new AdminContentStepError("invalid_wardrobe_update_result");
+  }
+
+  const lookup = await loadWardrobeItemDraft(
+    client,
+    normalized.topicId,
+    normalized.requestId,
+    "wardrobe_update_failed",
+  );
+
+  if (
+    lookup.kind !== "found" ||
+    !matchesUpdatedWardrobeItemDraft(lookup.item, normalized)
+  ) {
+    throw new AdminContentStepError("invalid_wardrobe_update_result");
+  }
+
+  return { item: lookup.item };
+}
+
+/**
+ * Records an explicit approve/reject decision for one unpublished item. The
+ * revision precondition prevents one editor from overwriting another review.
+ */
+export async function decideAdminWardrobeItemDraft(
+  client: BareTraenClient,
+  input: DecideAdminWardrobeItemDraftInput,
+): Promise<DecideAdminWardrobeItemDraftResult> {
+  const normalized = normalizeWardrobeDecision(input);
+  let response: Awaited<ReturnType<typeof decideWardrobeItemDraft>>;
+
+  try {
+    response = await decideWardrobeItemDraft(client, normalized);
+  } catch {
+    throw new AdminContentStepError("wardrobe_review_failed");
+  }
+
+  if (response.error) {
+    throw mapDatabaseFailure(response.error, "wardrobe_review_failed");
+  }
+
+  if (response.data === null) {
+    return recoverWardrobeDecision(client, normalized);
+  }
+
+  if (
+    !isRecord(response.data) ||
+    response.data.id !== normalized.wardrobeItemId
+  ) {
+    throw new AdminContentStepError("invalid_wardrobe_decision_result");
+  }
+
+  const lookup = await loadWardrobeItemDraft(
+    client,
+    normalized.topicId,
+    normalized.wardrobeItemId,
+    "wardrobe_review_failed",
+  );
+
+  if (
+    lookup.kind !== "found" ||
+    !matchesWardrobeDecision(lookup.item, normalized)
+  ) {
+    throw new AdminContentStepError("invalid_wardrobe_decision_result");
+  }
+
+  return { item: lookup.item };
 }

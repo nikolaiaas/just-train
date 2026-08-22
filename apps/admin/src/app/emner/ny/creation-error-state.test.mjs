@@ -58,7 +58,7 @@ test("uses the same field guidance when a saved draft is renamed to a duplicate"
   }
 });
 
-test("explains when a draft can no longer be edited without exposing why it was hidden", () => {
+test("explains when content can no longer be edited without exposing why it was hidden", () => {
   for (const [mapError, error] of [
     [mapTopicUpdateError, new AdminContentError("topic_draft_not_editable")],
     [mapGoalUpdateError, new AdminContentStepError("goal_draft_not_editable")],
@@ -70,7 +70,7 @@ test("explains when a draft can no longer be edited without exposing why it was 
     const result = mapError(error);
 
     assert.equal(result.status, "unavailable");
-    assert.match(result.message, /publiceret eller fjernet/i);
+    assert.match(result.message, /fjernet eller have ændret status/i);
   }
 });
 

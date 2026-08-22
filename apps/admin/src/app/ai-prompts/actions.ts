@@ -151,7 +151,7 @@ export async function publishAiPromptVersion(
     };
   }
 
-  revalidatePath("/");
+  revalidatePath("/ai-prompts");
 
   return {
     status: "success",

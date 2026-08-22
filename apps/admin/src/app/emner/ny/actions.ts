@@ -1,12 +1,18 @@
 "use server";
 
 import {
+  AdminContentStepError,
   createAdminExerciseDraft as createExerciseDraft,
   createAdminGoalDraft as createGoalDraft,
   createAdminTopicDraft as createTopicDraft,
+  createAdminWardrobeItemDraft as createWardrobeItemDraft,
+  decideAdminWardrobeItemDraft as decideWardrobeItemDraft,
   updateAdminExerciseDraft as updateExerciseDraft,
   updateAdminGoalDraft as updateGoalDraft,
   updateAdminTopicDraft as updateTopicDraft,
+  updateAdminWardrobeItemDraft as updateWardrobeItemDraft,
+  type AdminWardrobeItemDraft,
+  type BareTraenClient,
 } from "@bare-traen/api-client";
 import { revalidatePath } from "next/cache";
 
@@ -40,6 +46,11 @@ import {
   validateTopicDraftForm,
   type TopicDraftFieldErrors,
 } from "../topic-draft";
+import {
+  validateWardrobeDecisionForm,
+  validateWardrobeItemDraftForm,
+  type WardrobeItemDraftFieldErrors,
+} from "../wardrobe-item-draft";
 
 export type {
   AssistantMode,
@@ -96,6 +107,21 @@ export type CreateExerciseState =
       updatedAt: string;
     };
 
+export type WardrobeItemState =
+  | { status: "idle" }
+  | {
+      status: "invalid";
+      message: string;
+      fieldErrors: WardrobeItemDraftFieldErrors;
+    }
+  | { status: "conflict" | "denied" | "unavailable"; message: string }
+  | {
+      status: "success";
+      message: string;
+      operation: "created" | "updated" | "approved" | "rejected";
+      item: AdminWardrobeItemDraft;
+    };
+
 export type AssistantState =
   | { status: "idle" }
   | {
@@ -129,6 +155,15 @@ async function requestHasTrustedOrigin(): Promise<boolean> {
 function readExpectedUpdatedAt(formData: FormData): string {
   const values = formData.getAll("expectedUpdatedAt");
   return values.length === 1 && typeof values[0] === "string" ? values[0] : "";
+}
+
+function readPublicationStatus(formData: FormData): "draft" | "published" {
+  const values = formData.getAll("publicationStatus");
+  const value = values.length === 1 ? values[0] : null;
+
+  if (value === "draft" || value === "published") return value;
+
+  throw new Error("The content publication status is invalid.");
 }
 
 export async function createAdminTopicDraft(
@@ -186,7 +221,7 @@ export async function createAdminTopicDraft(
       title: validation.value.title,
     });
 
-    revalidatePath("/");
+    revalidatePath("/emner");
 
     return {
       status: "success",
@@ -246,10 +281,12 @@ export async function updateAdminTopicDraft(
   }
 
   try {
+    const expectedStatus = readPublicationStatus(formData);
     const result = await updateTopicDraft(session.client, {
       authenticatedUserId: session.access.profile.id,
       accentColor: validation.value.accentColor,
       description: validation.value.description,
+      expectedStatus,
       expectedUpdatedAt: readExpectedUpdatedAt(formData),
       icon: validation.value.icon,
       requestId: validation.value.requestId,
@@ -257,12 +294,16 @@ export async function updateAdminTopicDraft(
       title: validation.value.title,
     });
 
-    revalidatePath("/");
+    revalidatePath("/emner");
+    revalidatePath(`/emner/${result.topic.id}`);
     revalidatePath("/emner/ny");
 
     return {
       status: "success",
-      message: "Emnekladden er opdateret.",
+      message:
+        expectedStatus === "published"
+          ? "Det publicerede emne er opdateret. Ændringen er synlig med det samme."
+          : "Emnekladden er opdateret.",
       topicId: result.topic.id,
       updatedAt: result.topic.updatedAt,
     };
@@ -330,7 +371,7 @@ export async function createAdminGoalDraft(
       topicId: validation.value.topicId,
     });
 
-    revalidatePath("/");
+    revalidatePath("/emner");
     revalidatePath("/emner/ny");
 
     return {
@@ -391,11 +432,13 @@ export async function updateAdminGoalDraft(
   }
 
   try {
+    const expectedStatus = readPublicationStatus(formData);
     const result = await updateGoalDraft(session.client, {
       authenticatedUserId: session.access.profile.id,
       difficulty: validation.value.difficulty,
       equipment: validation.value.equipment,
       estimatedMinutes: validation.value.estimatedMinutes,
+      expectedStatus,
       expectedUpdatedAt: readExpectedUpdatedAt(formData),
       heroMediaUrl: validation.value.heroMediaUrl,
       requestId: validation.value.requestId,
@@ -406,12 +449,15 @@ export async function updateAdminGoalDraft(
       topicId: validation.value.topicId,
     });
 
-    revalidatePath("/");
+    revalidatePath("/emner");
     revalidatePath("/emner/ny");
 
     return {
       status: "success",
-      message: "Målkladden er opdateret.",
+      message:
+        expectedStatus === "published"
+          ? "Det publicerede mål er opdateret. Ændringen er synlig med det samme."
+          : "Målkladden er opdateret.",
       goalId: result.goal.id,
       updatedAt: result.goal.updatedAt,
     };
@@ -481,7 +527,7 @@ export async function createAdminExerciseDraft(
       videoUrl: validation.value.videoUrl,
     });
 
-    revalidatePath("/");
+    revalidatePath("/emner");
     revalidatePath("/emner/ny");
 
     return {
@@ -542,10 +588,12 @@ export async function updateAdminExerciseDraft(
   }
 
   try {
+    const expectedStatus = readPublicationStatus(formData);
     const result = await updateExerciseDraft(session.client, {
       authenticatedUserId: session.access.profile.id,
       equipment: validation.value.equipment,
       estimatedMinutes: validation.value.recommendedMinutes,
+      expectedStatus,
       expectedUpdatedAt: readExpectedUpdatedAt(formData),
       goalId: validation.value.goalId,
       instructions: validation.value.instructions,
@@ -559,17 +607,263 @@ export async function updateAdminExerciseDraft(
       videoUrl: validation.value.videoUrl,
     });
 
-    revalidatePath("/");
+    revalidatePath("/emner");
     revalidatePath("/emner/ny");
 
     return {
       status: "success",
-      message: "Deløvelseskladden er opdateret.",
+      message:
+        expectedStatus === "published"
+          ? "Den publicerede deløvelse er opdateret. Ændringen er synlig med det samme."
+          : "Deløvelseskladden er opdateret.",
       exerciseId: result.exercise.id,
       updatedAt: result.exercise.updatedAt,
     };
   } catch (error) {
     return mapExerciseUpdateError(error);
+  }
+}
+
+function mapWardrobeActionError(
+  error: unknown,
+  operation: "create" | "update" | "decision",
+): WardrobeItemState {
+  if (!(error instanceof AdminContentStepError)) {
+    return {
+      status: "unavailable",
+      message:
+        "Garderobetinget kunne ikke gemmes lige nu. Dine indtastninger er bevaret.",
+    };
+  }
+
+  if (error.code === "admin_access_denied") {
+    return {
+      status: "denied",
+      message: "Din konto har ikke adgang til at ændre garderoben.",
+    };
+  }
+
+  if (
+    error.code === "wardrobe_draft_conflict" ||
+    error.code === "wardrobe_draft_not_editable"
+  ) {
+    return {
+      status: "conflict",
+      message:
+        "Garderobetinget er ændret et andet sted. Dine ændringer er ikke gemt. Genindlæs siden, og prøv igen på den nyeste version.",
+    };
+  }
+
+  if (error.code === "wardrobe_creation_conflict") {
+    return {
+      status: "conflict",
+      message:
+        "Denne garderobekladde kolliderer med en eksisterende gemning. Genindlæs siden, og prøv igen.",
+    };
+  }
+
+  return {
+    status: "unavailable",
+    message:
+      operation === "decision"
+        ? "Godkendelsen kunne ikke gemmes lige nu. Garderobetinget er ikke ændret."
+        : operation === "update"
+          ? "Ændringerne kunne ikke gemmes lige nu. Dine indtastninger er bevaret."
+          : "Garderobetinget kunne ikke gemmes lige nu. Dine indtastninger er bevaret.",
+  };
+}
+
+async function getWardrobeAdminSession(): Promise<
+  | {
+      ok: true;
+      client: BareTraenClient;
+      userId: string;
+    }
+  | { ok: false; state: WardrobeItemState }
+> {
+  if (!(await requestHasTrustedOrigin())) {
+    return {
+      ok: false,
+      state: {
+        status: "denied",
+        message:
+          "Gemningen kom ikke fra en godkendt administrationsside. Genindlæs siden og prøv igen.",
+      },
+    };
+  }
+
+  const session = await getAdminAccessSession();
+
+  if (session.access.kind === "unauthenticated") {
+    return {
+      ok: false,
+      state: {
+        status: "denied",
+        message: "Din session er udløbet. Log ind igen, før du gemmer.",
+      },
+    };
+  }
+
+  if (session.access.kind !== "authorized" || !session.client) {
+    return {
+      ok: false,
+      state:
+        session.access.kind === "denied"
+          ? {
+              status: "denied",
+              message: "Din konto har ikke adgang til at ændre garderoben.",
+            }
+          : {
+              status: "unavailable",
+              message:
+                "Administrationen kan ikke forbinde til databasen lige nu. Intet er gemt.",
+            },
+    };
+  }
+
+  return {
+    ok: true,
+    client: session.client,
+    userId: session.access.profile.id,
+  };
+}
+
+export async function createAdminWardrobeItemDraft(
+  _previousState: WardrobeItemState,
+  formData: FormData,
+): Promise<WardrobeItemState> {
+  const validation = validateWardrobeItemDraftForm(formData);
+
+  if (!validation.ok) {
+    return {
+      status: "invalid",
+      message: validation.message,
+      fieldErrors: validation.fieldErrors,
+    };
+  }
+
+  const session = await getWardrobeAdminSession();
+  if (!session.ok) return session.state;
+
+  try {
+    const result = await createWardrobeItemDraft(session.client, {
+      authenticatedUserId: session.userId,
+      category: validation.value.category,
+      editorialNote: validation.value.editorialNote,
+      icon: validation.value.icon,
+      name: validation.value.name,
+      points: validation.value.points,
+      rarity: validation.value.rarity,
+      requestId: validation.value.requestId,
+      sortOrder: validation.value.sortOrder,
+      topicId: validation.value.topicId,
+      unlockRule: validation.value.unlockRule,
+    });
+
+    revalidatePath("/emner");
+    revalidatePath("/emner/ny");
+
+    return {
+      status: "success",
+      message: result.created
+        ? "Garderobetinget er gemt som kladde."
+        : "Garderobetinget var allerede gemt og er hentet igen.",
+      operation: "created",
+      item: result.item,
+    };
+  } catch (error) {
+    return mapWardrobeActionError(error, "create");
+  }
+}
+
+export async function updateAdminWardrobeItemDraft(
+  _previousState: WardrobeItemState,
+  formData: FormData,
+): Promise<WardrobeItemState> {
+  const validation = validateWardrobeItemDraftForm(formData);
+
+  if (!validation.ok) {
+    return {
+      status: "invalid",
+      message: validation.message,
+      fieldErrors: validation.fieldErrors,
+    };
+  }
+
+  const session = await getWardrobeAdminSession();
+  if (!session.ok) return session.state;
+
+  try {
+    const result = await updateWardrobeItemDraft(session.client, {
+      authenticatedUserId: session.userId,
+      category: validation.value.category,
+      editorialNote: validation.value.editorialNote,
+      expectedUpdatedAt: readExpectedUpdatedAt(formData),
+      icon: validation.value.icon,
+      name: validation.value.name,
+      points: validation.value.points,
+      rarity: validation.value.rarity,
+      requestId: validation.value.requestId,
+      sortOrder: validation.value.sortOrder,
+      topicId: validation.value.topicId,
+      unlockRule: validation.value.unlockRule,
+    });
+
+    revalidatePath("/emner");
+    revalidatePath("/emner/ny");
+
+    return {
+      status: "success",
+      message:
+        "Garderobetinget er opdateret som kladde og skal godkendes igen.",
+      operation: "updated",
+      item: result.item,
+    };
+  } catch (error) {
+    return mapWardrobeActionError(error, "update");
+  }
+}
+
+export async function decideAdminWardrobeItemDraft(
+  _previousState: WardrobeItemState,
+  formData: FormData,
+): Promise<WardrobeItemState> {
+  const validation = validateWardrobeDecisionForm(formData);
+
+  if (!validation.ok) {
+    return {
+      status: "invalid",
+      message: validation.message,
+      fieldErrors: {},
+    };
+  }
+
+  const session = await getWardrobeAdminSession();
+  if (!session.ok) return session.state;
+
+  try {
+    const result = await decideWardrobeItemDraft(session.client, {
+      authenticatedUserId: session.userId,
+      decision: validation.value.decision,
+      expectedUpdatedAt: validation.value.expectedUpdatedAt,
+      topicId: validation.value.topicId,
+      wardrobeItemId: validation.value.itemId,
+    });
+
+    revalidatePath("/emner");
+    revalidatePath("/emner/ny");
+
+    return {
+      status: "success",
+      message:
+        validation.value.decision === "approved"
+          ? "Garderobetinget er godkendt til den senere publicering."
+          : "Garderobetinget er afvist og bliver ikke taget med i en publicering.",
+      operation: validation.value.decision,
+      item: result.item,
+    };
+  } catch (error) {
+    return mapWardrobeActionError(error, "decision");
   }
 }
 

@@ -85,7 +85,7 @@ export function mapTopicUpdateError(error: unknown): TopicFailureState {
     return {
       status: "unavailable",
       message:
-        "Emnekladden kunne ikke opdateres lige nu. Intet er publiceret. Prøv igen senere.",
+        "Emnet kunne ikke opdateres lige nu. Intet er gemt. Prøv igen senere.",
     };
   }
 
@@ -108,7 +108,7 @@ export function mapTopicUpdateError(error: unknown): TopicFailureState {
     return {
       status: "unavailable",
       message:
-        "Emnekladden kan ikke længere redigeres. Den kan være publiceret eller fjernet. Genindlæs siden.",
+        "Emnet kan ikke længere redigeres. Det kan være fjernet eller have ændret status. Genindlæs siden.",
     };
   }
 
@@ -116,14 +116,14 @@ export function mapTopicUpdateError(error: unknown): TopicFailureState {
     return {
       status: "unavailable",
       message:
-        "Emnekladden er ændret et andet sted. Dine ændringer er ikke gemt. Genindlæs siden, og prøv igen på den nyeste version.",
+        "Emnet er ændret et andet sted. Dine ændringer er ikke gemt. Genindlæs siden, og prøv igen på den nyeste version.",
     };
   }
 
   return {
     status: "unavailable",
     message:
-      "Emnekladden kunne ikke opdateres lige nu. Intet er publiceret. Prøv igen senere.",
+      "Emnet kunne ikke opdateres lige nu. Intet er gemt. Prøv igen senere.",
   };
 }
 
@@ -172,7 +172,7 @@ export function mapGoalUpdateError(error: unknown): GoalFailureState {
     return {
       status: "unavailable",
       message:
-        "Målkladden kunne ikke opdateres lige nu. Intet er publiceret. Prøv igen senere.",
+        "Målet kunne ikke opdateres lige nu. Intet er gemt. Prøv igen senere.",
     };
   }
 
@@ -195,7 +195,7 @@ export function mapGoalUpdateError(error: unknown): GoalFailureState {
     return {
       status: "unavailable",
       message:
-        "Målkladden kan ikke længere redigeres. Den kan være publiceret eller fjernet. Genindlæs siden.",
+        "Målet kan ikke længere redigeres. Det kan være fjernet eller have ændret status. Genindlæs siden.",
     };
   }
 
@@ -203,14 +203,14 @@ export function mapGoalUpdateError(error: unknown): GoalFailureState {
     return {
       status: "unavailable",
       message:
-        "Målkladden er ændret et andet sted. Dine ændringer er ikke gemt. Genindlæs siden, og prøv igen på den nyeste version.",
+        "Målet er ændret et andet sted. Dine ændringer er ikke gemt. Genindlæs siden, og prøv igen på den nyeste version.",
     };
   }
 
   return {
     status: "unavailable",
     message:
-      "Målkladden kunne ikke opdateres lige nu. Intet er publiceret. Prøv igen senere.",
+      "Målet kunne ikke opdateres lige nu. Intet er gemt. Prøv igen senere.",
   };
 }
 
@@ -259,7 +259,7 @@ export function mapExerciseUpdateError(error: unknown): ExerciseFailureState {
     return {
       status: "unavailable",
       message:
-        "Deløvelseskladden kunne ikke opdateres lige nu. Intet er publiceret. Prøv igen senere.",
+        "Deløvelsen kunne ikke opdateres lige nu. Intet er gemt. Prøv igen senere.",
     };
   }
 
@@ -282,7 +282,7 @@ export function mapExerciseUpdateError(error: unknown): ExerciseFailureState {
     return {
       status: "unavailable",
       message:
-        "Deløvelseskladden kan ikke længere redigeres. Den kan være publiceret eller fjernet. Genindlæs siden.",
+        "Deløvelsen kan ikke længere redigeres. Den kan være fjernet eller have ændret status. Genindlæs siden.",
     };
   }
 
@@ -290,13 +290,13 @@ export function mapExerciseUpdateError(error: unknown): ExerciseFailureState {
     return {
       status: "unavailable",
       message:
-        "Deløvelseskladden er ændret et andet sted. Dine ændringer er ikke gemt. Genindlæs siden, og prøv igen på den nyeste version.",
+        "Deløvelsen er ændret et andet sted. Dine ændringer er ikke gemt. Genindlæs siden, og prøv igen på den nyeste version.",
     };
   }
 
   return {
     status: "unavailable",
     message:
-      "Deløvelseskladden kunne ikke opdateres lige nu. Intet er publiceret. Prøv igen senere.",
+      "Deløvelsen kunne ikke opdateres lige nu. Intet er gemt. Prøv igen senere.",
   };
 }
