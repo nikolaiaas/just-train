@@ -17,6 +17,7 @@ import type {
 } from "@bare-traen/api-client";
 
 import type { AssistantWardrobeItem } from "../assistant-request";
+import { WardrobeItemImage } from "../wardrobe-item-image";
 import {
   createAdminWardrobeItemDraft,
   decideAdminWardrobeItemDraft,
@@ -25,6 +26,7 @@ import {
 } from "./actions";
 import styles from "./page.module.css";
 import {
+  orderWardrobeSuggestions,
   wardrobeSuggestionSnapshot,
   wardrobeSnapshotHasChanges,
   type WardrobeEditorSnapshot,
@@ -88,12 +90,23 @@ function itemCanBeReviewed(item: AdminWardrobeItemDraft): boolean {
   return item.status === "draft" || item.hasPendingRevision;
 }
 
+function wardrobeImageAlt(name: string, description: string): string {
+  const normalizedName = name.replace(/\s+/gu, " ").trim();
+  const normalizedDescription = description.replace(/\s+/gu, " ").trim();
+
+  return normalizedDescription
+    ? `${normalizedName}. ${normalizedDescription}`
+    : normalizedName;
+}
+
 function emptySnapshot(): WardrobeEditorSnapshot {
   return {
     category: "clothing",
+    description: "",
     editorialNote: "",
     equipSlot: "",
     icon: "✨",
+    imagePath: "",
     name: "",
     points: "100",
     rarity: "common",
@@ -105,9 +118,11 @@ function emptySnapshot(): WardrobeEditorSnapshot {
 function itemSnapshot(item: AdminWardrobeItemDraft): WardrobeEditorSnapshot {
   return {
     category: item.category,
+    description: item.description,
     editorialNote: item.editorialNote,
     equipSlot: item.equipSlot,
     icon: item.icon,
+    imagePath: item.imagePath ?? "",
     name: item.name,
     points: item.points > 0 ? item.points.toString() : "0",
     rarity: item.rarity,
@@ -168,6 +183,9 @@ export function WardrobeAuthoring({
     useState<WardrobeEditorSnapshot | null>(null);
   const [name, setName] = useState("");
   const [icon, setIcon] = useState("✨");
+  const [description, setDescription] = useState("");
+  const [imagePath, setImagePath] = useState("");
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [category, setCategory] = useState<AdminWardrobeCategory>("clothing");
   const [equipSlot, setEquipSlot] = useState<AdminWardrobeEquipSlot | "">("");
   const [rarity, setRarity] = useState<AdminWardrobeRarity>("common");
@@ -195,9 +213,11 @@ export function WardrobeAuthoring({
 
   const currentSnapshot: WardrobeEditorSnapshot = {
     category,
+    description,
     editorialNote,
     equipSlot,
     icon,
+    imagePath,
     name,
     points,
     rarity,
@@ -229,6 +249,10 @@ export function WardrobeAuthoring({
     () => new Set(items.map((item) => item.name.toLocaleLowerCase("da-DK"))),
     [items],
   );
+  const orderedSuggestions = useMemo(
+    () => orderWardrobeSuggestions(suggestions),
+    [suggestions],
+  );
 
   const replaceItems = useCallback(
     (next: AdminWardrobeItemDraft[]) => {
@@ -243,6 +267,8 @@ export function WardrobeAuthoring({
   function applySnapshot(snapshot: WardrobeEditorSnapshot) {
     setName(snapshot.name);
     setIcon(snapshot.icon);
+    setDescription(snapshot.description);
+    setImagePath(snapshot.imagePath);
     setCategory(snapshot.category);
     setEquipSlot(snapshot.equipSlot);
     setRarity(snapshot.rarity);
@@ -259,12 +285,16 @@ export function WardrobeAuthoring({
     });
   }
 
-  function startCreating(snapshot = emptySnapshot()) {
+  function startCreating(
+    snapshot = emptySnapshot(),
+    previewImageUrl: string | null = null,
+  ) {
     setEditorMode("create");
     setEditingItemId(null);
     setNextRequestId(window.crypto.randomUUID());
     setSavedSnapshot(emptySnapshot());
     applySnapshot(snapshot);
+    setImageUrl(previewImageUrl);
     setCreateSubmitted(false);
     setUpdateSubmitted(false);
     setDecisionSubmitted(false);
@@ -279,6 +309,7 @@ export function WardrobeAuthoring({
     setEditingItemId(item.id);
     setSavedSnapshot(snapshot);
     applySnapshot(snapshot);
+    setImageUrl(item.imageUrl);
     setCreateSubmitted(false);
     setUpdateSubmitted(false);
     setDecisionSubmitted(false);
@@ -368,9 +399,10 @@ export function WardrobeAuthoring({
         <p className={styles.eyebrow}>Gemte belønninger</p>
         <h3>Byg garderoben til emnet</h3>
         <p>
-          Opret ting manuelt, eller brug et AI-forslag som udgangspunkt. Intet
-          gemmes, før du vælger Gem som kladde, og hvert gemt element skal
-          godkendes af dig før den senere publicering.
+          Opret ting manuelt, eller få AI til at lave et billedark med 16
+          individuelle garderobeforslag. Intet gemmes, før du vælger Gem som
+          kladde, og hvert gemt element skal godkendes af dig før den senere
+          publicering.
         </p>
         <div className={styles.inlineActions}>
           <button
@@ -378,7 +410,7 @@ export function WardrobeAuthoring({
             className={styles.secondaryButton}
             onClick={onOpenAssistant}
           >
-            Få forslag fra AI
+            Lav 16 billedforslag med AI
           </button>
           <button
             type="button"
@@ -403,35 +435,60 @@ export function WardrobeAuthoring({
             </div>
             <span>{suggestions.length} forslag</span>
           </header>
-          <div className={styles.wardrobeGrid}>
-            {suggestions.map((item, index) => {
+          <div className={styles.wardrobeGrid} role="list">
+            {orderedSuggestions.map((item) => {
               const alreadySaved = savedNames.has(
                 item.name.toLocaleLowerCase("da-DK"),
               );
               return (
                 <article
                   className={styles.wardrobeCard}
-                  key={`${item.name}-${index}`}
+                  key={`${item.ordinal}-${item.imagePath}-${item.name}`}
+                  role="listitem"
                 >
-                  <span className={styles.wardrobeIcon} aria-hidden="true">
-                    {item.icon}
+                  <span className={styles.wardrobeOrdinal}>
+                    Forslag {item.ordinal}
                   </span>
-                  <strong>{item.name}</strong>
-                  <small>
-                    {categoryLabels[item.category]} ·{" "}
-                    {rarityLabels[item.rarity]} ·{" "}
-                    {equipSlotLabels[item.equipSlot]}
-                  </small>
-                  <p>
-                    {item.points > 0 ? `${item.points} point` : item.unlockRule}
-                  </p>
-                  <p>{item.reason}</p>
+                  <WardrobeItemImage
+                    alt={wardrobeImageAlt(item.name, item.description)}
+                    className={styles.wardrobeMedia}
+                    imageClassName={styles.wardrobeMediaImage}
+                    imageUrl={item.imageUrl}
+                    placeholderClassName={styles.wardrobeMediaPlaceholder}
+                  />
+                  <div className={styles.wardrobeCardCopy}>
+                    <strong>{item.name}</strong>
+                    <p className={styles.wardrobeDescription}>
+                      {item.description}
+                    </p>
+                    <small>
+                      {categoryLabels[item.category]} ·{" "}
+                      {rarityLabels[item.rarity]} ·{" "}
+                      {equipSlotLabels[item.equipSlot]}
+                    </small>
+                    <p className={styles.wardrobeUnlockSummary}>
+                      {item.points > 0
+                        ? `${item.points} point`
+                        : item.unlockRule}
+                    </p>
+                    <p className={styles.wardrobeEditorialReason}>
+                      {item.reason}
+                    </p>
+                  </div>
                   <button
                     type="button"
                     className={styles.cardButton}
                     disabled={alreadySaved || busy || dirty}
                     onClick={() =>
-                      startCreating(wardrobeSuggestionSnapshot(item))
+                      startCreating(
+                        wardrobeSuggestionSnapshot(item),
+                        item.imageUrl,
+                      )
+                    }
+                    aria-label={
+                      alreadySaved
+                        ? `${item.name} er allerede gemt`
+                        : `Brug forslag ${item.ordinal}: ${item.name}`
                     }
                   >
                     {alreadySaved ? "Allerede gemt" : "Brug forslag"}
@@ -441,8 +498,9 @@ export function WardrobeAuthoring({
             })}
           </div>
           <p className={styles.wardrobeDisclaimer}>
-            Brug forslag åbner en redigerbar formular. Forslaget er stadig ikke
-            gemt, før du aktivt vælger Gem som kladde.
+            De 16 beskårne billeder vises i rækkefølge fra billedarket. Brug
+            forslag åbner en redigerbar formular og bevarer billedet. Forslaget
+            er stadig ikke gemt, før du aktivt vælger Gem som kladde.
           </p>
         </section>
       ) : null}
@@ -467,9 +525,13 @@ export function WardrobeAuthoring({
           <div className={styles.savedWardrobeList}>
             {items.map((item) => (
               <article key={item.id} className={styles.savedWardrobeItem}>
-                <span className={styles.wardrobeIcon} aria-hidden="true">
-                  {item.icon}
-                </span>
+                <WardrobeItemImage
+                  alt={wardrobeImageAlt(item.name, item.description)}
+                  className={styles.savedWardrobeMedia}
+                  imageClassName={styles.wardrobeMediaImage}
+                  imageUrl={item.imageUrl}
+                  placeholderClassName={styles.wardrobeMediaPlaceholder}
+                />
                 <div className={styles.savedWardrobeBody}>
                   <div className={styles.savedWardrobeHeading}>
                     <strong>{item.name}</strong>
@@ -479,6 +541,11 @@ export function WardrobeAuthoring({
                       {itemStatusLabel(item)}
                     </span>
                   </div>
+                  {item.description ? (
+                    <p className={styles.savedWardrobeDescription}>
+                      {item.description}
+                    </p>
+                  ) : null}
                   <small>
                     {categoryLabels[item.category]} ·{" "}
                     {rarityLabels[item.rarity]} ·{" "}
@@ -495,6 +562,7 @@ export function WardrobeAuthoring({
                     className={styles.secondaryButton}
                     disabled={busy || dirty}
                     onClick={() => startEditing(item)}
+                    aria-label={`Rediger ${item.name}`}
                   >
                     Rediger
                   </button>
@@ -618,6 +686,8 @@ export function WardrobeAuthoring({
               }
             />
             <input type="hidden" name="topicId" value={topicId} />
+            <input type="hidden" name="icon" value={icon} />
+            <input type="hidden" name="imagePath" value={imagePath} />
             <input
               type="hidden"
               name="sortOrder"
@@ -634,20 +704,33 @@ export function WardrobeAuthoring({
                 value={editingItem?.updatedAt ?? ""}
               />
             ) : null}
-            <div className={styles.fieldGrid}>
-              <label className={styles.iconField}>
-                <span>Ikon</span>
-                <input
-                  name="icon"
-                  maxLength={16}
-                  value={icon}
-                  disabled={busy}
-                  aria-invalid={Boolean(fieldErrors.icon)}
-                  onChange={(event) => setIcon(event.target.value)}
-                />
-                {fieldErrors.icon ? <small>{fieldErrors.icon}</small> : null}
-              </label>
-              <label className={styles.titleField}>
+            <div className={styles.wardrobeEditorMediaRow}>
+              <WardrobeItemImage
+                alt={
+                  name.trim()
+                    ? wardrobeImageAlt(name, description)
+                    : "Nyt garderobeting"
+                }
+                className={styles.wardrobeEditorMedia}
+                imageClassName={styles.wardrobeMediaImage}
+                imageUrl={imageUrl}
+                placeholderClassName={styles.wardrobeMediaPlaceholder}
+              />
+              <div>
+                <strong>
+                  {imagePath
+                    ? "Billedet følger med kladden"
+                    : "Billede mangler"}
+                </strong>
+                <p>
+                  {imagePath
+                    ? "Du kan rette navn, beskrivelse og placering uden at miste det beskårne AI-billede."
+                    : "Den manuelle kladde kan gemmes nu og få et genereret billede senere."}
+                </p>
+              </div>
+            </div>
+            <div className={`${styles.fieldGrid} ${styles.wardrobeFieldGrid}`}>
+              <label className={styles.fullField}>
                 <span>Navn</span>
                 <input
                   ref={nameRef}
@@ -661,6 +744,27 @@ export function WardrobeAuthoring({
                   placeholder="Fx Regnbuebold"
                 />
                 {fieldErrors.name ? <small>{fieldErrors.name}</small> : null}
+              </label>
+              <label className={styles.fullField}>
+                <span>Beskrivelse til barnet</span>
+                <textarea
+                  name="description"
+                  rows={3}
+                  maxLength={240}
+                  value={description}
+                  disabled={busy}
+                  aria-invalid={Boolean(fieldErrors.description)}
+                  onChange={(event) => setDescription(event.target.value)}
+                  placeholder="Fx Et helt par blå sko med små stjerner"
+                />
+                {fieldErrors.description ? (
+                  <small>{fieldErrors.description}</small>
+                ) : (
+                  <span className={styles.helpText}>
+                    Beskriv kort, hvad barnet kan se. Teksten vises også for
+                    skærmlæsere.
+                  </span>
+                )}
               </label>
             </div>
             <div className={styles.formGrid}>

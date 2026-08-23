@@ -6,11 +6,26 @@ import {
   exerciseSnapshotHasChanges,
   getAssistantContextGreeting,
   goalSnapshotHasChanges,
+  orderWardrobeSuggestions,
   syncExerciseMeasurementResetDefault,
   topicSnapshotHasChanges,
   wardrobeSuggestionSnapshot,
   wardrobeSnapshotHasChanges,
 } from "./workspace-ux.ts";
+
+test("wardrobe image suggestions render in immutable row-major order", () => {
+  const suggestions = Array.from({ length: 16 }, (_, index) => ({
+    name: `Forslag ${16 - index}`,
+    ordinal: 16 - index,
+  }));
+  const ordered = orderWardrobeSuggestions(suggestions);
+
+  assert.deepEqual(
+    ordered.map((item) => item.ordinal),
+    Array.from({ length: 16 }, (_, index) => index + 1),
+  );
+  assert.equal(suggestions[0].ordinal, 16);
+});
 
 test("assistant responses are shown only in the context that submitted them", () => {
   const requestId = "10000000-0000-4000-8000-000000000001";
@@ -148,9 +163,11 @@ test("goal and exercise dirty checks cover every editable field", () => {
 test("wardrobe dirty checks cover content and unlock method", () => {
   const item = {
     category: "equipment",
+    description: "En farverig bold, som barnet kan holde i hånden.",
     editorialNote: "Passer til emnet.",
     equipSlot: "held",
     icon: "🌈",
+    imagePath: "70000000-0000-4000-8000-000000000001/01.png",
     name: "Regnbuebold",
     points: "125",
     rarity: "rare",
@@ -164,8 +181,10 @@ test("wardrobe dirty checks cover content and unlock method", () => {
     wardrobeSnapshotHasChanges(
       {
         ...item,
+        description: "  En farverig bold, som barnet kan holde i hånden.\r\n",
         editorialNote: "  Passer til emnet.\r\n",
         icon: "  🌈 ",
+        imagePath: "  70000000-0000-4000-8000-000000000001/01.png ",
         name: "  Regnbuebold ",
         points: "0125",
       },
@@ -176,9 +195,11 @@ test("wardrobe dirty checks cover content and unlock method", () => {
 
   for (const change of [
     { category: "effect" },
+    { description: "En bold med klare regnbuefarver." },
     { editorialNote: "Passer til farvetemaet." },
     { equipSlot: "accessory" },
     { icon: "⚽" },
+    { imagePath: "70000000-0000-4000-8000-000000000001/02.png" },
     { name: "Stjernebold" },
     { points: "150" },
     { rarity: "special" },
@@ -194,8 +215,9 @@ test("wardrobe dirty checks cover content and unlock method", () => {
 test("wardrobe suggestions keep their proposed equipment slot editable", () => {
   const snapshot = wardrobeSuggestionSnapshot({
     category: "clothing",
+    description: "Et helt par blå sko med stjerner.",
     equipSlot: "feet",
-    icon: "👟",
+    imagePath: "70000000-0000-4000-8000-000000000001/01.png",
     name: "Stjernesko",
     points: 75,
     rarity: "rare",
@@ -204,6 +226,12 @@ test("wardrobe suggestions keep their proposed equipment slot editable", () => {
   });
 
   assert.equal(snapshot.equipSlot, "feet");
+  assert.equal(snapshot.description, "Et helt par blå sko med stjerner.");
+  assert.equal(
+    snapshot.imagePath,
+    "70000000-0000-4000-8000-000000000001/01.png",
+  );
+  assert.equal(snapshot.icon, "✨");
   assert.equal(snapshot.unlockMode, "points");
   assert.equal(snapshot.points, "75");
 });

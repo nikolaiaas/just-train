@@ -445,12 +445,18 @@ export async function loadResumableTopicDraft(
       contentVersion: item.content_version,
       createdAt: item.created_at,
       createdBy: item.created_by,
+      description: item.description ?? "",
       editorialNote: item.editorial_note ?? "",
       editorialStatus: item.editorial_status,
       equipSlot: item.equip_slot,
       hasPendingRevision: item.has_pending_revision,
       icon: item.icon,
       id: item.id,
+      imagePath: item.image_path ?? null,
+      imageUrl: item.image_path
+        ? client.storage.from("wardrobe-images").getPublicUrl(item.image_path)
+            .data.publicUrl
+        : null,
       name: item.name,
       points: item.points ?? 0,
       publishedAt: item.published_at,

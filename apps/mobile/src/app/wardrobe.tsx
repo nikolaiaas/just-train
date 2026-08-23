@@ -3,6 +3,7 @@ import {
   type ChildWardrobeItem,
 } from "@bare-traen/api-client";
 import { colors, radii, spacing, typography } from "@bare-traen/design";
+import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
@@ -24,6 +25,7 @@ import {
   WARDROBE_SLOT_ORDER,
   applyWardrobeEquipmentState,
   getWardrobeErrorMessage,
+  getWardrobeImageAccessibilityLabel,
   planWardrobeEquipment,
 } from "@/wardrobe/core";
 
@@ -36,6 +38,37 @@ type ReplacementConfirmation = {
   replacementName: string;
   targetId: string;
 };
+
+function WardrobeCatalogImage({ item }: { item: ChildWardrobeItem }) {
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
+  const accessibilityLabel = getWardrobeImageAccessibilityLabel(item);
+  const canShowImage = Boolean(item.imageUrl && failedUrl !== item.imageUrl);
+
+  return (
+    <View style={styles.itemMedia}>
+      {canShowImage ? (
+        <Image
+          accessible
+          accessibilityLabel={accessibilityLabel}
+          accessibilityRole="image"
+          contentFit="cover"
+          onError={() => setFailedUrl(item.imageUrl)}
+          source={{ uri: item.imageUrl ?? "" }}
+          style={styles.itemImage}
+        />
+      ) : (
+        <View
+          accessible
+          accessibilityLabel={`Billede mangler for ${item.name}`}
+          accessibilityRole="image"
+          style={styles.itemImageFallback}
+        >
+          <Text style={styles.itemImageFallbackText}>Billede mangler</Text>
+        </View>
+      )}
+    </View>
+  );
+}
 
 export default function WardrobeRoute() {
   const router = useRouter();
@@ -241,45 +274,50 @@ function ChildWardrobe({
         return (
           <SurfaceCard key={item.wardrobeItemId} style={styles.itemCard}>
             <View style={styles.itemHeading}>
-              <View
-                accessible
-                accessibilityLabel={`${item.name}: ${item.icon}`}
-                accessibilityRole="image"
-                style={styles.itemIcon}
-              >
-                <Text style={styles.itemEmoji}>{item.icon}</Text>
-              </View>
+              <WardrobeCatalogImage item={item} />
               <View style={styles.itemCopy}>
-                <Text style={styles.itemName}>{item.name}</Text>
+                <View style={styles.itemTitleRow}>
+                  <Text style={styles.itemName}>{item.name}</Text>
+                  <View
+                    accessibilityLabel={
+                      item.isEquipped
+                        ? "Har denne ting på"
+                        : "Har ikke denne ting på"
+                    }
+                    style={[
+                      styles.statusPill,
+                      item.isEquipped && styles.statusPillEquipped,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.statusText,
+                        item.isEquipped && styles.statusTextEquipped,
+                      ]}
+                    >
+                      {item.isEquipped ? "På nu" : "I skabet"}
+                    </Text>
+                  </View>
+                </View>
+                {item.description ? (
+                  <Text style={styles.itemDescription}>{item.description}</Text>
+                ) : null}
                 <Text style={styles.catalogMeta}>
                   {WARDROBE_CATEGORY_LABELS[item.category]} ·{" "}
                   {WARDROBE_RARITY_LABELS[item.rarity]}
                 </Text>
               </View>
-              <View
-                accessibilityLabel={
-                  item.isEquipped
-                    ? "Har denne ting på"
-                    : "Har ikke denne ting på"
-                }
-                style={[
-                  styles.statusPill,
-                  item.isEquipped && styles.statusPillEquipped,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.statusText,
-                    item.isEquipped && styles.statusTextEquipped,
-                  ]}
-                >
-                  {item.isEquipped ? "På nu" : "I skabet"}
-                </Text>
-              </View>
             </View>
 
             <View style={styles.slotRow}>
-              <Text style={styles.slotIcon}>{slot.icon}</Text>
+              <Text
+                accessible={false}
+                accessibilityElementsHidden
+                importantForAccessibility="no-hide-descendants"
+                style={styles.slotIcon}
+              >
+                {slot.icon}
+              </Text>
               <View style={styles.slotCopy}>
                 <Text style={styles.slotLabel}>{slot.label}</Text>
                 <Body>{slot.description}</Body>
@@ -380,24 +418,56 @@ const styles = StyleSheet.create({
   itemCard: { gap: spacing.md },
   itemHeading: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: spacing.md,
   },
-  itemIcon: {
-    width: 54,
-    height: 54,
+  itemMedia: {
+    width: 104,
+    height: 104,
+    flexShrink: 0,
+    overflow: "hidden",
+    borderRadius: radii.lg,
+    backgroundColor: colors.page,
+  },
+  itemImage: { width: "100%", height: "100%" },
+  itemImageFallback: {
+    width: "100%",
+    height: "100%",
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 1,
+    borderColor: colors.border,
     borderRadius: radii.lg,
-    backgroundColor: colors.softWarm,
+    backgroundColor: colors.page,
+    padding: spacing.sm,
   },
-  itemEmoji: { fontSize: 29 },
+  itemImageFallbackText: {
+    color: colors.muted,
+    fontFamily: typography.families.systemRounded,
+    fontSize: typography.sizes.caption,
+    fontWeight: typography.weights.bold,
+    textAlign: "center",
+  },
   itemCopy: { flex: 1, gap: spacing.xxs },
+  itemTitleRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "flex-start",
+    gap: spacing.xs,
+  },
   itemName: {
+    flexGrow: 1,
+    flexShrink: 1,
     color: colors.ink,
     fontFamily: typography.families.systemRounded,
     fontSize: typography.sizes.cardTitle,
     fontWeight: typography.weights.bold,
+  },
+  itemDescription: {
+    color: colors.muted,
+    fontFamily: typography.families.systemRounded,
+    fontSize: typography.sizes.body,
+    lineHeight: 19,
   },
   catalogMeta: {
     color: colors.muted,
@@ -406,6 +476,7 @@ const styles = StyleSheet.create({
     fontWeight: typography.weights.semibold,
   },
   statusPill: {
+    alignSelf: "flex-start",
     borderRadius: radii.full,
     backgroundColor: colors.page,
     paddingHorizontal: spacing.sm,

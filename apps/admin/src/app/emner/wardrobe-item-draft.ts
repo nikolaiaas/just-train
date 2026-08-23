@@ -7,6 +7,7 @@ import type {
 
 export const MAX_WARDROBE_NAME_LENGTH = 80;
 export const MAX_WARDROBE_ICON_LENGTH = 16;
+export const MAX_WARDROBE_DESCRIPTION_LENGTH = 240;
 export const MAX_WARDROBE_UNLOCK_RULE_LENGTH = 200;
 export const MAX_WARDROBE_EDITORIAL_NOTE_LENGTH = 300;
 export const MAX_WARDROBE_POINTS = 1_000;
@@ -19,6 +20,8 @@ const SINGLE_LINE_CONTROL_CHARACTER_PATTERN = /[\u0000-\u001f\u007f-\u009f]/u;
 const DISALLOWED_MULTILINE_CONTROL_CHARACTER_PATTERN =
   /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f]/u;
 const UNSIGNED_INTEGER_PATTERN = /^\d+$/u;
+const WARDROBE_IMAGE_PATH_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\/(?:0[1-9]|1[0-6])\.png$/i;
 const CATEGORIES = new Set<AdminWardrobeCategory>([
   "clothing",
   "equipment",
@@ -42,6 +45,8 @@ export type WardrobeItemDraftInput = {
   topicId: string;
   name: string;
   icon: string;
+  description: string;
+  imagePath: string;
   category: AdminWardrobeCategory;
   equipSlot: AdminWardrobeEquipSlot;
   rarity: AdminWardrobeRarity;
@@ -57,6 +62,8 @@ export type WardrobeItemDraftFieldErrors = Partial<
     | "topicId"
     | "name"
     | "icon"
+    | "description"
+    | "imagePath"
     | "category"
     | "equipSlot"
     | "rarity"
@@ -95,6 +102,8 @@ const DRAFT_FIELDS = [
   "topicId",
   "name",
   "icon",
+  "description",
+  "imagePath",
   "category",
   "equipSlot",
   "rarity",
@@ -177,6 +186,8 @@ export function validateWardrobeItemDraftForm(
   const topicId = normalizeUuid(values.topicId);
   const name = values.name.trim();
   const icon = values.icon.trim();
+  const description = values.description.replace(/\r\n?/gu, "\n").trim();
+  const imagePath = values.imagePath.trim().toLocaleLowerCase("en-US");
   const unlockRule = values.unlockRule.replace(/\s+/gu, " ").trim();
   const editorialNote = values.editorialNote.replace(/\r\n?/gu, "\n").trim();
   const points = parseInteger(values.points, 0, MAX_WARDROBE_POINTS);
@@ -199,12 +210,26 @@ export function validateWardrobeItemDraftForm(
     fieldErrors.name = `Navnet skal stå på én linje og må højst være ${MAX_WARDROBE_NAME_LENGTH} tegn.`;
   }
   if (!icon) {
-    fieldErrors.icon = "Vælg et kort ikon eller en emoji.";
+    fieldErrors.icon = "Det tekniske reserveikon mangler.";
   } else if (
     codePointLength(icon) > MAX_WARDROBE_ICON_LENGTH ||
     SINGLE_LINE_CONTROL_CHARACTER_PATTERN.test(values.icon)
   ) {
     fieldErrors.icon = `Ikonet skal stå på én linje og må højst være ${MAX_WARDROBE_ICON_LENGTH} tegn.`;
+  }
+  if (
+    codePointLength(description) > MAX_WARDROBE_DESCRIPTION_LENGTH ||
+    DISALLOWED_MULTILINE_CONTROL_CHARACTER_PATTERN.test(values.description)
+  ) {
+    fieldErrors.description = `Beskrivelsen må højst være ${MAX_WARDROBE_DESCRIPTION_LENGTH} tegn og må ikke indeholde skjulte kontroltegn.`;
+  }
+  if (
+    imagePath.length > 0 &&
+    (!WARDROBE_IMAGE_PATH_PATTERN.test(imagePath) ||
+      SINGLE_LINE_CONTROL_CHARACTER_PATTERN.test(values.imagePath))
+  ) {
+    fieldErrors.imagePath =
+      "Billedet tilhører ikke et gyldigt garderobe-billedark.";
   }
   if (!CATEGORIES.has(values.category as AdminWardrobeCategory)) {
     fieldErrors.category = "Vælg en gyldig type.";
@@ -262,6 +287,8 @@ export function validateWardrobeItemDraftForm(
       topicId: topicId!,
       name,
       icon,
+      description,
+      imagePath,
       category: values.category as AdminWardrobeCategory,
       equipSlot: values.equipSlot as AdminWardrobeEquipSlot,
       rarity: values.rarity as AdminWardrobeRarity,

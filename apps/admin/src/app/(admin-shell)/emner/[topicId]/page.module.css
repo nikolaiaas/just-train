@@ -661,15 +661,36 @@
   background: #fbfcf9;
 }
 
-.rewardIcon {
+.rewardMedia {
   display: grid;
-  width: 44px;
-  height: 44px;
+  width: 96px;
+  overflow: hidden;
   place-items: center;
-  flex: 0 0 44px;
+  flex: 0 0 96px;
   border-radius: 13px;
-  background: #e8f5f2;
-  font-size: 23px;
+  aspect-ratio: 1;
+  background: #edf1f1;
+}
+
+.rewardMediaImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.rewardMediaPlaceholder {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  padding: 10px;
+  place-items: center;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.72), transparent), #e8eeed;
+  color: #526b77;
+  font-size: 11px;
+  font-weight: 720;
+  line-height: 1.35;
+  text-align: center;
 }
 
 .rewardContent {
@@ -695,6 +716,13 @@
   color: #536a76;
   font-size: 11px;
   font-weight: 650;
+}
+
+.rewardDescription {
+  margin: 8px 0 0;
+  color: #405b69;
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 .unlockRule {

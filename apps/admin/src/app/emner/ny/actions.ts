@@ -27,8 +27,15 @@ import {
   type AssistantDraftReview,
   type AssistantSuggestion,
   type AssistantWardrobeItem,
+  type WardrobeGridPlanInput,
 } from "../assistant-request";
 import { assistantInvocationErrorMessage } from "../assistant-invocation";
+import {
+  attachWardrobeGridImages,
+  createWardrobeGridImageInput,
+  deriveWardrobeGridImageRequestId,
+  parseWardrobeGridImageOutput,
+} from "../wardrobe-grid";
 import {
   mapExerciseCreationError,
   mapExerciseUpdateError,
@@ -750,9 +757,11 @@ export async function createAdminWardrobeItemDraft(
     const result = await createWardrobeItemDraft(session.client, {
       authenticatedUserId: session.userId,
       category: validation.value.category,
+      description: validation.value.description,
       editorialNote: validation.value.editorialNote,
       equipSlot: validation.value.equipSlot,
       icon: validation.value.icon,
+      imagePath: validation.value.imagePath || null,
       name: validation.value.name,
       points: validation.value.points,
       rarity: validation.value.rarity,
@@ -799,10 +808,12 @@ export async function updateAdminWardrobeItemDraft(
     const result = await updateWardrobeItemDraft(session.client, {
       authenticatedUserId: session.userId,
       category: validation.value.category,
+      description: validation.value.description,
       editorialNote: validation.value.editorialNote,
       equipSlot: validation.value.equipSlot,
       expectedUpdatedAt: readExpectedUpdatedAt(formData),
       icon: validation.value.icon,
+      imagePath: validation.value.imagePath || null,
       name: validation.value.name,
       points: validation.value.points,
       rarity: validation.value.rarity,
@@ -996,12 +1007,108 @@ export async function askAdminContentAssistant(
     );
   }
 
+  let items = parsed.items;
+
+  if (mode === "wardrobe") {
+    const wardrobeInput = inputData as WardrobeGridPlanInput;
+    const imageRequestId = await deriveWardrobeGridImageRequestId(requestId);
+    const imageInput = createWardrobeGridImageInput(
+      wardrobeInput.topic,
+      parsed.items,
+    );
+    const { data: imagePreparedRows, error: imagePrepareError } =
+      await session.client.rpc("prepare_admin_ai_job", {
+        p_operation_key: "content.wardrobe_grid_image",
+        p_client_request_id: imageRequestId,
+        p_input_data: imageInput,
+      });
+    const imagePrepared = imagePreparedRows?.[0];
+
+    if (imagePrepareError || !imagePrepared?.job_id) {
+      return assistantError(
+        "De 16 garderobeidéer blev lavet, men billedarket kunne ikke forberedes. Prøv igen med samme besked.",
+        requestId,
+      );
+    }
+
+    if (imagePrepared.job_status !== "succeeded") {
+      const { error: imageInvokeError } = await session.client.functions.invoke(
+        "process-admin-ai-job",
+        {
+          body: { jobId: imagePrepared.job_id },
+        },
+      );
+
+      if (imageInvokeError) {
+        return assistantError(
+          assistantInvocationErrorMessage(imageInvokeError),
+          requestId,
+        );
+      }
+    }
+
+    const { data: imageJob, error: imageJobError } = await session.client
+      .from("ai_jobs")
+      .select("status, output_data, public_error_code")
+      .eq("id", imagePrepared.job_id)
+      .maybeSingle();
+
+    if (imageJobError || !imageJob) {
+      return assistantError(
+        "Billedarket blev startet, men resultatet kunne ikke hentes. Prøv igen med samme besked.",
+        requestId,
+      );
+    }
+
+    if (imageJob.status === "failed" || imageJob.status === "cancelled") {
+      return mapAiJobError(imageJob.public_error_code, requestId);
+    }
+
+    if (imageJob.status !== "succeeded") {
+      return assistantError(
+        "GPT Image 2 tegner stadig billedarket. Vent et øjeblik og prøv igen med samme besked.",
+        requestId,
+      );
+    }
+
+    const imageOutput = parseWardrobeGridImageOutput(
+      imageJob.output_data,
+      imagePrepared.job_id,
+    );
+
+    if (!imageOutput) {
+      return assistantError(
+        "Billedarket havde et ukendt format og blev derfor ikke vist eller gemt.",
+        requestId,
+        "start_new",
+      );
+    }
+
+    const attached = attachWardrobeGridImages(
+      parsed.items,
+      imageOutput,
+      (path) =>
+        session.client!.storage.from("wardrobe-images").getPublicUrl(path).data
+          .publicUrl,
+    );
+
+    if (!attached) {
+      return assistantError(
+        "De 16 beskårne billeder kunne ikke forbindes sikkert med forslagene.",
+        requestId,
+        "start_new",
+      );
+    }
+
+    items = attached;
+  }
+
   return {
     status: "success",
     requestId,
     reply: parsed.reply,
     suggestion: parsed.suggestion,
-    items: parsed.items,
+    items,
     review: parsed.review ?? null,
   };
 }

@@ -65,7 +65,7 @@ test("maps every bounded browser context to its server-owned operation", () => {
     ["topic", "content.topic_brief"],
     ["goal", "content.goal_draft"],
     ["exercise", "content.exercise_draft"],
-    ["wardrobe", "content.wardrobe_examples"],
+    ["wardrobe", "content.wardrobe_grid_plan"],
     ["review", "content.draft_review"],
   ]) {
     const result = validateAssistantRequest(formData({ mode }));
@@ -87,6 +87,13 @@ test("maps every bounded browser context to its server-owned operation", () => {
   assert.equal(exercise.value.inputData.position, 1);
   assert.deepEqual(exercise.value.inputData.sequence, []);
   assert.equal(exercise.value.inputData.draft.targetValue, 6);
+
+  const wardrobe = validateAssistantRequest(formData({ mode: "wardrobe" }));
+  assert.deepEqual(wardrobe.value.inputData.topic, {
+    title: "Boldleg",
+    description: "Leg med bold og bevægelse.",
+  });
+  assert.equal(Object.hasOwn(wardrobe.value.inputData, "draft"), false);
 
   const incompleteExercise = validateAssistantRequest(
     formData({
@@ -252,12 +259,14 @@ test("parses strict topic, goal, and exercise proposals", () => {
   );
 });
 
-test("parses wardrobe examples and rejects unexpected output", () => {
+test("parses exactly 16 ordered visual wardrobe plans and rejects drift", () => {
   const parsed = parseAssistantOutput("wardrobe", {
-    reply: "Her er et syntetisk eksempel.",
-    items: Array.from({ length: 3 }, (_, index) => ({
+    items: Array.from({ length: 16 }, (_, index) => ({
+      ordinal: index + 1,
       name: index === 0 ? "Regnbuebold" : `Sjov ting ${index + 1}`,
-      icon: "🌈",
+      description: "En venlig belønning til boldleg.",
+      visualDescription:
+        "A friendly stylized blue football reward, centered on a plain background.",
       category: "equipment",
       equipSlot: index === 0 ? "held" : "accessory",
       rarity: index === 0 ? "rare" : "common",
@@ -269,12 +278,16 @@ test("parses wardrobe examples and rejects unexpected output", () => {
 
   assert.equal(parsed?.items[0]?.name, "Regnbuebold");
   assert.equal(parsed?.items[0]?.equipSlot, "held");
+  assert.equal(parsed?.items.length, 16);
+  assert.equal(parsed?.items[15]?.ordinal, 16);
+  assert.equal(parsed?.items[0]?.imagePath, "");
   assert.equal(
     parseAssistantOutput("wardrobe", {
-      reply: "Forkert pointregel.",
-      items: Array.from({ length: 3 }, (_, index) => ({
+      items: Array.from({ length: 16 }, (_, index) => ({
+        ordinal: index + 1,
         name: `Sjov ting ${index + 1}`,
-        icon: "🌈",
+        description: "En venlig belønning til boldleg.",
+        visualDescription: "A centered generic football reward.",
         category: "equipment",
         equipSlot: "held",
         rarity: "common",
@@ -287,33 +300,19 @@ test("parses wardrobe examples and rejects unexpected output", () => {
   );
   assert.equal(
     parseAssistantOutput("wardrobe", {
-      reply: "Forkert",
       items: [],
       published: true,
     }),
     null,
   );
 
-  const legacy = parseAssistantOutput("wardrobe", {
-    reply: "Et ældre versionsbundet forslag.",
-    items: Array.from({ length: 3 }, (_, index) => ({
-      name: `Legacyting ${index + 1}`,
-      icon: "🌟",
-      category: "clothing",
-      rarity: "common",
-      points: 100,
-      unlockRule: "",
-      reason: "Kan stadig gennemgås af en redaktør.",
-    })),
-  });
-  assert.equal(legacy?.items[0]?.equipSlot, "accessory");
-
   assert.equal(
     parseAssistantOutput("wardrobe", {
-      reply: "Forkert placering.",
-      items: Array.from({ length: 3 }, (_, index) => ({
+      items: Array.from({ length: 16 }, (_, index) => ({
+        ordinal: index + 1,
         name: `Ting ${index + 1}`,
-        icon: "🌟",
+        description: "En venlig belønning til boldleg.",
+        visualDescription: "A centered generic football reward.",
         category: "clothing",
         equipSlot: "left-foot",
         rarity: "common",
@@ -324,6 +323,23 @@ test("parses wardrobe examples and rejects unexpected output", () => {
     }),
     null,
   );
+
+  const wrongOrder = {
+    items: Array.from({ length: 16 }, (_, index) => ({
+      ordinal: index + 1,
+      name: `Ting ${index + 1}`,
+      description: "En venlig belønning til boldleg.",
+      visualDescription: "A centered generic football reward.",
+      category: "clothing",
+      equipSlot: "head",
+      rarity: "common",
+      points: 100,
+      unlockRule: "",
+      reason: "Passer til emnet.",
+    })),
+  };
+  wrongOrder.items[4].ordinal = 6;
+  assert.equal(parseAssistantOutput("wardrobe", wrongOrder), null);
 });
 
 test("parses a non-mutating review checklist and rejects proposal-shaped review output", () => {
