@@ -1,24 +1,38 @@
 import { createClient } from "npm:@supabase/supabase-js@2.112.3";
+import { decode as decodePng, encode as encodePng } from "npm:fast-png@8.0.0";
 
 import { normalizeAdminContentOutput } from "../_shared/ai/admin-content-output.ts";
+import {
+  buildWardrobeGridImagePrompt,
+  cropWardrobeGridPng,
+  WardrobeGridImageError,
+} from "../_shared/ai/admin-wardrobe-grid.ts";
+import {
+  generateOpenRouterTextToImage,
+  OpenRouterImageError,
+} from "../_shared/ai/openrouter-image.ts";
 import {
   generateOpenRouterStructuredText,
   OpenRouterStructuredTextError,
 } from "../_shared/ai/openrouter-structured-text.ts";
 
+type StructuredTextOperationKey =
+  | "content.topic_brief"
+  | "content.wardrobe_examples"
+  | "content.wardrobe_grid_plan"
+  | "content.goal_draft"
+  | "content.exercise_draft"
+  | "content.draft_review";
+
 type Claim = {
   attempt_number: number;
+  capability: string;
   gateway: string;
   input_data: unknown;
   job_id: string;
   max_cost_microusd: number;
   model: string;
-  operation_key:
-    | "content.topic_brief"
-    | "content.wardrobe_examples"
-    | "content.goal_draft"
-    | "content.exercise_draft"
-    | "content.draft_review";
+  operation_key: StructuredTextOperationKey | "content.wardrobe_grid_image";
   output_contract: unknown;
   prompt_template: string;
   provider: string;
@@ -125,10 +139,21 @@ function safeError(error: unknown): {
   providerRequestId: string | null;
   publicCode: string;
 } {
-  if (error instanceof OpenRouterStructuredTextError) {
+  if (
+    error instanceof OpenRouterStructuredTextError ||
+    error instanceof OpenRouterImageError
+  ) {
     return {
       attemptCode: error.attemptCode,
       providerRequestId: error.providerRequestId,
+      publicCode: error.publicCode,
+    };
+  }
+
+  if (error instanceof WardrobeGridImageError) {
+    return {
+      attemptCode: error.attemptCode,
+      providerRequestId: null,
       publicCode: error.publicCode,
     };
   }
@@ -140,12 +165,27 @@ function safeError(error: unknown): {
   };
 }
 
-function schemaName(operationKey: Claim["operation_key"]): string {
+function isStructuredTextOperation(
+  operationKey: Claim["operation_key"],
+): operationKey is StructuredTextOperationKey {
+  return (
+    operationKey === "content.topic_brief" ||
+    operationKey === "content.wardrobe_examples" ||
+    operationKey === "content.wardrobe_grid_plan" ||
+    operationKey === "content.goal_draft" ||
+    operationKey === "content.exercise_draft" ||
+    operationKey === "content.draft_review"
+  );
+}
+
+function schemaName(operationKey: StructuredTextOperationKey): string {
   switch (operationKey) {
     case "content.topic_brief":
       return "admin_topic_brief";
     case "content.wardrobe_examples":
       return "admin_wardrobe_examples";
+    case "content.wardrobe_grid_plan":
+      return "admin_wardrobe_grid_plan";
     case "content.goal_draft":
       return "admin_goal_draft";
     case "content.exercise_draft":
@@ -182,16 +222,48 @@ async function processJob(jobId: string): Promise<void> {
   let providerRequestId: string | null = null;
   let usage: Record<string, number> = {};
 
+  async function uploadOrReusePng(
+    objectPath: string,
+    bytes: Uint8Array,
+  ): Promise<void> {
+    const bucket = admin.storage.from("wardrobe-images");
+    const { error: uploadError } = await bucket.upload(objectPath, bytes, {
+      cacheControl: "31536000",
+      contentType: "image/png",
+      upsert: false,
+    });
+
+    if (!uploadError) return;
+
+    // A request can be interrupted after Storage accepted it. Reusing only an
+    // exact immutable object makes a repeated worker invocation idempotent
+    // without allowing an overwrite from either the browser or the worker.
+    const { data: existingBlob, error: downloadError } =
+      await bucket.download(objectPath);
+
+    if (downloadError || !existingBlob || existingBlob.size !== bytes.length) {
+      throw new OpenRouterImageError({
+        attemptCode: "wardrobe_image_upload_failed",
+        providerRequestId,
+        publicCode: "worker_interrupted",
+        retryable: true,
+      });
+    }
+
+    const existing = new Uint8Array(await existingBlob.arrayBuffer());
+
+    if (!existing.every((byte, index) => byte === bytes[index])) {
+      throw new OpenRouterImageError({
+        attemptCode: "wardrobe_image_path_conflict",
+        providerRequestId,
+        publicCode: "worker_interrupted",
+        retryable: false,
+      });
+    }
+  }
+
   try {
-    if (
-      claim.gateway !== "openrouter" ||
-      claim.provider !== "openai" ||
-      (claim.operation_key !== "content.topic_brief" &&
-        claim.operation_key !== "content.wardrobe_examples" &&
-        claim.operation_key !== "content.goal_draft" &&
-        claim.operation_key !== "content.exercise_draft" &&
-        claim.operation_key !== "content.draft_review")
-    ) {
+    if (claim.gateway !== "openrouter" || claim.provider !== "openai") {
       throw new OpenRouterStructuredTextError({
         attemptCode: "unsupported_gateway",
         publicCode: "server_configuration",
@@ -199,59 +271,145 @@ async function processJob(jobId: string): Promise<void> {
       });
     }
 
-    const result = await generateOpenRouterStructuredText({
-      apiKey: readRequiredEnvironment("OPENROUTER_API_KEY"),
-      editorialInput: claim.input_data,
-      model: claim.model,
-      options: claim.request_options,
-      outputSchema: claim.output_contract,
-      schemaName: schemaName(claim.operation_key),
-      systemPrompt: claim.prompt_template,
-      timeoutMs: claim.timeout_ms,
-    });
-    billedCostMicrousd = result.costMicrousd;
-    providerRequestId = result.providerRequestId;
-    usage = result.usage;
+    let outputData: unknown;
 
-    if (result.costMicrousd === null) {
-      throw new OpenRouterStructuredTextError({
-        attemptCode: "openrouter_cost_unavailable",
-        providerRequestId: result.providerRequestId,
-        publicCode: "provider_failed",
-        retryable: false,
+    if (isStructuredTextOperation(claim.operation_key)) {
+      if (claim.capability !== "structured_text") {
+        throw new OpenRouterStructuredTextError({
+          attemptCode: "unsupported_capability",
+          publicCode: "server_configuration",
+          retryable: false,
+        });
+      }
+
+      const result = await generateOpenRouterStructuredText({
+        apiKey: readRequiredEnvironment("OPENROUTER_API_KEY"),
+        editorialInput: claim.input_data,
+        model: claim.model,
+        options: claim.request_options,
+        outputSchema: claim.output_contract,
+        schemaName: schemaName(claim.operation_key),
+        systemPrompt: claim.prompt_template,
+        timeoutMs: claim.timeout_ms,
       });
-    }
+      billedCostMicrousd = result.costMicrousd;
+      providerRequestId = result.providerRequestId;
+      usage = result.usage;
 
-    if (result.costMicrousd > claim.max_cost_microusd) {
-      throw new OpenRouterStructuredTextError({
-        attemptCode: "provider_cost_limit_exceeded",
-        providerRequestId: result.providerRequestId,
-        publicCode: "cost_limit_exceeded",
-        retryable: false,
+      if (result.costMicrousd === null) {
+        throw new OpenRouterStructuredTextError({
+          attemptCode: "openrouter_cost_unavailable",
+          providerRequestId: result.providerRequestId,
+          publicCode: "provider_failed",
+          retryable: false,
+        });
+      }
+
+      if (result.costMicrousd > claim.max_cost_microusd) {
+        throw new OpenRouterStructuredTextError({
+          attemptCode: "provider_cost_limit_exceeded",
+          providerRequestId: result.providerRequestId,
+          publicCode: "cost_limit_exceeded",
+          retryable: false,
+        });
+      }
+
+      const normalizedOutput = normalizeAdminContentOutput(
+        claim.operation_key,
+        result.output,
+      );
+
+      if (!normalizedOutput) {
+        throw new OpenRouterStructuredTextError({
+          attemptCode: "invalid_openrouter_output",
+          providerRequestId: result.providerRequestId,
+          publicCode: "provider_failed",
+          retryable: false,
+        });
+      }
+
+      outputData = normalizedOutput;
+    } else if (claim.operation_key === "content.wardrobe_grid_image") {
+      if (
+        claim.capability !== "image_generation" ||
+        claim.model !== "openai/gpt-image-2"
+      ) {
+        throw new OpenRouterImageError({
+          attemptCode: "unsupported_capability",
+          publicCode: "server_configuration",
+          retryable: false,
+        });
+      }
+
+      const prompt = buildWardrobeGridImagePrompt({
+        inputData: claim.input_data,
+        promptTemplate: claim.prompt_template,
       });
-    }
+      const result = await generateOpenRouterTextToImage({
+        apiKey: readRequiredEnvironment("OPENROUTER_API_KEY"),
+        model: claim.model,
+        options: claim.request_options,
+        prompt,
+        timeoutMs: claim.timeout_ms,
+      });
+      billedCostMicrousd = result.costMicrousd;
+      providerRequestId = result.providerRequestId;
+      usage = result.usage;
 
-    const normalizedOutput = normalizeAdminContentOutput(
-      claim.operation_key,
-      result.output,
-    );
+      if (result.costMicrousd === null) {
+        throw new OpenRouterImageError({
+          attemptCode: "openrouter_cost_unavailable",
+          providerRequestId: result.providerRequestId,
+          publicCode: "provider_failed",
+          retryable: false,
+        });
+      }
 
-    if (!normalizedOutput) {
+      if (result.costMicrousd > claim.max_cost_microusd) {
+        throw new OpenRouterImageError({
+          attemptCode: "provider_cost_limit_exceeded",
+          providerRequestId: result.providerRequestId,
+          publicCode: "cost_limit_exceeded",
+          retryable: false,
+        });
+      }
+
+      const crops = cropWardrobeGridPng(result.bytes, {
+        decode: (bytes, options) => decodePng(bytes, options),
+        encode: (image) =>
+          encodePng({
+            ...image,
+            depth: image.depth as 8 | 16,
+          }),
+      });
+      const sheetPath = `${claim.job_id}/sheet.png`;
+
+      await uploadOrReusePng(sheetPath, result.bytes);
+
+      const items: Array<{ imagePath: string; ordinal: number }> = [];
+
+      for (const crop of crops) {
+        const imagePath = `${claim.job_id}/${String(crop.ordinal).padStart(2, "0")}.png`;
+        await uploadOrReusePng(imagePath, crop.bytes);
+        items.push({ imagePath, ordinal: crop.ordinal });
+      }
+
+      outputData = { items, sheetPath };
+    } else {
       throw new OpenRouterStructuredTextError({
-        attemptCode: "invalid_openrouter_output",
-        providerRequestId: result.providerRequestId,
-        publicCode: "provider_failed",
+        attemptCode: "unsupported_operation",
+        publicCode: "server_configuration",
         retryable: false,
       });
     }
 
     const completionPayload = {
       p_attempt_number: claim.attempt_number,
-      p_cost_microusd: result.costMicrousd,
+      p_cost_microusd: billedCostMicrousd,
       p_job_id: claim.job_id,
-      p_output_data: normalizedOutput,
-      p_provider_request_id: result.providerRequestId,
-      p_usage: result.usage,
+      p_output_data: outputData,
+      p_provider_request_id: providerRequestId,
+      p_usage: usage,
     };
     let { error: completeError } = await admin.rpc(
       "complete_admin_ai_job_for_worker",
@@ -271,7 +429,7 @@ async function processJob(jobId: string): Promise<void> {
       JSON.stringify({
         event: "admin_ai_job_succeeded",
         jobId,
-        costMicrousd: result.costMicrousd,
+        costMicrousd: billedCostMicrousd,
       }),
     );
   } catch (error) {

@@ -71,6 +71,7 @@ export type AdminWardrobeItemDraft = {
   contentVersion: number;
   createdAt: string;
   createdBy: string | null;
+  description: string;
   editorialNote: string;
   editorialStatus: AdminWardrobeEditorialStatus;
   equipSlot: AdminWardrobeEquipSlot;
@@ -78,6 +79,8 @@ export type AdminWardrobeItemDraft = {
   hasPendingRevision: boolean;
   icon: string;
   id: string;
+  imagePath: string | null;
+  imageUrl: string | null;
   name: string;
   points: number;
   publishedAt: string | null;
@@ -127,6 +130,8 @@ export type CreateAdminWardrobeItemDraftInput = {
   /** Resolved from the authenticated admin session by trusted server code. */
   authenticatedUserId: string;
   category: AdminWardrobeCategory;
+  /** Child-facing description. Empty is retained for legacy/manual items. */
+  description?: string;
   editorialNote: string;
   /**
    * The exclusive avatar position occupied by the item. Omission is accepted
@@ -134,6 +139,8 @@ export type CreateAdminWardrobeItemDraftInput = {
    */
   equipSlot?: AdminWardrobeEquipSlot;
   icon: string;
+  /** Immutable crop path in the synthetic wardrobe image bucket. */
+  imagePath?: string | null;
   name: string;
   /** `0` means the item uses `unlockRule` instead of a point price. */
   points: number;
@@ -251,9 +258,11 @@ export type AdminContentStepErrorCode =
   | "invalid_wardrobe_creation_result"
   | "invalid_wardrobe_decision"
   | "invalid_wardrobe_decision_result"
+  | "invalid_wardrobe_description"
   | "invalid_wardrobe_editorial_note"
   | "invalid_wardrobe_equip_slot"
   | "invalid_wardrobe_icon"
+  | "invalid_wardrobe_image_path"
   | "invalid_wardrobe_item_id"
   | "invalid_wardrobe_name"
   | "invalid_wardrobe_points"
@@ -316,9 +325,11 @@ const ERROR_MESSAGES: Record<AdminContentStepErrorCode, string> = {
   invalid_wardrobe_decision: "The wardrobe review decision is invalid.",
   invalid_wardrobe_decision_result:
     "Wardrobe review returned an invalid result.",
+  invalid_wardrobe_description: "The wardrobe item description is invalid.",
   invalid_wardrobe_editorial_note: "The wardrobe editorial note is invalid.",
   invalid_wardrobe_equip_slot: "The wardrobe equipment position is invalid.",
   invalid_wardrobe_icon: "The wardrobe item icon is invalid.",
+  invalid_wardrobe_image_path: "The wardrobe item image path is invalid.",
   invalid_wardrobe_item_id: "The wardrobe item id is invalid.",
   invalid_wardrobe_name: "The wardrobe item name is invalid.",
   invalid_wardrobe_points: "The wardrobe item point price is invalid.",
@@ -397,9 +408,12 @@ const MAX_REPETITION_TARGET = 10_000;
 const MAX_DURATION_TARGET_SECONDS = 86_400;
 const MAX_WARDROBE_NAME_LENGTH = 80;
 const MAX_WARDROBE_ICON_LENGTH = 16;
+const MAX_WARDROBE_DESCRIPTION_LENGTH = 240;
 const MAX_WARDROBE_POINTS = 1_000;
 const MAX_WARDROBE_UNLOCK_RULE_LENGTH = 200;
 const MAX_WARDROBE_EDITORIAL_NOTE_LENGTH = 500;
+const WARDROBE_IMAGE_PATH_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\/(?:0[1-9]|1[0-6])\.png$/i;
 
 const GOAL_COLUMNS =
   "id, topic_id, slug, title, summary, difficulty, estimated_minutes, equipment, hero_media_url, sort_order, content_version, is_published, published_at, created_by, created_at, updated_at" as const;
@@ -424,15 +438,19 @@ type NormalizedExerciseDraft = Omit<
 type NormalizedWardrobeItemDraft = Omit<
   CreateAdminWardrobeItemDraftInput,
   | "category"
+  | "description"
   | "editorialNote"
   | "equipSlot"
+  | "imagePath"
   | "points"
   | "rarity"
   | "unlockRule"
 > & {
   category: AdminWardrobeCategory;
+  description: string | null;
   editorialNote: string | null;
   equipSlot: AdminWardrobeEquipSlot;
+  imagePath: string | null;
   points: number | null;
   rarity: AdminWardrobeRarity;
   unlockRule: string | null;
@@ -446,7 +464,7 @@ type NormalizedWardrobeDecision = Omit<
 };
 
 type SaveWardrobeItemDraftRpcArgs =
-  Database["public"]["Functions"]["save_admin_wardrobe_item_draft"]["Args"];
+  Database["public"]["Functions"]["save_admin_wardrobe_item_draft_with_image"]["Args"];
 
 function isRecord(value: unknown): value is UnknownRecord {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -527,6 +545,7 @@ function normalizeMultiline(
     | "invalid_instructions"
     | "invalid_safety_notes"
     | "invalid_summary"
+    | "invalid_wardrobe_description"
     | "invalid_wardrobe_editorial_note"
     | "invalid_wardrobe_unlock_rule",
   maximumLength: number,
@@ -814,6 +833,12 @@ function normalizeWardrobeItemDraft(
     "invalid_wardrobe_editorial_note",
     MAX_WARDROBE_EDITORIAL_NOTE_LENGTH,
   );
+  const description = normalizeMultiline(
+    input.description ?? "",
+    "invalid_wardrobe_description",
+    MAX_WARDROBE_DESCRIPTION_LENGTH,
+  );
+  const imagePath = normalizeWardrobeImagePath(input.imagePath);
 
   return {
     authenticatedUserId: normalizeUuid(
@@ -821,6 +846,7 @@ function normalizeWardrobeItemDraft(
       "invalid_authenticated_user_id",
     ),
     category: normalizeWardrobeCategory(input.category),
+    description: description || null,
     editorialNote: editorialNote || null,
     equipSlot: normalizeWardrobeEquipSlot(input.equipSlot),
     icon: normalizeSingleLine(
@@ -828,6 +854,7 @@ function normalizeWardrobeItemDraft(
       "invalid_wardrobe_icon",
       MAX_WARDROBE_ICON_LENGTH,
     ),
+    imagePath,
     name: normalizeSingleLine(
       input.name,
       "invalid_wardrobe_name",
@@ -840,6 +867,20 @@ function normalizeWardrobeItemDraft(
     topicId: normalizeUuid(input.topicId, "invalid_topic_id"),
     unlockRule: unlockRule || null,
   };
+}
+
+function normalizeWardrobeImagePath(value: unknown): string | null {
+  if (value === null || value === undefined || value === "") return null;
+
+  if (
+    typeof value !== "string" ||
+    value !== value.trim() ||
+    !WARDROBE_IMAGE_PATH_PATTERN.test(value)
+  ) {
+    throw new AdminContentStepError("invalid_wardrobe_image_path");
+  }
+
+  return value.toLowerCase();
 }
 
 function normalizeWardrobeDecision(
@@ -1085,7 +1126,10 @@ function parseExerciseDraft(value: unknown): AdminExerciseDraft | null {
   };
 }
 
-function parseWardrobeItemDraft(value: unknown): AdminWardrobeItemDraft | null {
+function parseWardrobeItemDraft(
+  value: unknown,
+  publicUrlForPath: (path: string) => string,
+): AdminWardrobeItemDraft | null {
   if (!isRecord(value)) {
     return null;
   }
@@ -1111,12 +1155,22 @@ function parseWardrobeItemDraft(value: unknown): AdminWardrobeItemDraft | null {
       MAX_WARDROBE_EDITORIAL_NOTE_LENGTH,
     ) &&
       value.editorial_note.length > 0);
+  const descriptionIsValid =
+    value.description === null ||
+    (isReturnedMultiline(value.description, MAX_WARDROBE_DESCRIPTION_LENGTH) &&
+      value.description.length > 0);
+  const imagePathIsValid =
+    value.image_path === null ||
+    (typeof value.image_path === "string" &&
+      WARDROBE_IMAGE_PATH_PATTERN.test(value.image_path));
 
   if (
     !isUuid(value.id) ||
     !isUuid(value.topic_id) ||
     !isReturnedSingleLine(value.name, MAX_WARDROBE_NAME_LENGTH) ||
     !isReturnedSingleLine(value.icon, MAX_WARDROBE_ICON_LENGTH) ||
+    !descriptionIsValid ||
+    !imagePathIsValid ||
     typeof value.category !== "string" ||
     !WARDROBE_CATEGORIES.has(value.category as AdminWardrobeCategory) ||
     typeof value.equip_slot !== "string" ||
@@ -1152,17 +1206,25 @@ function parseWardrobeItemDraft(value: unknown): AdminWardrobeItemDraft | null {
     return null;
   }
 
+  const imagePath = (value.image_path as string | null)?.toLowerCase() ?? null;
+  const imageUrl = imagePath ? publicUrlForPath(imagePath) : null;
+
+  if (imageUrl !== null && !URL.canParse(imageUrl)) return null;
+
   return {
     category: value.category as AdminWardrobeCategory,
     contentVersion: value.content_version as number,
     createdAt: value.created_at,
     createdBy: value.created_by?.toLowerCase() ?? null,
+    description: (value.description as string | null) ?? "",
     editorialNote: (value.editorial_note as string | null) ?? "",
     editorialStatus: value.editorial_status as AdminWardrobeEditorialStatus,
     equipSlot: value.equip_slot as AdminWardrobeEquipSlot,
     hasPendingRevision: value.has_pending_revision,
     icon: value.icon,
     id: value.id.toLowerCase(),
+    imagePath,
+    imageUrl,
     name: value.name,
     points: (value.points as number | null) ?? 0,
     publishedAt: value.published_at as string | null,
@@ -1180,7 +1242,10 @@ type WardrobeItemLookup =
   | { kind: "invalid" }
   | { kind: "missing" };
 
-function parseWardrobeItemLookup(value: unknown): WardrobeItemLookup {
+function parseWardrobeItemLookup(
+  value: unknown,
+  publicUrlForPath: (path: string) => string,
+): WardrobeItemLookup {
   if (!Array.isArray(value) || value.length > 1) {
     return { kind: "invalid" };
   }
@@ -1189,7 +1254,7 @@ function parseWardrobeItemLookup(value: unknown): WardrobeItemLookup {
     return { kind: "missing" };
   }
 
-  const item = parseWardrobeItemDraft(value[0]);
+  const item = parseWardrobeItemDraft(value[0], publicUrlForPath);
   return item ? { kind: "found", item } : { kind: "invalid" };
 }
 
@@ -1326,10 +1391,12 @@ async function insertWardrobeItemDraft(
     .insert({
       category: input.category,
       created_by: input.authenticatedUserId,
+      description: input.description,
       editorial_note: input.editorialNote,
       equip_slot: input.equipSlot,
       icon: input.icon,
       id: input.requestId,
+      image_path: input.imagePath,
       name: input.name,
       points: input.points,
       rarity: input.rarity,
@@ -1373,7 +1440,11 @@ async function loadWardrobeItemDraft(
     throw mapDatabaseFailure(response.error, fallback);
   }
 
-  return parseWardrobeItemLookup(response.data);
+  return parseWardrobeItemLookup(
+    response.data,
+    (path) =>
+      client.storage.from("wardrobe-images").getPublicUrl(path).data.publicUrl,
+  );
 }
 
 async function updateGoalDraft(
@@ -1441,11 +1512,15 @@ async function updateWardrobeItemDraft(
   // guarded RPC for the database's exclusive points/unlock representation.
   const args: SaveWardrobeItemDraftRpcArgs = {
     p_category: input.category,
+    p_description:
+      input.description as SaveWardrobeItemDraftRpcArgs["p_description"],
     p_editorial_note:
       input.editorialNote as SaveWardrobeItemDraftRpcArgs["p_editorial_note"],
     p_equip_slot: input.equipSlot,
     p_expected_updated_at: expectedUpdatedAt,
     p_icon: input.icon,
+    p_image_path:
+      input.imagePath as SaveWardrobeItemDraftRpcArgs["p_image_path"],
     p_name: input.name,
     p_points: input.points as SaveWardrobeItemDraftRpcArgs["p_points"],
     p_rarity: input.rarity,
@@ -1456,7 +1531,9 @@ async function updateWardrobeItemDraft(
     p_wardrobe_item_id: input.requestId,
   };
 
-  return client.rpc("save_admin_wardrobe_item_draft", args).maybeSingle();
+  return client
+    .rpc("save_admin_wardrobe_item_draft_with_image", args)
+    .maybeSingle();
 }
 
 async function decideWardrobeItemDraft(
@@ -1532,6 +1609,8 @@ function matchesWardrobeItemDraft(
     item.topicId === input.topicId &&
     item.name === input.name &&
     item.icon === input.icon &&
+    item.description === (input.description ?? "") &&
+    item.imagePath === input.imagePath &&
     item.category === input.category &&
     item.rarity === input.rarity &&
     item.points === (input.points ?? 0) &&
@@ -1603,6 +1682,8 @@ function matchesUpdatedWardrobeItemDraft(
     item.topicId === input.topicId &&
     item.name === input.name &&
     item.icon === input.icon &&
+    item.description === (input.description ?? "") &&
+    item.imagePath === input.imagePath &&
     item.category === input.category &&
     item.rarity === input.rarity &&
     item.points === (input.points ?? 0) &&

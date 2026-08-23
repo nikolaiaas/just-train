@@ -17,11 +17,14 @@ const topicId = "40000000-0000-4000-8000-000000000001";
 const goalId = "50000000-0000-4000-8000-000000000001";
 const exerciseId = "60000000-0000-4000-8000-000000000001";
 const wardrobeItemId = "70000000-0000-4000-8000-000000000001";
+const wardrobeImagePath = "a9ed2205-4ab3-4a28-99d0-a8e61e4a2260/01.png";
+const wardrobeImageUrl = `https://example.supabase.test/storage/v1/object/public/wardrobe-images/${wardrobeImagePath}`;
 
 const goalRow = Object.freeze({
   content_version: 1,
   created_at: "2026-08-21T21:00:00.000Z",
   created_by: adminId,
+  description: "En venlig stjernetrøje til boldlegen.",
   difficulty: "beginner",
   equipment: ["Bold", "4 kegler"],
   estimated_minutes: 15,
@@ -63,12 +66,14 @@ const wardrobeItemRow = Object.freeze({
   content_version: 1,
   created_at: "2026-08-21T21:02:00.000Z",
   created_by: adminId,
+  description: "En venlig stjernetrøje til boldlegen.",
   editorial_note: "Et roligt, brandfrit valg.",
   editorial_status: "draft",
   equip_slot: "body",
   has_pending_revision: false,
   icon: "🧢",
   id: wardrobeItemId,
+  image_path: wardrobeImagePath,
   is_published: false,
   name: "Stjernetrøje",
   points: 120,
@@ -113,9 +118,11 @@ const validExerciseInput = Object.freeze({
 const validWardrobeInput = Object.freeze({
   authenticatedUserId: adminId,
   category: "clothing",
+  description: wardrobeItemRow.description,
   editorialNote: "Et roligt, brandfrit valg.",
   equipSlot: "body",
   icon: "🧢",
+  imagePath: wardrobeImagePath,
   name: "Stjernetrøje",
   points: 120,
   rarity: "rare",
@@ -195,6 +202,20 @@ function clientForResponses(responses, calls = []) {
       return name === "list_admin_wardrobe_item_drafts"
         ? Promise.resolve(response)
         : queryFor(response, calls);
+    },
+    storage: {
+      from(bucket) {
+        assert.equal(bucket, "wardrobe-images");
+        return {
+          getPublicUrl(path) {
+            return {
+              data: {
+                publicUrl: `https://example.supabase.test/storage/v1/object/public/wardrobe-images/${path}`,
+              },
+            };
+          },
+        };
+      },
     },
   };
 }
@@ -279,12 +300,15 @@ function expectedWardrobeItem(overrides = {}) {
     contentVersion: 1,
     createdAt: wardrobeItemRow.created_at,
     createdBy: adminId,
+    description: wardrobeItemRow.description,
     editorialNote: wardrobeItemRow.editorial_note,
     editorialStatus: "draft",
     equipSlot: "body",
     hasPendingRevision: false,
     icon: "🧢",
     id: wardrobeItemId,
+    imagePath: wardrobeImagePath,
+    imageUrl: wardrobeImageUrl,
     name: "Stjernetrøje",
     points: 120,
     publishedAt: null,
@@ -410,10 +434,12 @@ test("creates a normalized unpublished wardrobe item below its topic", async () 
     value: {
       category: "clothing",
       created_by: adminId,
+      description: wardrobeItemRow.description,
       editorial_note: wardrobeItemRow.editorial_note,
       equip_slot: "body",
       icon: "🧢",
       id: wardrobeItemId,
+      image_path: wardrobeImagePath,
       name: "Stjernetrøje",
       points: 120,
       rarity: "rare",
@@ -564,6 +590,11 @@ test("rejects invalid wardrobe content before accessing Supabase", async () => {
     [{ name: "  " }, "invalid_wardrobe_name"],
     [{ name: "x".repeat(81) }, "invalid_wardrobe_name"],
     [{ icon: "x".repeat(17) }, "invalid_wardrobe_icon"],
+    [{ description: "x".repeat(241) }, "invalid_wardrobe_description"],
+    [
+      { imagePath: "https://example.test/item.png" },
+      "invalid_wardrobe_image_path",
+    ],
     [{ category: "hat" }, "invalid_wardrobe_category"],
     [{ equipSlot: "left-foot" }, "invalid_wardrobe_equip_slot"],
     [{ rarity: "legendary" }, "invalid_wardrobe_rarity"],
@@ -994,17 +1025,19 @@ test("updates wardrobe content and resets its editorial status to draft", async 
     calls.find(
       (call) =>
         call.operation === "rpc" &&
-        call.name === "save_admin_wardrobe_item_draft",
+        call.name === "save_admin_wardrobe_item_draft_with_image",
     ),
     {
       operation: "rpc",
-      name: "save_admin_wardrobe_item_draft",
+      name: "save_admin_wardrobe_item_draft_with_image",
       args: {
         p_category: "effect",
+        p_description: wardrobeItemRow.description,
         p_editorial_note: null,
         p_equip_slot: "body",
         p_expected_updated_at: wardrobeItemRow.updated_at,
         p_icon: "✨",
+        p_image_path: wardrobeImagePath,
         p_name: "Stjernestøv",
         p_points: null,
         p_rarity: "special",
@@ -1062,7 +1095,7 @@ test("stages a corrected feet slot for a legacy published wardrobe item", async 
     calls.find(
       (call) =>
         call.operation === "rpc" &&
-        call.name === "save_admin_wardrobe_item_draft",
+        call.name === "save_admin_wardrobe_item_draft_with_image",
     )?.args.p_equip_slot,
     "feet",
   );

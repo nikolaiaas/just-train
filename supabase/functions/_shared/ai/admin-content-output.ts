@@ -1,6 +1,7 @@
 export type AdminContentOperationKey =
   | "content.topic_brief"
   | "content.wardrobe_examples"
+  | "content.wardrobe_grid_plan"
   | "content.goal_draft"
   | "content.exercise_draft"
   | "content.draft_review";
@@ -17,6 +18,8 @@ const WARDROBE_EQUIP_SLOTS = new Set([
   "feet",
   "accessory",
 ]);
+const WARDROBE_CATEGORIES = new Set(["clothing", "equipment", "effect"]);
+const WARDROBE_RARITIES = new Set(["common", "rare", "special"]);
 
 const DISALLOWED_MULTILINE_CONTROL_CHARACTER_PATTERN =
   /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f]/gu;
@@ -250,6 +253,112 @@ function normalizeWardrobeOutput(value: UnknownRecord): JsonObject | null {
   return { items, reply };
 }
 
+function hasExactKeys(
+  value: UnknownRecord,
+  expectedKeys: readonly string[],
+): boolean {
+  const actualKeys = Object.keys(value).sort();
+  const sortedExpectedKeys = [...expectedKeys].sort();
+
+  return (
+    actualKeys.length === sortedExpectedKeys.length &&
+    actualKeys.every((key, index) => key === sortedExpectedKeys[index])
+  );
+}
+
+function isBoundedText(
+  value: string | null,
+  maximumLength: number,
+  required: boolean,
+): value is string {
+  return (
+    value !== null &&
+    value.length <= maximumLength &&
+    (!required || value.length > 0)
+  );
+}
+
+function normalizeWardrobeGridPlanOutput(
+  value: UnknownRecord,
+): JsonObject | null {
+  if (
+    !hasExactKeys(value, ["items"]) ||
+    !Array.isArray(value.items) ||
+    value.items.length !== 16
+  ) {
+    return null;
+  }
+
+  const items: JsonObject[] = [];
+  const itemKeys = [
+    "ordinal",
+    "name",
+    "description",
+    "visualDescription",
+    "category",
+    "equipSlot",
+    "rarity",
+    "points",
+    "unlockRule",
+    "reason",
+  ] as const;
+
+  for (const [index, candidate] of value.items.entries()) {
+    if (!isRecord(candidate) || !hasExactKeys(candidate, itemKeys)) return null;
+
+    const ordinal = candidate.ordinal;
+    const name = normalizeRequiredSingleLine(candidate.name);
+    const description = normalizeRequiredMultiline(candidate.description);
+    const visualDescription = normalizeRequiredMultiline(
+      candidate.visualDescription,
+    );
+    const unlockRule = normalizeMultiline(candidate.unlockRule);
+    const reason = normalizeRequiredMultiline(candidate.reason);
+    const category = candidate.category;
+    const equipSlot = candidate.equipSlot;
+    const rarity = candidate.rarity;
+    const points = candidate.points;
+
+    if (
+      ordinal !== index + 1 ||
+      !Number.isSafeInteger(ordinal) ||
+      !isBoundedText(name, 80, true) ||
+      !isBoundedText(description, 240, true) ||
+      !isBoundedText(visualDescription, 500, true) ||
+      !isBoundedText(unlockRule, 200, false) ||
+      !isBoundedText(reason, 300, true) ||
+      typeof category !== "string" ||
+      !WARDROBE_CATEGORIES.has(category) ||
+      typeof equipSlot !== "string" ||
+      !WARDROBE_EQUIP_SLOTS.has(equipSlot) ||
+      typeof rarity !== "string" ||
+      !WARDROBE_RARITIES.has(rarity) ||
+      typeof points !== "number" ||
+      !Number.isSafeInteger(points) ||
+      points < 0 ||
+      points > 1_000 ||
+      (points === 0 ? unlockRule.length === 0 : unlockRule.length !== 0)
+    ) {
+      return null;
+    }
+
+    items.push({
+      category,
+      description,
+      equipSlot,
+      name,
+      ordinal,
+      points,
+      rarity,
+      reason,
+      unlockRule,
+      visualDescription,
+    });
+  }
+
+  return { items };
+}
+
 function normalizeReviewCheck(
   value: unknown,
   allowOptional: boolean,
@@ -321,6 +430,8 @@ export function normalizeAdminContentOutput(
       return normalizeExerciseOutput(value);
     case "content.wardrobe_examples":
       return normalizeWardrobeOutput(value);
+    case "content.wardrobe_grid_plan":
+      return normalizeWardrobeGridPlanOutput(value);
     case "content.draft_review":
       return normalizeDraftReviewOutput(value);
   }

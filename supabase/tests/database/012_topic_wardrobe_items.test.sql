@@ -37,7 +37,9 @@ select results_eq(
       ('created_by'::text),
       ('created_at'::text),
       ('updated_at'::text),
-      ('equip_slot'::text)
+      ('equip_slot'::text),
+      ('description'::text),
+      ('image_path'::text)
   $$,
   'the wardrobe catalog exposes only its reviewed content and audit fields'
 );
@@ -361,7 +363,7 @@ select is(
   pg_get_function_result(
     'public.list_admin_wardrobe_item_drafts(uuid,uuid)'::regprocedure
   ),
-  'TABLE(id uuid, topic_id uuid, name text, icon text, category wardrobe_item_category, equip_slot wardrobe_equip_slot, rarity wardrobe_item_rarity, points integer, unlock_rule text, editorial_note text, editorial_status wardrobe_editorial_status, sort_order integer, content_version integer, is_published boolean, published_at timestamp with time zone, created_by uuid, created_at timestamp with time zone, updated_at timestamp with time zone, has_pending_revision boolean)',
+  'TABLE(id uuid, topic_id uuid, name text, icon text, description text, image_path text, category wardrobe_item_category, equip_slot wardrobe_equip_slot, rarity wardrobe_item_rarity, points integer, unlock_rule text, editorial_note text, editorial_status wardrobe_editorial_status, sort_order integer, content_version integer, is_published boolean, published_at timestamp with time zone, created_by uuid, created_at timestamp with time zone, updated_at timestamp with time zone, has_pending_revision boolean)',
   'the admin draft reader returns the complete generated-client wardrobe row shape'
 );
 

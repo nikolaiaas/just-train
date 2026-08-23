@@ -1055,11 +1055,13 @@ export type Database = {
           content_version: number;
           created_at: string;
           created_by: string | null;
+          description: string | null;
           editorial_note: string | null;
           editorial_status: Database["public"]["Enums"]["wardrobe_editorial_status"];
           equip_slot: Database["public"]["Enums"]["wardrobe_equip_slot"];
           icon: string;
           id: string;
+          image_path: string | null;
           is_published: boolean;
           name: string;
           points: number | null;
@@ -1075,11 +1077,13 @@ export type Database = {
           content_version?: number;
           created_at?: string;
           created_by?: string | null;
+          description?: string | null;
           editorial_note?: string | null;
           editorial_status?: Database["public"]["Enums"]["wardrobe_editorial_status"];
           equip_slot?: Database["public"]["Enums"]["wardrobe_equip_slot"];
           icon: string;
           id?: string;
+          image_path?: string | null;
           is_published?: boolean;
           name: string;
           points?: number | null;
@@ -1095,11 +1099,13 @@ export type Database = {
           content_version?: number;
           created_at?: string;
           created_by?: string | null;
+          description?: string | null;
           editorial_note?: string | null;
           editorial_status?: Database["public"]["Enums"]["wardrobe_editorial_status"];
           equip_slot?: Database["public"]["Enums"]["wardrobe_equip_slot"];
           icon?: string;
           id?: string;
+          image_path?: string | null;
           is_published?: boolean;
           name?: string;
           points?: number | null;
@@ -1136,6 +1142,7 @@ export type Database = {
         Args: { p_job_id: string };
         Returns: {
           attempt_number: number;
+          capability: string;
           gateway: string;
           input_contract: Json;
           input_data: Json;
@@ -1278,12 +1285,14 @@ export type Database = {
           content_version: number;
           created_at: string;
           created_by: string;
+          description: string;
           editorial_note: string;
           editorial_status: Database["public"]["Enums"]["wardrobe_editorial_status"];
           equip_slot: Database["public"]["Enums"]["wardrobe_equip_slot"];
           has_pending_revision: boolean;
           icon: string;
           id: string;
+          image_path: string;
           is_published: boolean;
           name: string;
           points: number;
@@ -1303,9 +1312,11 @@ export type Database = {
           catalog_item_id: string;
           category: Database["public"]["Enums"]["wardrobe_item_category"];
           child_profile_id: string;
+          description: string;
           equip_slot: Database["public"]["Enums"]["wardrobe_equip_slot"];
           equipped_at: string;
           icon: string;
+          image_path: string;
           is_equipped: boolean;
           name: string;
           rarity: Database["public"]["Enums"]["wardrobe_item_rarity"];
@@ -1376,6 +1387,27 @@ export type Database = {
           p_equip_slot: Database["public"]["Enums"]["wardrobe_equip_slot"];
           p_expected_updated_at: string;
           p_icon: string;
+          p_name: string;
+          p_points: number;
+          p_rarity: Database["public"]["Enums"]["wardrobe_item_rarity"];
+          p_sort_order: number;
+          p_topic_id: string;
+          p_unlock_rule: string;
+          p_wardrobe_item_id: string;
+        };
+        Returns: {
+          id: string;
+        }[];
+      };
+      save_admin_wardrobe_item_draft_with_image: {
+        Args: {
+          p_category: Database["public"]["Enums"]["wardrobe_item_category"];
+          p_description: string;
+          p_editorial_note: string;
+          p_equip_slot: Database["public"]["Enums"]["wardrobe_equip_slot"];
+          p_expected_updated_at: string;
+          p_icon: string;
+          p_image_path: string;
           p_name: string;
           p_points: number;
           p_rarity: Database["public"]["Enums"]["wardrobe_item_rarity"];

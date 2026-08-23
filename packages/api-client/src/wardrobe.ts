@@ -20,7 +20,10 @@ export type ChildWardrobeEquipmentState = {
 
 export type ChildWardrobeItem = ChildWardrobeEquipmentState & {
   category: ChildWardrobeItemCategory;
+  description: string;
   icon: string;
+  imagePath: string | null;
+  imageUrl: string | null;
   name: string;
   rarity: ChildWardrobeItemRarity;
   topicId: string;
@@ -82,6 +85,10 @@ const ITEM_RARITIES = new Set<ChildWardrobeItemRarity>([
   "special",
 ]);
 const SINGLE_LINE_CONTROL_CHARACTER_PATTERN = /[\u0000-\u001f\u007f-\u009f]/u;
+const DISALLOWED_MULTILINE_CONTROL_CHARACTER_PATTERN =
+  /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f]/u;
+const WARDROBE_IMAGE_PATH_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\/(?:0[1-9]|1[0-6])\.png$/i;
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -128,6 +135,19 @@ function isBoundedSingleLineText(
   );
 }
 
+function isOptionalBoundedDescription(value: unknown): value is string | null {
+  if (value === null) return true;
+  const length = typeof value === "string" ? Array.from(value).length : 0;
+
+  return (
+    typeof value === "string" &&
+    value === value.trim() &&
+    length >= 1 &&
+    length <= 240 &&
+    !DISALLOWED_MULTILINE_CONTROL_CHARACTER_PATTERN.test(value)
+  );
+}
+
 function parseChildWardrobeEquipmentState(
   value: unknown,
 ): ChildWardrobeEquipmentState | null {
@@ -160,7 +180,10 @@ function parseChildWardrobeEquipmentState(
   };
 }
 
-function parseChildWardrobeItem(value: unknown): ChildWardrobeItem | null {
+function parseChildWardrobeItem(
+  value: unknown,
+  publicUrlForPath: (path: string) => string,
+): ChildWardrobeItem | null {
   const equipmentState = parseChildWardrobeEquipmentState(value);
 
   if (
@@ -174,6 +197,12 @@ function parseChildWardrobeItem(value: unknown): ChildWardrobeItem | null {
     value.topic_id.toLowerCase() === NIL_UUID ||
     !isBoundedSingleLineText(value.name, 80) ||
     !isBoundedSingleLineText(value.icon, 16) ||
+    !isOptionalBoundedDescription(value.description) ||
+    !(
+      value.image_path === null ||
+      (typeof value.image_path === "string" &&
+        WARDROBE_IMAGE_PATH_PATTERN.test(value.image_path))
+    ) ||
     typeof value.category !== "string" ||
     !ITEM_CATEGORIES.has(value.category as ChildWardrobeItemCategory) ||
     typeof value.catalog_equip_slot !== "string" ||
@@ -185,10 +214,18 @@ function parseChildWardrobeItem(value: unknown): ChildWardrobeItem | null {
     return null;
   }
 
+  const imagePath = (value.image_path as string | null)?.toLowerCase() ?? null;
+  const imageUrl = imagePath ? publicUrlForPath(imagePath) : null;
+
+  if (imageUrl !== null && !URL.canParse(imageUrl)) return null;
+
   return {
     ...equipmentState,
     category: value.category as ChildWardrobeItemCategory,
+    description: (value.description as string | null) ?? "",
     icon: value.icon,
+    imagePath,
+    imageUrl,
     name: value.name,
     rarity: value.rarity as ChildWardrobeItemRarity,
     topicId: value.topic_id.toLowerCase(),
@@ -198,6 +235,7 @@ function parseChildWardrobeItem(value: unknown): ChildWardrobeItem | null {
 function parseChildWardrobeItems(
   value: unknown,
   expectedChildProfileId: string,
+  publicUrlForPath: (path: string) => string,
 ): ChildWardrobeItem[] | null {
   if (!Array.isArray(value)) {
     return null;
@@ -207,7 +245,7 @@ function parseChildWardrobeItems(
   const itemIds = new Set<string>();
 
   for (const candidate of value) {
-    const item = parseChildWardrobeItem(candidate);
+    const item = parseChildWardrobeItem(candidate, publicUrlForPath);
 
     if (
       !item ||
@@ -321,7 +359,12 @@ export async function loadChildWardrobe(
     throw mapDatabaseError(response.error, "child_wardrobe_load_failed");
   }
 
-  const items = parseChildWardrobeItems(response.data, childProfileId);
+  const items = parseChildWardrobeItems(
+    response.data,
+    childProfileId,
+    (path) =>
+      client.storage.from("wardrobe-images").getPublicUrl(path).data.publicUrl,
+  );
 
   if (!items) {
     throw new WardrobeError("invalid_child_wardrobe_result");
