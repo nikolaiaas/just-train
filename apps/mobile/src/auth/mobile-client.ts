@@ -42,8 +42,12 @@ export function createMobileAuthClient(): MobileAuthClient {
     allowExtraVariantFallback: __DEV__ || platform === "web",
   });
   const config = parsePublicSupabaseConfig({
-    url: process.env.EXPO_PUBLIC_SUPABASE_URL,
-    publishableKey: process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+    url:
+      process.env.EXPO_PUBLIC_SUPABASE_URL_OVERRIDE ??
+      process.env.EXPO_PUBLIC_SUPABASE_URL,
+    publishableKey:
+      process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY_OVERRIDE ??
+      process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
   });
 
   const backend = resolveMobileAuthBackend({

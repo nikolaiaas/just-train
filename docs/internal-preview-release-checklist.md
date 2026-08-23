@@ -62,15 +62,17 @@ Update, or a fresh iOS build. Stop the release when a required check fails.
       `config.toml`, or reset a linked project.
 - [ ] If Edge Function code changed, obtain explicit hosted-mutation approval,
       verify required secret names without revealing values, and deploy it
-      separately; merging migrations does not deploy Functions. For the current
-      worker, run `mise exec -- pnpm exec supabase functions deploy process-ai-job`
-      from the repository root.
+      separately; merging migrations does not deploy Functions. Deploy
+      `process-ai-job` and `process-admin-ai-job` with `--no-verify-jwt` as
+      configured when either worker or its gateway setting changed.
 
-- [ ] Confirm the deployed Function is active with JWT verification enabled.
-      Check CORS preflight returns `200` and an unauthenticated request is
-      rejected with `401`. If its behavior changed, complete one authenticated
-      synthetic end-to-end smoke test through private upload, processing,
-      private output retrieval, and rendering.
+- [ ] Confirm both deployed Functions have legacy gateway JWT verification
+      disabled. Each handler must still require a bearer token, resolve the
+      user with Supabase Auth, enforce job ownership and RLS, and reject an
+      unauthenticated request with `401`; the admin handler must also require an
+      admin-scoped job. Check CORS preflight returns `200`. If behavior changed,
+      complete one authenticated synthetic end-to-end smoke test for each
+      affected worker.
 - [ ] Recheck hosted Auth/RLS health for a database or authentication change.
 
 ## 5. Choose the correct iOS delivery

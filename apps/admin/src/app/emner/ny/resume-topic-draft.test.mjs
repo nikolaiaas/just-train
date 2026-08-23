@@ -2,9 +2,12 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  addExerciseToTopicEditorOutline,
+  buildTopicEditorHref,
   getResumeStartingStep,
   isMissingWardrobeStorageError,
   loadResumableTopicDraft,
+  loadTopicEditorOutline,
   parseResumeTopicId,
   parseResumeTopicSelection,
 } from "./resume-topic-draft.ts";
@@ -67,6 +70,8 @@ const wardrobeItem = {
   createdBy: "40000000-0000-4000-8000-000000000001",
   editorialNote: "Et syntetisk eksempel.",
   editorialStatus: "draft",
+  equipSlot: "accessory",
+  hasPendingRevision: false,
   icon: "✨",
   id: "50000000-0000-4000-8000-000000000001",
   name: "Stjernestøv",
@@ -129,6 +134,19 @@ test("resume selection strictly validates topic, goal, and exercise IDs", () => 
       topicId: topic.id,
     },
   );
+  assert.deepEqual(
+    parseResumeTopicSelection({
+      add: "exercise",
+      goal: goal.id,
+      topic: topic.id,
+    }),
+    {
+      exerciseId: null,
+      goalId: goal.id,
+      startingStep: "new-exercise",
+      topicId: topic.id,
+    },
+  );
 
   assert.equal(parseResumeTopicSelection({ goal: goal.id }), null);
   assert.equal(
@@ -142,6 +160,27 @@ test("resume selection strictly validates topic, goal, and exercise IDs", () => 
   assert.equal(
     parseResumeTopicSelection({
       exercise: "not-an-exercise",
+      goal: goal.id,
+      topic: topic.id,
+    }),
+    null,
+  );
+  assert.equal(
+    parseResumeTopicSelection({ add: "exercise", topic: topic.id }),
+    null,
+  );
+  assert.equal(
+    parseResumeTopicSelection({
+      add: "exercise",
+      exercise: exercise.id,
+      goal: goal.id,
+      topic: topic.id,
+    }),
+    null,
+  );
+  assert.equal(
+    parseResumeTopicSelection({
+      add: "goal",
       goal: goal.id,
       topic: topic.id,
     }),
@@ -171,6 +210,20 @@ test("resume starts at the first unsaved authoring step", () => {
       nextExerciseSortOrder: 0,
       nextGoalSortOrder: 0,
     }),
+    "exercise",
+  );
+  assert.equal(
+    getResumeStartingStep(
+      {
+        topic: { ...topic, status: "published" },
+        goal,
+        exercise: null,
+        wardrobeItems: [],
+        nextExerciseSortOrder: 5,
+        nextGoalSortOrder: 4,
+      },
+      "new-exercise",
+    ),
     "exercise",
   );
   assert.equal(
@@ -282,6 +335,8 @@ test("resume loads unpublished drafts and avoids occupied content positions", as
           created_by: wardrobeItem.createdBy,
           editorial_note: wardrobeItem.editorialNote,
           editorial_status: wardrobeItem.editorialStatus,
+          equip_slot: wardrobeItem.equipSlot,
+          has_pending_revision: wardrobeItem.hasPendingRevision,
           icon: wardrobeItem.icon,
           id: wardrobeItem.id,
           is_published: false,
@@ -673,4 +728,266 @@ test("resume tolerates the exact missing admin wardrobe RPC during deployment", 
     nextExerciseSortOrder: 0,
     nextGoalSortOrder: 0,
   });
+});
+
+test("editor links preserve the selected topic hierarchy and explicit add mode", () => {
+  assert.equal(
+    buildTopicEditorHref({ topicId: topic.id }),
+    `/emner/ny?topic=${topic.id}`,
+  );
+  assert.equal(
+    buildTopicEditorHref({ goalId: goal.id, topicId: topic.id }),
+    `/emner/ny?topic=${topic.id}&goal=${goal.id}`,
+  );
+  assert.equal(
+    buildTopicEditorHref({
+      exerciseId: exercise.id,
+      goalId: goal.id,
+      topicId: topic.id,
+    }),
+    `/emner/ny?topic=${topic.id}&goal=${goal.id}&exercise=${exercise.id}`,
+  );
+  assert.equal(
+    buildTopicEditorHref({
+      createExercise: true,
+      goalId: goal.id,
+      topicId: topic.id,
+    }),
+    `/emner/ny?topic=${topic.id}&goal=${goal.id}&add=exercise`,
+  );
+});
+
+test("a newly saved exercise appears once in its goal outline as a draft", () => {
+  const outline = [
+    {
+      exercises: [
+        {
+          id: exercise.id,
+          sortOrder: 4,
+          status: "published",
+          title: exercise.title,
+        },
+      ],
+      id: goal.id,
+      sortOrder: 3,
+      status: "published",
+      title: goal.title,
+    },
+  ];
+  const newExercise = {
+    goalId: goal.id,
+    id: "30000000-0000-4000-8000-000000000002",
+    sortOrder: 5,
+    title: "Gå på linen",
+  };
+
+  const updated = addExerciseToTopicEditorOutline(outline, newExercise);
+
+  assert.deepEqual(updated[0].exercises, [
+    outline[0].exercises[0],
+    {
+      id: newExercise.id,
+      sortOrder: 5,
+      status: "draft",
+      title: "Gå på linen",
+    },
+  ]);
+  assert.deepEqual(
+    addExerciseToTopicEditorOutline(updated, newExercise),
+    updated,
+  );
+  assert.equal(outline[0].exercises.length, 1);
+});
+
+test("resume prepares a blank next exercise without replacing an existing one", async () => {
+  const calls = [];
+  const responses = [
+    {
+      data: {
+        accent_color: topic.accentColor,
+        description: topic.description,
+        icon: topic.icon,
+        id: topic.id,
+        is_published: true,
+        published_at: "2026-08-22T06:00:00.000Z",
+        title: topic.title,
+        updated_at: topic.updatedAt,
+      },
+      error: null,
+    },
+    {
+      data: {
+        difficulty: goal.difficulty,
+        equipment: goal.equipment,
+        estimated_minutes: goal.estimatedMinutes,
+        hero_media_url: goal.heroMediaUrl,
+        id: goal.id,
+        is_published: true,
+        published_at: "2026-08-22T06:00:00.000Z",
+        sort_order: goal.sortOrder,
+        summary: goal.summary,
+        title: goal.title,
+        updated_at: goal.updatedAt,
+      },
+      error: null,
+    },
+    { data: { sort_order: goal.sortOrder }, error: null },
+    { data: [], error: null },
+    { data: { sort_order: 8 }, error: null },
+  ];
+  let responseIndex = 0;
+  const client = {
+    from(table) {
+      const response = responses[responseIndex++];
+      const query = {
+        eq(column, value) {
+          calls.push({ column, operation: "eq", table, value });
+          return query;
+        },
+        limit() {
+          return query;
+        },
+        maybeSingle: async () => response,
+        order() {
+          return query;
+        },
+        select(columns) {
+          calls.push({ columns, operation: "select", table });
+          return query;
+        },
+      };
+      return query;
+    },
+    rpc() {
+      return Promise.resolve(responses[responseIndex++]);
+    },
+  };
+
+  const result = await loadResumableTopicDraft(client, topic.id, {
+    createExercise: true,
+    goalId: goal.id,
+  });
+
+  assert.equal(result.exercise, null);
+  assert.equal(result.nextExerciseSortOrder, 9);
+  assert.equal(
+    calls.filter(
+      (call) =>
+        call.table === "exercises" &&
+        call.operation === "select" &&
+        call.columns !== "sort_order",
+    ).length,
+    0,
+  );
+});
+
+test("editor outline loads every goal and exercise with independent statuses", async () => {
+  const secondGoalId = "20000000-0000-4000-8000-000000000002";
+  const secondExerciseId = "30000000-0000-4000-8000-000000000002";
+  const calls = [];
+  const responses = {
+    exercises: {
+      data: [
+        {
+          goal_id: goal.id,
+          id: exercise.id,
+          is_published: true,
+          sort_order: 4,
+          title: exercise.title,
+        },
+        {
+          goal_id: secondGoalId,
+          id: secondExerciseId,
+          is_published: false,
+          sort_order: 1,
+          title: "Anden deløvelse",
+        },
+      ],
+      error: null,
+    },
+    goals: {
+      data: [
+        {
+          id: goal.id,
+          is_published: true,
+          sort_order: 3,
+          title: goal.title,
+        },
+        {
+          id: secondGoalId,
+          is_published: false,
+          sort_order: 5,
+          title: "Andet mål",
+        },
+      ],
+      error: null,
+    },
+  };
+  const client = {
+    from(table) {
+      const response = responses[table];
+      const query = {
+        eq(column, value) {
+          calls.push({ column, operation: "eq", table, value });
+          return query;
+        },
+        in(column, values) {
+          calls.push({ column, operation: "in", table, values });
+          return query;
+        },
+        order(column, options) {
+          calls.push({ column, operation: "order", options, table });
+          return query;
+        },
+        select(columns) {
+          calls.push({ columns, operation: "select", table });
+          return query;
+        },
+        then(onFulfilled, onRejected) {
+          return Promise.resolve(response).then(onFulfilled, onRejected);
+        },
+      };
+      return query;
+    },
+  };
+
+  assert.deepEqual(await loadTopicEditorOutline(client, topic.id), [
+    {
+      exercises: [
+        {
+          id: exercise.id,
+          sortOrder: 4,
+          status: "published",
+          title: exercise.title,
+        },
+      ],
+      id: goal.id,
+      sortOrder: 3,
+      status: "published",
+      title: goal.title,
+    },
+    {
+      exercises: [
+        {
+          id: secondExerciseId,
+          sortOrder: 1,
+          status: "draft",
+          title: "Anden deløvelse",
+        },
+      ],
+      id: secondGoalId,
+      sortOrder: 5,
+      status: "draft",
+      title: "Andet mål",
+    },
+  ]);
+  assert.deepEqual(
+    calls.find((call) => call.operation === "in"),
+    {
+      column: "goal_id",
+      operation: "in",
+      table: "exercises",
+      values: [goal.id, secondGoalId],
+    },
+  );
 });

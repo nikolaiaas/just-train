@@ -33,6 +33,7 @@ const context = {
     name: index === 0 ? "Regnbuebold" : `Balanceidé ${index + 1}`,
     icon: "🌈",
     category: "equipment",
+    equipSlot: index === 0 ? "held" : "accessory",
     rarity: "rare",
     points: 250,
     unlockRule: "",
@@ -111,6 +112,7 @@ test("maps every bounded browser context to its server-owned operation", () => {
     "Find et sted med god plads.",
   );
   assert.equal(review.value.inputData.wardrobeExamples[0].name, "Regnbuebold");
+  assert.equal(review.value.inputData.wardrobeExamples[0].equipSlot, "held");
 });
 
 test("rejects duplicate, malformed, oversized, injected, and inexact contexts", () => {
@@ -257,6 +259,7 @@ test("parses wardrobe examples and rejects unexpected output", () => {
       name: index === 0 ? "Regnbuebold" : `Sjov ting ${index + 1}`,
       icon: "🌈",
       category: "equipment",
+      equipSlot: index === 0 ? "held" : "accessory",
       rarity: index === 0 ? "rare" : "common",
       points: 250,
       unlockRule: "",
@@ -265,6 +268,7 @@ test("parses wardrobe examples and rejects unexpected output", () => {
   });
 
   assert.equal(parsed?.items[0]?.name, "Regnbuebold");
+  assert.equal(parsed?.items[0]?.equipSlot, "held");
   assert.equal(
     parseAssistantOutput("wardrobe", {
       reply: "Forkert pointregel.",
@@ -272,6 +276,7 @@ test("parses wardrobe examples and rejects unexpected output", () => {
         name: `Sjov ting ${index + 1}`,
         icon: "🌈",
         category: "equipment",
+        equipSlot: "held",
         rarity: "common",
         points: 250,
         unlockRule: "Gennemfør et mål",
@@ -285,6 +290,37 @@ test("parses wardrobe examples and rejects unexpected output", () => {
       reply: "Forkert",
       items: [],
       published: true,
+    }),
+    null,
+  );
+
+  const legacy = parseAssistantOutput("wardrobe", {
+    reply: "Et ældre versionsbundet forslag.",
+    items: Array.from({ length: 3 }, (_, index) => ({
+      name: `Legacyting ${index + 1}`,
+      icon: "🌟",
+      category: "clothing",
+      rarity: "common",
+      points: 100,
+      unlockRule: "",
+      reason: "Kan stadig gennemgås af en redaktør.",
+    })),
+  });
+  assert.equal(legacy?.items[0]?.equipSlot, "accessory");
+
+  assert.equal(
+    parseAssistantOutput("wardrobe", {
+      reply: "Forkert placering.",
+      items: Array.from({ length: 3 }, (_, index) => ({
+        name: `Ting ${index + 1}`,
+        icon: "🌟",
+        category: "clothing",
+        equipSlot: "left-foot",
+        rarity: "common",
+        points: 100,
+        unlockRule: "",
+        reason: "Placeringen findes ikke.",
+      })),
     }),
     null,
   );

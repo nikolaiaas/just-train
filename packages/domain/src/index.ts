@@ -6,6 +6,65 @@ export type TopicId = string;
 export type GoalId = string;
 export type ExerciseId = string;
 
+/**
+ * Exclusive avatar equipment positions. A `feet` item is one wearable pair of
+ * shoes; left and right shoes are deliberately not separate inventory items.
+ */
+export const WARDROBE_EQUIP_SLOTS = [
+  "head",
+  "body",
+  "held",
+  "feet",
+  "accessory",
+] as const;
+
+export type WardrobeEquipSlot = (typeof WARDROBE_EQUIP_SLOTS)[number];
+
+export interface EquippableWardrobeItem {
+  id: string;
+  equipSlot: WardrobeEquipSlot;
+}
+
+/** Returns false for any selection containing two items in one exclusive slot. */
+export function hasExclusiveWardrobeEquipSlots(
+  items: readonly EquippableWardrobeItem[],
+): boolean {
+  const occupiedSlots = new Set<WardrobeEquipSlot>();
+
+  for (const item of items) {
+    if (occupiedSlots.has(item.equipSlot)) {
+      return false;
+    }
+
+    occupiedSlots.add(item.equipSlot);
+  }
+
+  return true;
+}
+
+/**
+ * Selects an item and atomically replaces any current item occupying the same
+ * exclusive position. Items in every other position remain selected.
+ */
+export function equipWardrobeItem<T extends EquippableWardrobeItem>(
+  equippedItems: readonly T[],
+  item: T,
+): T[] {
+  return [
+    ...equippedItems.filter(
+      (equippedItem) => equippedItem.equipSlot !== item.equipSlot,
+    ),
+    item,
+  ];
+}
+
+export function unequipWardrobeSlot<T extends EquippableWardrobeItem>(
+  equippedItems: readonly T[],
+  slot: WardrobeEquipSlot,
+): T[] {
+  return equippedItems.filter((item) => item.equipSlot !== slot);
+}
+
 export interface Family {
   id: FamilyId;
   displayName: string;

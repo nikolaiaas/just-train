@@ -21,6 +21,7 @@ function draftForm(overrides = {}) {
     name: "  Regnbuebold  ",
     icon: "  🌈  ",
     category: "equipment",
+    equipSlot: "held",
     rarity: "rare",
     points: "125",
     unlockRule: "",
@@ -59,6 +60,7 @@ test("normalizes a point-priced wardrobe draft", () => {
       name: "Regnbuebold",
       icon: "🌈",
       category: "equipment",
+      equipSlot: "held",
       rarity: "rare",
       points: 125,
       unlockRule: "",
@@ -95,6 +97,19 @@ test("rejects duplicated, missing, and non-string fields", () => {
   assert.ok(!result.ok && result.fieldErrors.name);
   assert.ok(!result.ok && result.fieldErrors.rarity);
   assert.ok(!result.ok && result.fieldErrors.icon);
+});
+
+test("requires one supported exclusive equipment position", () => {
+  for (const equipSlot of ["head", "body", "held", "feet", "accessory"]) {
+    const result = validateWardrobeItemDraftForm(draftForm({ equipSlot }));
+    assert.equal(result.ok, true, equipSlot);
+  }
+
+  for (const equipSlot of ["", "left-shoe", "both-hands"]) {
+    const result = validateWardrobeItemDraftForm(draftForm({ equipSlot }));
+    assert.equal(result.ok, false, equipSlot);
+    assert.ok(!result.ok && result.fieldErrors.equipSlot);
+  }
 });
 
 test("enforces bounded content and point values", () => {

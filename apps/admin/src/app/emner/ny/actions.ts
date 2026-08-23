@@ -28,6 +28,7 @@ import {
   type AssistantSuggestion,
   type AssistantWardrobeItem,
 } from "../assistant-request";
+import { assistantInvocationErrorMessage } from "../assistant-invocation";
 import {
   mapExerciseCreationError,
   mapExerciseUpdateError,
@@ -750,6 +751,7 @@ export async function createAdminWardrobeItemDraft(
       authenticatedUserId: session.userId,
       category: validation.value.category,
       editorialNote: validation.value.editorialNote,
+      equipSlot: validation.value.equipSlot,
       icon: validation.value.icon,
       name: validation.value.name,
       points: validation.value.points,
@@ -798,6 +800,7 @@ export async function updateAdminWardrobeItemDraft(
       authenticatedUserId: session.userId,
       category: validation.value.category,
       editorialNote: validation.value.editorialNote,
+      equipSlot: validation.value.equipSlot,
       expectedUpdatedAt: readExpectedUpdatedAt(formData),
       icon: validation.value.icon,
       name: validation.value.name,
@@ -953,7 +956,7 @@ export async function askAdminContentAssistant(
 
     if (invokeError) {
       return assistantError(
-        "AI-assistenten kunne ikke startes lige nu. Din kladde er ikke ændret.",
+        assistantInvocationErrorMessage(invokeError),
         requestId,
       );
     }

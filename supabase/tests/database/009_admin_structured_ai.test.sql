@@ -401,7 +401,7 @@ select throws_ok(
     select public.complete_admin_ai_job_for_worker(
       (select id from public.ai_jobs where client_request_id = 'c3000000-0000-4000-8000-000000000020'),
       1::smallint,
-      '{"reply":"Et forslag.","items":[{"name":"Regnbuebold","icon":"🌈","category":"equipment","rarity":"rare","points":250,"unlockRule":"","reason":"Passer til emnet."}]}'::jsonb,
+      '{"reply":"Et forslag.","items":[{"name":"Regnbuebold","icon":"🌈","category":"equipment","equipSlot":"held","rarity":"rare","points":250,"unlockRule":"","reason":"Passer til emnet."}]}'::jsonb,
       'test-wardrobe-one',
       '{}'::jsonb,
       100::bigint
@@ -417,7 +417,7 @@ select throws_ok(
     select public.complete_admin_ai_job_for_worker(
       (select id from public.ai_jobs where client_request_id = 'c3000000-0000-4000-8000-000000000020'),
       1::smallint,
-      '{"reply":"Tre forslag.","items":[{"name":"Regnbuebold","icon":"🌈","category":"equipment","rarity":"rare","unlockRule":"","reason":"Passer."},{"name":"Trænerkasket","icon":"🧢","category":"clothing","rarity":"common","points":100,"unlockRule":"","reason":"Passer."},{"name":"Stjernestøv","icon":"✨","category":"effect","rarity":"special","points":0,"unlockRule":"Gennemfør tre mål","reason":"Passer."}]}'::jsonb,
+      '{"reply":"Tre forslag.","items":[{"name":"Regnbuebold","icon":"🌈","category":"equipment","equipSlot":"held","rarity":"rare","unlockRule":"","reason":"Passer."},{"name":"Trænerkasket","icon":"🧢","category":"clothing","equipSlot":"head","rarity":"common","points":100,"unlockRule":"","reason":"Passer."},{"name":"Stjernestøv","icon":"✨","category":"effect","equipSlot":"accessory","rarity":"special","points":0,"unlockRule":"Gennemfør tre mål","reason":"Passer."}]}'::jsonb,
       'test-wardrobe-missing',
       '{}'::jsonb,
       100::bigint
@@ -433,7 +433,7 @@ select throws_ok(
     select public.complete_admin_ai_job_for_worker(
       (select id from public.ai_jobs where client_request_id = 'c3000000-0000-4000-8000-000000000020'),
       1::smallint,
-      '{"reply":"Tre forslag.","items":[{"name":"Regnbuebold","icon":"🌈","category":"equipment","rarity":"rare","points":250,"unlockRule":"Gennemfør noget","reason":"Passer."},{"name":"Trænerkasket","icon":"🧢","category":"clothing","rarity":"common","points":100,"unlockRule":"","reason":"Passer."},{"name":"Stjernestøv","icon":"✨","category":"effect","rarity":"special","points":0,"unlockRule":"Gennemfør tre mål","reason":"Passer."}]}'::jsonb,
+      '{"reply":"Tre forslag.","items":[{"name":"Regnbuebold","icon":"🌈","category":"equipment","equipSlot":"held","rarity":"rare","points":250,"unlockRule":"Gennemfør noget","reason":"Passer."},{"name":"Trænerkasket","icon":"🧢","category":"clothing","equipSlot":"head","rarity":"common","points":100,"unlockRule":"","reason":"Passer."},{"name":"Stjernestøv","icon":"✨","category":"effect","equipSlot":"accessory","rarity":"special","points":0,"unlockRule":"Gennemfør tre mål","reason":"Passer."}]}'::jsonb,
       'test-wardrobe-rule',
       '{}'::jsonb,
       100::bigint
@@ -449,7 +449,7 @@ select lives_ok(
     select public.complete_admin_ai_job_for_worker(
       (select id from public.ai_jobs where client_request_id = 'c3000000-0000-4000-8000-000000000020'),
       1::smallint,
-      '{"reply":"Tre forslag til gennemgang.","items":[{"name":"Regnbuebold","icon":"🌈","category":"equipment","rarity":"rare","points":250,"unlockRule":"","reason":"Passer til emnet."},{"name":"Trænerkasket","icon":"🧢","category":"clothing","rarity":"common","points":100,"unlockRule":"","reason":"En enkel syntetisk belønning."},{"name":"Stjernestøv","icon":"✨","category":"effect","rarity":"special","points":0,"unlockRule":"Gennemfør tre mål","reason":"En oplåselig effekt uden brand."}]}'::jsonb,
+      '{"reply":"Tre forslag til gennemgang.","items":[{"name":"Regnbuebold","icon":"🌈","category":"equipment","equipSlot":"held","rarity":"rare","points":250,"unlockRule":"","reason":"Passer til emnet."},{"name":"Trænerkasket","icon":"🧢","category":"clothing","equipSlot":"head","rarity":"common","points":100,"unlockRule":"","reason":"En enkel syntetisk belønning."},{"name":"Stjernestøv","icon":"✨","category":"effect","equipSlot":"accessory","rarity":"special","points":0,"unlockRule":"Gennemfør tre mål","reason":"En oplåselig effekt uden brand."}]}'::jsonb,
       'test-wardrobe-success',
       '{"total_tokens":180}'::jsonb,
       150::bigint

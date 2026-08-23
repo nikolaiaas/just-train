@@ -55,6 +55,8 @@ The service page can also stop a Bare Træn preview that was started from anothe
 
 The console is intentionally limited. It runs only on this Mac, cannot execute arbitrary commands, cannot connect to Production, and does not offer a database reset. The full project roadmap remains in `TASKS.md`; the smaller editable board is plain JSON saved in `tools/dev-console/tasks.json`.
 
+The two local AI Edge Functions are the one deliberate attached helper outside the service cards. When the administration is using Local Supabase and needs its AI assistant, start **Local Supabase** on the Services page and then use the tracked Codex project action **Start local AI**. Keep that action running while testing. Hosted Development already runs its deployed Functions and does not use this local helper.
+
 Task edits and evidence screenshots are real repository changes and therefore appear in Git. Keep the JSON board and screenshot folder small and reviewable. Never put passwords, API keys, one-time codes, magic-link URLs, real email addresses, real child information, or other personal data in either place. Use only synthetic screenshots, crop them to the relevant result, and keep each image below 1 MiB when practical. `TASKS.md` remains the durable roadmap, and an overlapping item should be updated deliberately in both places when it is completed.
 
 Mobile web and the iPhone development server both use port `11001`, so only one of those modes can run at a time. The console explains this instead of moving either service to an unexpected port.
@@ -107,9 +109,19 @@ mise exec -- pnpm supabase:stop
 
 The local CLI may show a warning that `[inbucket]` is deprecated when it starts Mailpit. This is expected for now: the hosted GitHub deployment parser rejects the newer `[local_smtp]` name, while the current local CLI still accepts `[inbucket]` and keeps Mailpit available at port 54324.
 
-Starting local Supabase does **not** automatically switch either app away from its configured backend. The administration login has a localhost-only **Udviklingsmiljø** choice between Local Supabase and Hosted Development. The mobile app has no runtime selector: its backend is fixed when it starts from the two public values in its ignored `.env.local`. If a task needs mobile Safari connected to Local Supabase, ask the agent to replace only those two public values temporarily and restore the hosted values before iPhone work.
+Starting local Supabase does **not** automatically switch either app away from its configured backend. The administration login has a localhost-only **Udviklingsmiljø** choice between Local Supabase and Hosted Development. The mobile app has no runtime selector: its backend normally comes from the two public values in its ignored `.env.local`. For a synthetic mobile Safari test against Local Supabase, an agent may start Metro with the temporary public `EXPO_PUBLIC_SUPABASE_URL_OVERRIDE` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY_OVERRIDE` variables. They take precedence only for that Metro process, so the ignored hosted values and the iPhone setup remain unchanged. Never use a secret or service-role key in either override.
 
 With Local Supabase selected, a synthetic adult can complete first-family onboarding and then create a child profile with only a nickname and one of four non-photo preset avatars. Only the family owner may create one, the flow records a versioned guardian acknowledgement privately, and each family is limited to 10 active children. The app saves a request identity before submission so an interrupted or uncertain request can be retried without creating a duplicate child. Keep local development, automated tests, previews, and task evidence synthetic. The product's private family cartoon contract can accept a selected-child photo, but that does not turn real family data into acceptable development fixtures.
+
+### When local AI is needed
+
+First start Local Supabase from the Dev Console. Then choose the Codex project action **Start local AI**, or open another Terminal at the repository root and run:
+
+```bash
+mise exec -- pnpm dev:ai
+```
+
+Keep that process open. One command serves both the administration assistant and the family image worker, using only the ignored `supabase/functions/.env.local` file. If that file is missing, copy `supabase/functions/.env.example` to it and add the limited development credential locally; never put it in an app environment or Git. Stop the process with Control-C when the local AI test is finished. This is needed only when an app is connected to Local Supabase, not when it uses Hosted Development.
 
 ## Private family AI cartoon prototype
 
@@ -157,7 +169,7 @@ private object. See
 [`ai-image-provider-review.md`](./ai-image-provider-review.md) and
 `supabase/README.md` for the decision and explicitly approved local commands.
 
-The local Auth callback list is ready for ports 11000/11001 and the development, preview, and production app schemes. The same exact callbacks are already registered in Hosted Development, and the tested parent- and child-onboarding migrations were deployed there on 2026-08-21 after the child migration's fail-fast preflight passed. Custom hosted SMTP with the Danish template and CAPTCHA or server-side throttling remain separate gates before passwordless login is exposed publicly.
+The local Auth callback list is ready for ports 11000/11001 and the development, preview, and production app schemes. The same exact callbacks are already registered in Hosted Development, and the tested parent- and child-onboarding migrations were deployed there on 2026-08-21 after the child migration's fail-fast preflight passed. On 2026-08-23, both Hosted Development's returning-user and new-account templates were aligned with the local Danish six-digit-code and scanner-safe magic-link template. Custom hosted SMTP, disabled link tracking, and CAPTCHA or server-side throttling remain separate gates before passwordless login is exposed publicly.
 
 Supabase hosts the backend, not the visible previews. The administration preview belongs on Vercel, and iPhone previews belong on Expo/EAS.
 

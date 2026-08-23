@@ -36,7 +36,8 @@ select results_eq(
       ('published_at'::text),
       ('created_by'::text),
       ('created_at'::text),
-      ('updated_at'::text)
+      ('updated_at'::text),
+      ('equip_slot'::text)
   $$,
   'the wardrobe catalog exposes only its reviewed content and audit fields'
 );
@@ -360,7 +361,7 @@ select is(
   pg_get_function_result(
     'public.list_admin_wardrobe_item_drafts(uuid,uuid)'::regprocedure
   ),
-  'TABLE(id uuid, topic_id uuid, name text, icon text, category wardrobe_item_category, rarity wardrobe_item_rarity, points integer, unlock_rule text, editorial_note text, editorial_status wardrobe_editorial_status, sort_order integer, content_version integer, is_published boolean, published_at timestamp with time zone, created_by uuid, created_at timestamp with time zone, updated_at timestamp with time zone)',
+  'TABLE(id uuid, topic_id uuid, name text, icon text, category wardrobe_item_category, equip_slot wardrobe_equip_slot, rarity wardrobe_item_rarity, points integer, unlock_rule text, editorial_note text, editorial_status wardrobe_editorial_status, sort_order integer, content_version integer, is_published boolean, published_at timestamp with time zone, created_by uuid, created_at timestamp with time zone, updated_at timestamp with time zone, has_pending_revision boolean)',
   'the admin draft reader returns the complete generated-client wardrobe row shape'
 );
 
@@ -566,6 +567,8 @@ select results_eq(
     from public.list_admin_wardrobe_item_drafts(
       '40000000-0000-4000-8000-000000000001'
     )
+    where id::text like 'e0000000-%'
+    order by sort_order, id
   $$,
   $$
     values
@@ -1002,8 +1005,8 @@ select is(
       'e0000000-0000-4000-8000-000000000001'
     )
   ),
-  0,
-  'the admin draft RPC never returns an already-published item'
+  1,
+  'the admin editor can reopen an already-published item for a staged correction'
 );
 select lives_ok(
   $$ delete from public.wardrobe_items
@@ -1157,9 +1160,14 @@ select lives_ok(
   'an administrator can create a wardrobe item beneath a new topic'
 );
 select lives_ok(
-  $$ delete from public.topics
-     where id = 'e1000000-0000-4000-8000-000000000001' $$,
-  'an administrator can delete the disposable parent topic'
+  $$
+    select *
+    from public.delete_admin_topic(
+      'e1000000-0000-4000-8000-000000000001',
+      now()
+    )
+  $$,
+  'an administrator can delete the disposable parent through the guarded lifecycle'
 );
 select is(
   (

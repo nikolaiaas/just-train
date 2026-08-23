@@ -8,6 +8,7 @@ import {
   goalSnapshotHasChanges,
   syncExerciseMeasurementResetDefault,
   topicSnapshotHasChanges,
+  wardrobeSuggestionSnapshot,
   wardrobeSnapshotHasChanges,
 } from "./workspace-ux.ts";
 
@@ -148,6 +149,7 @@ test("wardrobe dirty checks cover content and unlock method", () => {
   const item = {
     category: "equipment",
     editorialNote: "Passer til emnet.",
+    equipSlot: "held",
     icon: "🌈",
     name: "Regnbuebold",
     points: "125",
@@ -175,6 +177,7 @@ test("wardrobe dirty checks cover content and unlock method", () => {
   for (const change of [
     { category: "effect" },
     { editorialNote: "Passer til farvetemaet." },
+    { equipSlot: "accessory" },
     { icon: "⚽" },
     { name: "Stjernebold" },
     { points: "150" },
@@ -186,4 +189,21 @@ test("wardrobe dirty checks cover content and unlock method", () => {
       true,
     );
   }
+});
+
+test("wardrobe suggestions keep their proposed equipment slot editable", () => {
+  const snapshot = wardrobeSuggestionSnapshot({
+    category: "clothing",
+    equipSlot: "feet",
+    icon: "👟",
+    name: "Stjernesko",
+    points: 75,
+    rarity: "rare",
+    reason: "Passer til emnet.",
+    unlockRule: "",
+  });
+
+  assert.equal(snapshot.equipSlot, "feet");
+  assert.equal(snapshot.unlockMode, "points");
+  assert.equal(snapshot.points, "75");
 });

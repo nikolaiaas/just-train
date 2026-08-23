@@ -17,3 +17,8 @@ command = "mise exec -- pnpm preview:admin"
 name = "Start Dev Console"
 icon = "tool"
 command = "mise exec -- pnpm dev:console"
+
+[[actions]]
+name = "Start local AI"
+icon = "run"
+command = "mise exec -- pnpm dev:ai"

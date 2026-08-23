@@ -11,6 +11,8 @@ export * from "./child.ts";
 export * from "./content.ts";
 export * from "./content-steps.ts";
 export * from "./parent.ts";
+export * from "./wardrobe.ts";
+export * from "./topic-lifecycle.ts";
 
 export type BareTraenClient = SupabaseClient<Database>;
 

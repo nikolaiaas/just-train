@@ -24,7 +24,7 @@ select results_eq(
       and operation.id = version.operation_id
     where operation.operation_key = 'content.draft_review'
   $$,
-  $$ values (1, 'openrouter'::text, 'openai'::text, 'openai/gpt-5-mini'::text) $$,
+  $$ values (2, 'openrouter'::text, 'openai'::text, 'openai/gpt-5-mini'::text) $$,
   'the review operation pins its immutable OpenAI-only route'
 );
 
@@ -188,9 +188,9 @@ values ('{
   "goal":{"title":"Gå på balancebane","summary":"Barnet gennemfører en kort og rolig balancebane.","difficulty":"beginner","estimatedMinutes":15,"equipment":["Malertape"]},
   "exercise":{"title":"Følg stregen","instructions":"Gå langsomt hen over stregen med armene ud til siden.","measurement":"completion","targetValue":null,"recommendedMinutes":8,"equipment":["Malertape"],"safetyNote":"En voksen holder sig tæt på, og gulvet skal være frit."},
   "wardrobeExamples":[
-    {"name":"Stjernestøvler","icon":"⭐","category":"clothing","rarity":"common","points":100,"unlockRule":"","reason":"Et brandfrit eksempel til balanceeventyret."},
-    {"name":"Regnbuespor","icon":"🌈","category":"effect","rarity":"rare","points":250,"unlockRule":"","reason":"En synlig belønning uden køb eller brand."},
-    {"name":"Balancekrone","icon":"👑","category":"clothing","rarity":"special","points":0,"unlockRule":"Gennemfør det første mål","reason":"En milepælsbelønning med en tydelig regel."}
+    {"name":"Stjernestøvler","icon":"⭐","category":"clothing","equipSlot":"feet","rarity":"common","points":100,"unlockRule":"","reason":"Et brandfrit eksempel til balanceeventyret."},
+    {"name":"Regnbuespor","icon":"🌈","category":"effect","equipSlot":"accessory","rarity":"rare","points":250,"unlockRule":"","reason":"En synlig belønning uden køb eller brand."},
+    {"name":"Balancekrone","icon":"👑","category":"clothing","equipSlot":"head","rarity":"special","points":0,"unlockRule":"Gennemfør det første mål","reason":"En milepælsbelønning med en tydelig regel."}
   ],
   "history":[]
 }'::jsonb);

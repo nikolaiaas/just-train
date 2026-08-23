@@ -480,6 +480,48 @@ export type Database = {
           },
         ];
       };
+      child_wardrobe_items: {
+        Row: {
+          acquired_at: string;
+          child_profile_id: string;
+          equip_slot: Database["public"]["Enums"]["wardrobe_equip_slot"];
+          equipped_at: string | null;
+          is_equipped: boolean;
+          wardrobe_item_id: string;
+        };
+        Insert: {
+          acquired_at?: string;
+          child_profile_id: string;
+          equip_slot?: Database["public"]["Enums"]["wardrobe_equip_slot"];
+          equipped_at?: string | null;
+          is_equipped?: boolean;
+          wardrobe_item_id: string;
+        };
+        Update: {
+          acquired_at?: string;
+          child_profile_id?: string;
+          equip_slot?: Database["public"]["Enums"]["wardrobe_equip_slot"];
+          equipped_at?: string | null;
+          is_equipped?: boolean;
+          wardrobe_item_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "child_wardrobe_items_child_profile_id_fkey";
+            columns: ["child_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "child_profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "child_wardrobe_items_wardrobe_item_id_fkey";
+            columns: ["wardrobe_item_id"];
+            isOneToOne: false;
+            referencedRelation: "wardrobe_items";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       exercise_attempts: {
         Row: {
           attempt_number: number;
@@ -1015,6 +1057,7 @@ export type Database = {
           created_by: string | null;
           editorial_note: string | null;
           editorial_status: Database["public"]["Enums"]["wardrobe_editorial_status"];
+          equip_slot: Database["public"]["Enums"]["wardrobe_equip_slot"];
           icon: string;
           id: string;
           is_published: boolean;
@@ -1034,6 +1077,7 @@ export type Database = {
           created_by?: string | null;
           editorial_note?: string | null;
           editorial_status?: Database["public"]["Enums"]["wardrobe_editorial_status"];
+          equip_slot?: Database["public"]["Enums"]["wardrobe_equip_slot"];
           icon: string;
           id?: string;
           is_published?: boolean;
@@ -1053,6 +1097,7 @@ export type Database = {
           created_by?: string | null;
           editorial_note?: string | null;
           editorial_status?: Database["public"]["Enums"]["wardrobe_editorial_status"];
+          equip_slot?: Database["public"]["Enums"]["wardrobe_equip_slot"];
           icon?: string;
           id?: string;
           is_published?: boolean;
@@ -1182,6 +1227,26 @@ export type Database = {
           is_active: boolean;
         }[];
       };
+      decide_admin_wardrobe_item_draft: {
+        Args: {
+          p_decision: Database["public"]["Enums"]["wardrobe_editorial_status"];
+          p_expected_updated_at: string;
+          p_topic_id: string;
+          p_wardrobe_item_id: string;
+        };
+        Returns: {
+          id: string;
+        }[];
+      };
+      delete_admin_topic: {
+        Args: { p_expected_updated_at: string; p_topic_id: string };
+        Returns: {
+          deleted_exercise_count: number;
+          deleted_goal_count: number;
+          deleted_wardrobe_item_count: number;
+          id: string;
+        }[];
+      };
       fail_admin_ai_job_for_worker: {
         Args: {
           p_attempt_error_code: string;
@@ -1215,6 +1280,8 @@ export type Database = {
           created_by: string;
           editorial_note: string;
           editorial_status: Database["public"]["Enums"]["wardrobe_editorial_status"];
+          equip_slot: Database["public"]["Enums"]["wardrobe_equip_slot"];
+          has_pending_revision: boolean;
           icon: string;
           id: string;
           is_published: boolean;
@@ -1226,6 +1293,24 @@ export type Database = {
           topic_id: string;
           unlock_rule: string;
           updated_at: string;
+        }[];
+      };
+      list_child_wardrobe: {
+        Args: { p_child_profile_id: string };
+        Returns: {
+          acquired_at: string;
+          catalog_equip_slot: Database["public"]["Enums"]["wardrobe_equip_slot"];
+          catalog_item_id: string;
+          category: Database["public"]["Enums"]["wardrobe_item_category"];
+          child_profile_id: string;
+          equip_slot: Database["public"]["Enums"]["wardrobe_equip_slot"];
+          equipped_at: string;
+          icon: string;
+          is_equipped: boolean;
+          name: string;
+          rarity: Database["public"]["Enums"]["wardrobe_item_rarity"];
+          topic_id: string;
+          wardrobe_item_id: string;
         }[];
       };
       prepare_admin_ai_job: {
@@ -1259,6 +1344,19 @@ export type Database = {
           storage_bucket: string;
         }[];
       };
+      publish_admin_topic: {
+        Args: { p_expected_updated_at: string; p_topic_id: string };
+        Returns: {
+          changed: boolean;
+          id: string;
+          is_published: boolean;
+          published_at: string;
+          published_exercise_count: number;
+          published_goal_count: number;
+          published_wardrobe_item_count: number;
+          updated_at: string;
+        }[];
+      };
       publish_ai_operation_version: {
         Args: {
           p_expected_active_version_id: string;
@@ -1269,6 +1367,50 @@ export type Database = {
           operation_id: string;
           operation_version_id: string;
           version: number;
+        }[];
+      };
+      save_admin_wardrobe_item_draft: {
+        Args: {
+          p_category: Database["public"]["Enums"]["wardrobe_item_category"];
+          p_editorial_note: string;
+          p_equip_slot: Database["public"]["Enums"]["wardrobe_equip_slot"];
+          p_expected_updated_at: string;
+          p_icon: string;
+          p_name: string;
+          p_points: number;
+          p_rarity: Database["public"]["Enums"]["wardrobe_item_rarity"];
+          p_sort_order: number;
+          p_topic_id: string;
+          p_unlock_rule: string;
+          p_wardrobe_item_id: string;
+        };
+        Returns: {
+          id: string;
+        }[];
+      };
+      set_child_wardrobe_item_equipped: {
+        Args: {
+          p_child_profile_id: string;
+          p_equipped?: boolean;
+          p_wardrobe_item_id: string;
+        };
+        Returns: {
+          acquired_at: string;
+          child_profile_id: string;
+          equip_slot: Database["public"]["Enums"]["wardrobe_equip_slot"];
+          equipped_at: string;
+          is_equipped: boolean;
+          wardrobe_item_id: string;
+        }[];
+      };
+      unpublish_admin_topic: {
+        Args: { p_expected_updated_at: string; p_topic_id: string };
+        Returns: {
+          changed: boolean;
+          id: string;
+          is_published: boolean;
+          published_at: string;
+          updated_at: string;
         }[];
       };
     };
@@ -1287,6 +1429,7 @@ export type Database = {
       progress_state: "in_progress" | "completed";
       session_status: "in_progress" | "completed" | "abandoned";
       wardrobe_editorial_status: "draft" | "approved" | "rejected";
+      wardrobe_equip_slot: "head" | "body" | "held" | "feet" | "accessory";
       wardrobe_item_category: "clothing" | "equipment" | "effect";
       wardrobe_item_rarity: "common" | "rare" | "special";
     };
@@ -1438,6 +1581,7 @@ export const Constants = {
       progress_state: ["in_progress", "completed"],
       session_status: ["in_progress", "completed", "abandoned"],
       wardrobe_editorial_status: ["draft", "approved", "rejected"],
+      wardrobe_equip_slot: ["head", "body", "held", "feet", "accessory"],
       wardrobe_item_category: ["clothing", "equipment", "effect"],
       wardrobe_item_rarity: ["common", "rare", "special"],
     },

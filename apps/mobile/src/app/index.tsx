@@ -38,6 +38,7 @@ const currentExercise = getCurrentExercise(demoExercises, demoProgress);
 const football = demoTopics.find((topic) => topic.id === demoGoal.topicId)!;
 const NEW_CHILD_ROUTE = "/child/new" as Href;
 const AI_CARTOON_ROUTE = "/ai/cartoon" as Href;
+const WARDROBE_ROUTE = "/wardrobe" as Href;
 
 export default function TodayScreen() {
   const {
@@ -450,6 +451,8 @@ function FixtureToday({
         </View>
       </View>
 
+      <WardrobeCard child={selectedChild} />
+
       <AiCartoonLabCard child={selectedChild} />
 
       <View style={styles.previewNote}>
@@ -459,6 +462,27 @@ function FixtureToday({
         </Text>
       </View>
     </Screen>
+  );
+}
+
+function WardrobeCard({ child }: { child: ParentChild }) {
+  const router = useRouter();
+
+  return (
+    <SurfaceCard style={styles.aiLabCard}>
+      <View style={styles.aiLabCopy}>
+        <Kicker>🧳 Min garderobe</Kicker>
+        <Text style={styles.weekTitle}>
+          Vælg, hvad {child.displayName} har på
+        </Text>
+        <Body>
+          Se optjente ting, og skift tøj, udstyr og et helt par sko ad gangen.
+        </Body>
+      </View>
+      <ActionButton onPress={() => router.push(WARDROBE_ROUTE)}>
+        Åbn garderoben
+      </ActionButton>
+    </SurfaceCard>
   );
 }
 

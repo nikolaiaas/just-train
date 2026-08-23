@@ -65,6 +65,8 @@ const wardrobeItemRow = Object.freeze({
   created_by: adminId,
   editorial_note: "Et roligt, brandfrit valg.",
   editorial_status: "draft",
+  equip_slot: "body",
+  has_pending_revision: false,
   icon: "🧢",
   id: wardrobeItemId,
   is_published: false,
@@ -112,6 +114,7 @@ const validWardrobeInput = Object.freeze({
   authenticatedUserId: adminId,
   category: "clothing",
   editorialNote: "Et roligt, brandfrit valg.",
+  equipSlot: "body",
   icon: "🧢",
   name: "Stjernetrøje",
   points: 120,
@@ -186,9 +189,12 @@ function clientForResponses(responses, calls = []) {
       calls.push({ operation: "from", table });
       return queryFor(nextResponse(), calls);
     },
-    async rpc(name, args) {
+    rpc(name, args) {
       calls.push({ operation: "rpc", name, args });
-      return nextResponse();
+      const response = nextResponse();
+      return name === "list_admin_wardrobe_item_drafts"
+        ? Promise.resolve(response)
+        : queryFor(response, calls);
     },
   };
 }
@@ -205,7 +211,11 @@ function assertWardrobeRpcCall(
   parentTopicId = topicId,
 ) {
   assert.deepEqual(
-    calls.find((call) => call.operation === "rpc"),
+    calls.find(
+      (call) =>
+        call.operation === "rpc" &&
+        call.name === "list_admin_wardrobe_item_drafts",
+    ),
     {
       operation: "rpc",
       name: "list_admin_wardrobe_item_drafts",
@@ -271,6 +281,8 @@ function expectedWardrobeItem(overrides = {}) {
     createdBy: adminId,
     editorialNote: wardrobeItemRow.editorial_note,
     editorialStatus: "draft",
+    equipSlot: "body",
+    hasPendingRevision: false,
     icon: "🧢",
     id: wardrobeItemId,
     name: "Stjernetrøje",
@@ -399,6 +411,7 @@ test("creates a normalized unpublished wardrobe item below its topic", async () 
       category: "clothing",
       created_by: adminId,
       editorial_note: wardrobeItemRow.editorial_note,
+      equip_slot: "body",
       icon: "🧢",
       id: wardrobeItemId,
       name: "Stjernetrøje",
@@ -438,6 +451,20 @@ test("maps an unlock-only wardrobe item to nullable database fields", async () =
   assert.deepEqual(calls[1].value.points, null);
   assert.deepEqual(calls[1].value.unlock_rule, "Gennemfør tre træninger");
   assert.deepEqual(calls[1].value.editorial_note, null);
+});
+
+test("keeps older wardrobe authoring callers compatible with an accessory default", async () => {
+  const legacyRow = { ...wardrobeItemRow, equip_slot: "accessory" };
+  const { equipSlot: _omittedSlot, ...legacyInput } = validWardrobeInput;
+  const { calls, ...client } = clientForResponses([
+    { data: { id: wardrobeItemId }, error: null },
+    { data: [legacyRow], error: null },
+  ]);
+
+  const result = await createAdminWardrobeItemDraft(client, legacyInput);
+
+  assert.equal(result.item.equipSlot, "accessory");
+  assert.equal(calls[1].value.equip_slot, "accessory");
 });
 
 test("rejects invalid goal input before accessing Supabase", async () => {
@@ -538,6 +565,7 @@ test("rejects invalid wardrobe content before accessing Supabase", async () => {
     [{ name: "x".repeat(81) }, "invalid_wardrobe_name"],
     [{ icon: "x".repeat(17) }, "invalid_wardrobe_icon"],
     [{ category: "hat" }, "invalid_wardrobe_category"],
+    [{ equipSlot: "left-foot" }, "invalid_wardrobe_equip_slot"],
     [{ rarity: "legendary" }, "invalid_wardrobe_rarity"],
     [{ points: -1 }, "invalid_wardrobe_points"],
     [{ points: 1_001 }, "invalid_wardrobe_points"],
@@ -962,36 +990,81 @@ test("updates wardrobe content and resets its editorial status to draft", async 
       unlockRule: "Gennemfør fem træninger",
     }),
   );
-  const updateCall = calls.find((call) => call.operation === "update");
-  assert.deepEqual(updateCall.value, {
-    category: "effect",
-    editorial_note: null,
-    icon: "✨",
-    name: "Stjernestøv",
-    points: null,
-    rarity: "special",
-    sort_order: 40,
-    unlock_rule: "Gennemfør fem træninger",
-  });
-  assert.equal("topic_id" in updateCall.value, false);
-  assert.equal("created_by" in updateCall.value, false);
-  assert.equal("is_published" in updateCall.value, false);
   assert.deepEqual(
-    calls.filter((call) => call.operation === "eq"),
-    [
-      { operation: "eq", column: "id", value: wardrobeItemId },
-      { operation: "eq", column: "topic_id", value: topicId },
-      { operation: "eq", column: "is_published", value: false },
-      {
-        operation: "eq",
-        column: "updated_at",
-        value: wardrobeItemRow.updated_at,
+    calls.find(
+      (call) =>
+        call.operation === "rpc" &&
+        call.name === "save_admin_wardrobe_item_draft",
+    ),
+    {
+      operation: "rpc",
+      name: "save_admin_wardrobe_item_draft",
+      args: {
+        p_category: "effect",
+        p_editorial_note: null,
+        p_equip_slot: "body",
+        p_expected_updated_at: wardrobeItemRow.updated_at,
+        p_icon: "✨",
+        p_name: "Stjernestøv",
+        p_points: null,
+        p_rarity: "special",
+        p_sort_order: 40,
+        p_topic_id: topicId,
+        p_unlock_rule: "Gennemfør fem træninger",
+        p_wardrobe_item_id: wardrobeItemId,
       },
-    ],
+    },
+  );
+  assertWardrobeRpcCall(calls);
+});
+
+test("stages a corrected feet slot for a legacy published wardrobe item", async () => {
+  const publishedAt = "2026-08-20T12:00:00.000Z";
+  const stagedAt = "2026-08-21T21:04:00.000Z";
+  const stagedRow = {
+    ...wardrobeItemRow,
+    content_version: 4,
+    editorial_status: "draft",
+    equip_slot: "feet",
+    has_pending_revision: true,
+    icon: "👟",
+    is_published: true,
+    name: "Stjernesko",
+    published_at: publishedAt,
+    updated_at: stagedAt,
+  };
+  const { calls, ...client } = clientForResponses([
+    { data: { id: wardrobeItemId }, error: null },
+    { data: [stagedRow], error: null },
+  ]);
+
+  const result = await updateAdminWardrobeItemDraft(client, {
+    ...validWardrobeUpdateInput,
+    equipSlot: "feet",
+    icon: "👟",
+    name: "Stjernesko",
+  });
+
+  assert.deepEqual(
+    result.item,
+    expectedWardrobeItem({
+      contentVersion: 4,
+      equipSlot: "feet",
+      hasPendingRevision: true,
+      icon: "👟",
+      name: "Stjernesko",
+      publishedAt,
+      status: "published",
+      updatedAt: stagedAt,
+    }),
   );
   assert.deepEqual(
-    calls.filter((call) => call.operation === "select"),
-    [{ operation: "select", columns: "id" }],
+    calls.find(
+      (call) =>
+        call.operation === "rpc" &&
+        call.name === "save_admin_wardrobe_item_draft",
+    )?.args.p_equip_slot,
+    "feet",
   );
   assertWardrobeRpcCall(calls);
 });
@@ -1014,25 +1087,22 @@ test("approves or rejects an unpublished wardrobe item optimistically", async ()
     });
 
     assert.equal(result.item.editorialStatus, decision);
-    assert.deepEqual(calls.find((call) => call.operation === "update").value, {
-      editorial_status: decision,
-    });
     assert.deepEqual(
-      calls.filter((call) => call.operation === "eq"),
-      [
-        { operation: "eq", column: "id", value: wardrobeItemId },
-        { operation: "eq", column: "topic_id", value: topicId },
-        { operation: "eq", column: "is_published", value: false },
-        {
-          operation: "eq",
-          column: "updated_at",
-          value: wardrobeItemRow.updated_at,
+      calls.find(
+        (call) =>
+          call.operation === "rpc" &&
+          call.name === "decide_admin_wardrobe_item_draft",
+      ),
+      {
+        operation: "rpc",
+        name: "decide_admin_wardrobe_item_draft",
+        args: {
+          p_decision: decision,
+          p_expected_updated_at: wardrobeItemRow.updated_at,
+          p_topic_id: topicId,
+          p_wardrobe_item_id: wardrobeItemId,
         },
-      ],
-    );
-    assert.deepEqual(
-      calls.filter((call) => call.operation === "select"),
-      [{ operation: "select", columns: "id" }],
+      },
     );
     assertWardrobeRpcCall(calls);
   }

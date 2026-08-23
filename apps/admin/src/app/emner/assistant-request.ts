@@ -134,6 +134,7 @@ export type AssistantWardrobeItem = {
   name: string;
   icon: string;
   category: "clothing" | "equipment" | "effect";
+  equipSlot: "head" | "body" | "held" | "feet" | "accessory";
   rarity: "common" | "rare" | "special";
   points: number;
   unlockRule: string;
@@ -183,6 +184,13 @@ const FIELD_NAMES = [
   "history",
   "context",
 ] as const;
+const WARDROBE_EQUIP_SLOTS = new Set<AssistantWardrobeItem["equipSlot"]>([
+  "head",
+  "body",
+  "held",
+  "feet",
+  "accessory",
+]);
 
 type AssistantFieldName = (typeof FIELD_NAMES)[number];
 type UnknownRecord = Record<string, unknown>;
@@ -443,9 +451,9 @@ function parseWardrobeExamples(
   const items: AssistantWardrobeItem[] = [];
 
   for (const item of value) {
-    if (
-      !isRecord(item) ||
-      !hasExactKeys(item, [
+    const hasLegacyShape =
+      isRecord(item) &&
+      hasExactKeys(item, [
         "name",
         "icon",
         "category",
@@ -453,7 +461,27 @@ function parseWardrobeExamples(
         "points",
         "unlockRule",
         "reason",
-      ]) ||
+      ]);
+    const hasSlotAwareShape =
+      isRecord(item) &&
+      hasExactKeys(item, [
+        "name",
+        "icon",
+        "category",
+        "equipSlot",
+        "rarity",
+        "points",
+        "unlockRule",
+        "reason",
+      ]);
+    const equipSlot =
+      isRecord(item) && item.equipSlot !== undefined
+        ? item.equipSlot
+        : "accessory";
+
+    if (
+      !isRecord(item) ||
+      (!hasLegacyShape && !hasSlotAwareShape) ||
       !isNormalizedString(item.name, 80) ||
       item.name.length === 0 ||
       !isNormalizedString(item.icon, 16) ||
@@ -461,6 +489,10 @@ function parseWardrobeExamples(
       (item.category !== "clothing" &&
         item.category !== "equipment" &&
         item.category !== "effect") ||
+      typeof equipSlot !== "string" ||
+      !WARDROBE_EQUIP_SLOTS.has(
+        equipSlot as AssistantWardrobeItem["equipSlot"],
+      ) ||
       (item.rarity !== "common" &&
         item.rarity !== "rare" &&
         item.rarity !== "special") ||
@@ -482,6 +514,7 @@ function parseWardrobeExamples(
       name: item.name,
       icon: item.icon,
       category: item.category,
+      equipSlot: equipSlot as AssistantWardrobeItem["equipSlot"],
       rarity: item.rarity,
       points: item.points as number,
       unlockRule: item.unlockRule,

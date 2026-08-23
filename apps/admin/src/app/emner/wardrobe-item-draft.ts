@@ -1,6 +1,7 @@
 import type {
   AdminWardrobeCategory,
   AdminWardrobeEditorialStatus,
+  AdminWardrobeEquipSlot,
   AdminWardrobeRarity,
 } from "@bare-traen/api-client";
 
@@ -24,6 +25,13 @@ const CATEGORIES = new Set<AdminWardrobeCategory>([
   "effect",
 ]);
 const RARITIES = new Set<AdminWardrobeRarity>(["common", "rare", "special"]);
+const EQUIP_SLOTS = new Set<AdminWardrobeEquipSlot>([
+  "head",
+  "body",
+  "held",
+  "feet",
+  "accessory",
+]);
 const DECISIONS = new Set<AdminWardrobeEditorialStatus>([
   "approved",
   "rejected",
@@ -35,6 +43,7 @@ export type WardrobeItemDraftInput = {
   name: string;
   icon: string;
   category: AdminWardrobeCategory;
+  equipSlot: AdminWardrobeEquipSlot;
   rarity: AdminWardrobeRarity;
   points: number;
   unlockRule: string;
@@ -49,6 +58,7 @@ export type WardrobeItemDraftFieldErrors = Partial<
     | "name"
     | "icon"
     | "category"
+    | "equipSlot"
     | "rarity"
     | "points"
     | "unlockRule"
@@ -86,6 +96,7 @@ const DRAFT_FIELDS = [
   "name",
   "icon",
   "category",
+  "equipSlot",
   "rarity",
   "points",
   "unlockRule",
@@ -198,6 +209,9 @@ export function validateWardrobeItemDraftForm(
   if (!CATEGORIES.has(values.category as AdminWardrobeCategory)) {
     fieldErrors.category = "Vælg en gyldig type.";
   }
+  if (!EQUIP_SLOTS.has(values.equipSlot as AdminWardrobeEquipSlot)) {
+    fieldErrors.equipSlot = "Vælg, hvor barnet kan have tinget på.";
+  }
   if (!RARITIES.has(values.rarity as AdminWardrobeRarity)) {
     fieldErrors.rarity = "Vælg en gyldig sjældenhed.";
   }
@@ -249,6 +263,7 @@ export function validateWardrobeItemDraftForm(
       name,
       icon,
       category: values.category as AdminWardrobeCategory,
+      equipSlot: values.equipSlot as AdminWardrobeEquipSlot,
       rarity: values.rarity as AdminWardrobeRarity,
       points: points!,
       unlockRule,

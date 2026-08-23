@@ -91,6 +91,8 @@ const wardrobeOneRow = Object.freeze({
   category: "effect",
   content_version: 1,
   editorial_status: "approved",
+  equip_slot: "accessory",
+  has_pending_revision: false,
   icon: "✨",
   id: WARDROBE_ONE_ID,
   is_published: true,
@@ -158,12 +160,72 @@ test("validates, groups and orders all topic-owned content", () => {
       item.id,
       item.status,
       item.editorialStatus,
+      item.equipSlot,
     ]),
     [
-      [WARDROBE_TWO_ID, "draft", "draft"],
-      [WARDROBE_ONE_ID, "published", "approved"],
+      [WARDROBE_TWO_ID, "draft", "draft", "accessory"],
+      [WARDROBE_ONE_ID, "published", "approved", "accessory"],
     ],
   );
+});
+
+test("validates wardrobe positions and keeps old deployment rows as accessories", () => {
+  const oldRow = { ...wardrobeTwoRow };
+  delete oldRow.equip_slot;
+  const oldDetail = parseAdminTopicDetailRows(
+    validRows({ wardrobeItems: [oldRow] }),
+  );
+
+  assert.ok(oldDetail);
+  assert.equal(oldDetail.wardrobeItems[0]?.equipSlot, "accessory");
+  assert.equal(
+    parseAdminTopicDetailRows(
+      validRows({
+        wardrobeItems: [{ ...wardrobeOneRow, equip_slot: "left-shoe" }],
+      }),
+    ),
+    null,
+  );
+});
+
+test("keeps a published wardrobe item's staged revision editable", () => {
+  const stagedAt = "2026-08-22T09:00:01.000Z";
+  const detail = parseAdminTopicDetailRows(
+    validRows({
+      wardrobeItems: [
+        {
+          ...wardrobeOneRow,
+          editorial_status: "draft",
+          equip_slot: "feet",
+          has_pending_revision: true,
+          icon: "👟",
+          name: "Stjernesko",
+          updated_at: stagedAt,
+        },
+      ],
+    }),
+  );
+
+  assert.ok(detail);
+  assert.deepEqual(detail.wardrobeItems[0], {
+    category: "effect",
+    contentVersion: 1,
+    editorialStatus: "draft",
+    equipSlot: "feet",
+    hasPendingRevision: true,
+    icon: "👟",
+    id: WARDROBE_ONE_ID,
+    name: "Stjernesko",
+    points: 40,
+    publishedAt: PUBLISHED_AT,
+    rarity: "special",
+    sortOrder: 1,
+    status: "published",
+    topicId: TOPIC_ID,
+    unlockRule: null,
+    updatedAt: stagedAt,
+  });
+  assert.equal(detail.updatedAt, stagedAt);
 });
 
 test("keeps rejected wardrobe proposals out of the usable rewards", () => {
@@ -174,6 +236,26 @@ test("keeps rejected wardrobe proposals out of the usable rewards", () => {
   );
 
   assert.ok(detail);
+  assert.deepEqual(detail.wardrobeItems, []);
+});
+
+test("uses the newest hidden or visible child revision for lifecycle actions", () => {
+  const newestRevision = "2026-08-22T09:00:00.000900Z";
+  const detail = parseAdminTopicDetailRows(
+    validRows({
+      topic: { ...topicRow, updated_at: "2026-08-22T09:00:00.000100Z" },
+      wardrobeItems: [
+        {
+          ...wardrobeTwoRow,
+          editorial_status: "rejected",
+          updated_at: newestRevision,
+        },
+      ],
+    }),
+  );
+
+  assert.ok(detail);
+  assert.equal(detail.updatedAt, newestRevision);
   assert.deepEqual(detail.wardrobeItems, []);
 });
 
@@ -285,7 +367,7 @@ test("loads one topic through granted columns and groups its children", async ()
       error: null,
     },
     list_admin_wardrobe_item_drafts: {
-      data: [wardrobeTwoRow],
+      data: [wardrobeOneRow, wardrobeTwoRow],
       error: null,
     },
   });
@@ -294,6 +376,10 @@ test("loads one topic through granted columns and groups its children", async ()
 
   assert.ok(detail);
   assert.equal(detail.id, TOPIC_ID);
+  assert.deepEqual(
+    detail.wardrobeItems.map((item) => item.id),
+    [WARDROBE_TWO_ID, WARDROBE_ONE_ID],
+  );
   assert.deepEqual(
     calls.find((call) => call.operation === "in" && call.table === "exercises")
       ?.value,

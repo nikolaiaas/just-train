@@ -119,7 +119,8 @@ Exit condition: local development does not depend on hand-created dashboard stat
 - [x] Require Vercel team login for pull-request previews; keep the public production URL fixture-only until application authentication exists.
 - [x] Configure Vercel and EAS preview environment variables for the hosted development backend.
 - [x] Set the hosted development Auth site URL to the stable administration URL and allow the exact 11000/11001 callbacks plus all three app schemes.
-- [ ] Connect a custom hosted SMTP provider, disable link tracking, and install the same Danish code-and-magic-link template used locally.
+- [x] Install the same Danish code-and-scanner-safe-magic-link template for Hosted Development returning-user and new-account emails.
+- [ ] Connect a custom hosted SMTP provider, disable link tracking, and complete one synthetic or adult delivery test.
 - [x] Add CI that resets the database, runs migrations, generates/checks types, and executes RLS tests, and require those checks before merging to `main`.
 - [x] Document the now-available Supabase Pro path for per-pull-request preview branches and its separate compute cost; keep it disabled until the branch-safe setup is ready.
 - [ ] If Supabase branching is enabled, connect each Vercel preview to its matching Supabase branch and synthetic seed.
@@ -166,9 +167,10 @@ Exit condition: pilot screens can be assembled from reviewed components rather t
 - [ ] Add family invitations.
 - [x] Add a private, immutable, versioned guardian-acknowledgement record for child-profile creation without adding child identity fields.
 - [ ] Define and implement the approved legal-consent, withdrawal, deletion, and retention records before a broader real-child pilot; the private family prototype is an explicitly accepted narrow exception.
-- [ ] Add topics, immutable topic releases, goals, ordered exercise steps, equipment, and safety text.
+- [x] Add topics with a simple mutable published/unpublished state, goals, ordered exercise steps, equipment, and safety text for the private play app.
 - [x] Add goal enrolments, training sessions, attempts, personal bests, and difficulty ratings.
-- [ ] Add an append-only point ledger, rewards, and child inventory.
+- [x] Add child wardrobe inventory with one atomic, exclusive equipped item per head, body, hand, feet, or accessory position; one feet item represents a complete pair of shoes.
+- [ ] Add the append-only point ledger and reward-acquisition flow that grants catalog items to child inventory.
 - [x] Add stable AI operations, immutable prompt/provider versions, generic family/admin jobs, private media metadata, named media slots, and worker-only attempt audit.
 - [x] Store the initial cartoon prompt in the database and let an administrator atomically publish a replacement while existing jobs remain pinned.
 - [x] Build the reviewed administration UI for prompt-version publication and active-version history.
@@ -197,6 +199,7 @@ Exit condition: access is denied by the database itself when a client attempts t
 - [x] Require every portrait request to be linked to the selected active child in the authenticated family member's family, and preserve that link across the mobile contract, Storage metadata, preparation RPC, and worker claim.
 - [x] Add a gallery-only private family cartoon prototype using database-versioned prompts and `openai/gpt-image-2` through an OpenAI-only, no-fallback OpenRouter route; keep development and evidence synthetic.
 - [x] Persist a caller-scoped child-creation request identity and safely retry it after refresh or interruption without creating a duplicate child.
+- [x] Show the selected child's acquired wardrobe and equip, replace, or remove exactly one item per head, body, hand, feet, or accessory position; one feet item is a complete pair of shoes.
 - [ ] Implement topic selection, goal list, and goal detail for the seeded football content.
 - [ ] Implement goal enrolment and the child's home screen.
 - [ ] Implement the ordered goal journey with completed, current, and locked exercises.
@@ -225,14 +228,15 @@ Exit condition: a child cannot lose or duplicate a completed attempt because of 
 ## 9. Build the functional administration vertical slice
 
 - [x] Implement administrator sign-in and authorization guard.
-- [ ] Implement the topic/goal library with draft, review, and published statuses.
-- [ ] Implement editing and reordering the seeded goal's exercises.
+- [x] Implement the topic/goal library with the deliberately simple draft/published state used by this private play app.
+- [x] Implement editing every existing goal and exercise and adding another exercise from the selected goal.
+- [ ] Implement manual reordering of goals and exercises.
 - [x] Validate name, explanation, measurement type, target, training time, equipment, and safety text.
 - [ ] Implement draft preview using the child-app presentation model.
-- [ ] Implement human review and an explicit publish action.
-- [ ] Publish an immutable topic release atomically.
-- [ ] Record who changed, reviewed, and published each release.
-- [ ] Verify that a newly published version appears in the child app while existing enrolments remain pinned safely.
+- [x] Implement human review and an explicit publish action.
+- [x] Publish or unpublish the current mutable topic tree atomically, with approved wardrobe items following publication, and permanently delete an unpublished topic only when no child activity or owned reward depends on it.
+- [ ] Record a dedicated audit event for who reviewed, published, unpublished, or deleted a topic.
+- [ ] Verify that newly published content appears in the child app while an unpublish immediately hides the topic without deleting family progress.
 
 Exit condition: an authorized person can edit and publish content without direct database-dashboard work.
 
@@ -258,7 +262,8 @@ Exit condition: each risky feature has a written go/defer decision and does not 
 
 ## 11. Add quality and release gates
 
-- [ ] Add unit tests for progression, timer reconstruction, points, rewards, and publication rules.
+- [x] Add unit and database tests for timer reconstruction and topic/wardrobe publication rules.
+- [ ] Add unit tests for progression, points, and reward acquisition.
 - [x] Add database migration and RLS tests.
 - [ ] Add Playwright smoke tests for the administration pilot path.
 - [ ] Add a real-device mobile smoke test, automated with Maestro when the routes stabilize.
@@ -277,7 +282,7 @@ Exit condition: a failed permission test, migration, type check, or core-flow sm
 - [x] The administration app has a shareable preview URL.
 - [x] A private Bare Træn build is installed on the owner's iPhone without public App Store release.
 - [ ] The functional parent-to-completed-exercise pilot works locally and on the iPhone.
-- [ ] The administration pilot can publish versioned content consumed by the mobile app.
+- [ ] The administration pilot can publish mutable content consumed by the mobile app.
 - [ ] Timers and pending results survive interruption and reconnect safely.
 - [x] RLS tests prove family and administrator isolation.
 - [ ] All development and preview data is synthetic.
@@ -287,7 +292,7 @@ Exit condition: a failed permission test, migration, type check, or core-flow sm
 
 - Direct child email login and account recovery.
 - All 18 child screens and all 7 administration screens at production depth.
-- Full wardrobe/equipment management.
+- Advanced wardrobe visuals, manual catalog ordering, and the complete point/reward economy.
 - Production AI-assisted content authoring.
 - Automated video anonymization and personalized completion videos.
 - Push notifications.
