@@ -67,6 +67,15 @@ export type WardrobeEquipmentPlan =
   | { kind: "replace"; replacement: ChildWardrobeItem }
   | { kind: "unequip"; replacement: null };
 
+export function getWardrobeImageAccessibilityLabel(
+  item: Pick<ChildWardrobeItem, "description" | "name">,
+): string {
+  const name = item.name.replace(/\s+/gu, " ").trim();
+  const description = item.description.replace(/\s+/gu, " ").trim();
+
+  return description ? `${name}. ${description}` : name;
+}
+
 export function planWardrobeEquipment(
   items: readonly ChildWardrobeItem[],
   target: ChildWardrobeItem,

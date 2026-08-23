@@ -7,6 +7,7 @@ import {
   WARDROBE_SLOT_DETAILS,
   applyWardrobeEquipmentState,
   getWardrobeErrorMessage,
+  getWardrobeImageAccessibilityLabel,
   planWardrobeEquipment,
   resolveSelectedChildWardrobeId,
 } from "../src/wardrobe/core.ts";
@@ -19,9 +20,13 @@ function wardrobeItem(overrides) {
     acquiredAt: "2026-08-23T08:00:00.000Z",
     category: "clothing",
     childProfileId: childId,
+    description: "Et helt par lette sko med lyn på siden.",
     equipSlot: "feet",
     equippedAt: null,
     icon: "👟",
+    imagePath: "70000000-0000-4000-8000-000000000001/01.png",
+    imageUrl:
+      "https://example.test/wardrobe-images/70000000-0000-4000-8000-000000000001/01.png",
     isEquipped: false,
     name: "Lynsko",
     rarity: "rare",
@@ -30,6 +35,22 @@ function wardrobeItem(overrides) {
     ...overrides,
   };
 }
+
+test("describes wardrobe images without exposing the legacy emoji", () => {
+  const shoes = wardrobeItem({
+    description: "  Et helt par lette sko\nmed lyn på siden.  ",
+  });
+
+  assert.equal(
+    getWardrobeImageAccessibilityLabel(shoes),
+    "Lynsko. Et helt par lette sko med lyn på siden.",
+  );
+  assert.doesNotMatch(getWardrobeImageAccessibilityLabel(shoes), /👟/u);
+  assert.equal(
+    getWardrobeImageAccessibilityLabel({ description: "", name: "Lynsko" }),
+    "Lynsko",
+  );
+});
 
 test("treats a feet item as one shoe pair and plans an explicit replacement", () => {
   const currentShoes = wardrobeItem({

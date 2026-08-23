@@ -1,6 +1,6 @@
 {
   "version": 3,
-  "updatedAt": "2026-08-23T11:38:06.000Z",
+  "updatedAt": "2026-08-23T17:37:03.000Z",
   "items": [
     {
       "id": "hosted-preview-safety",
@@ -104,13 +104,13 @@
     {
       "id": "admin-wardrobe-authoring",
       "title": "Opret emnegarderobe og belønningseksempler",
-      "details": "Tilføj en rigtig garderobemodel og en adminside, hvor man kan oprette, rette, godkende og afvise emnespecifikke ting med navn, type, sjældenhed, pointpris eller oplåsningsregel. AI skal kunne foreslå sikre syntetiske eksempler uden brands, links eller børnedata.",
-      "implementationNotes": "En rigtig garderobetabel med RLS, review-guardrails og typed API til oprettelse, redigering, godkendelse og afvisning er bygget. Hver manuel eller AI-foreslået ting får nu en eksklusiv placering på hoved, krop, i hånd, på fødder eller som tilbehør; én fødder-ting er et helt par sko. Prompt- og reviewkontrakter er versionsopgraderet uden at bryde ældre jobs, og redaktøren kan rette AI'ens valg. Ændringer til allerede publicerede ting gemmes som en privat revision og bliver først live efter godkendelse og ny publicering; barnets slot-snapshots opdateres atomisk. Kortet forbliver Doing, fordi manuel rækkefølge og den endelige point-/belønningsøkonomi stadig mangler.",
+      "details": "Tilføj en rigtig garderobemodel og en adminside, hvor man kan oprette, rette, godkende og afvise emnespecifikke ting med navn, billede, beskrivelse, type, sjældenhed, pointpris eller oplåsningsregel. AI skal bruge emnets titel og beskrivelse til at planlægge præcis 16 sikre syntetiske ting, tegne ét 4×4-billedark med GPT Image 2 og beskære det til 16 separate billeder uden brands, links eller børnedata.",
+      "implementationNotes": "En rigtig garderobetabel med RLS, review-guardrails og typed API til oprettelse, redigering, godkendelse og afvisning er bygget. Hver manuel eller AI-foreslået ting får nu en eksklusiv placering på hoved, krop, i hånd, på fødder eller som tilbehør; én fødder-ting er et helt par sko. Prompt- og reviewkontrakter er versionsopgraderet uden at bryde ældre jobs, og redaktøren kan rette AI'ens valg. Ændringer til allerede publicerede ting gemmes som en privat revision og bliver først live efter godkendelse og ny publicering; barnets slot-snapshots opdateres atomisk. Den topic-aware GPT Image 2-strøm laver præcis ét 4×4-billedark, beskærer det server-side til 16 row-major katalogbilleder og viser billeder samt beskrivelser i admin og mobil uden item-emojis. Kortet forbliver Doing, fordi manuel rækkefølge og den endelige point-/belønningsøkonomi stadig mangler.",
       "evidence": [],
       "status": "doing",
       "priority": 0,
       "createdAt": "2026-08-21T20:22:21.000Z",
-      "updatedAt": "2026-08-23T12:16:24.000Z"
+      "updatedAt": "2026-08-23T17:37:03.000Z"
     },
     {
       "id": "a5ed6926-00b7-49c4-ad6b-41a4974b6728",

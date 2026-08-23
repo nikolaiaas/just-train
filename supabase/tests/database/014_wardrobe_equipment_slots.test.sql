@@ -246,7 +246,7 @@ select is(
 );
 select is(
   pg_get_function_result('public.list_child_wardrobe(uuid)'::regprocedure),
-  'TABLE(child_profile_id uuid, wardrobe_item_id uuid, catalog_item_id uuid, topic_id uuid, name text, icon text, category wardrobe_item_category, equip_slot wardrobe_equip_slot, catalog_equip_slot wardrobe_equip_slot, rarity wardrobe_item_rarity, is_equipped boolean, acquired_at timestamp with time zone, equipped_at timestamp with time zone)',
+  'TABLE(child_profile_id uuid, wardrobe_item_id uuid, catalog_item_id uuid, topic_id uuid, name text, icon text, description text, image_path text, category wardrobe_item_category, equip_slot wardrobe_equip_slot, catalog_equip_slot wardrobe_equip_slot, rarity wardrobe_item_rarity, is_equipped boolean, acquired_at timestamp with time zone, equipped_at timestamp with time zone)',
   'the listing returns inventory and catalog identity for fail-closed clients'
 );
 

@@ -30,9 +30,11 @@ export type ExerciseEditorSnapshot = {
 
 export type WardrobeEditorSnapshot = {
   category: "clothing" | "equipment" | "effect";
+  description: string;
   editorialNote: string;
   equipSlot: "" | "head" | "body" | "held" | "feet" | "accessory";
   icon: string;
+  imagePath: string;
   name: string;
   points: string;
   rarity: "common" | "rare" | "special";
@@ -42,8 +44,9 @@ export type WardrobeEditorSnapshot = {
 
 export type WardrobeSuggestionSnapshotInput = {
   category: WardrobeEditorSnapshot["category"];
+  description: string;
   equipSlot: Exclude<WardrobeEditorSnapshot["equipSlot"], "">;
-  icon: string;
+  imagePath: string;
   name: string;
   points: number;
   rarity: WardrobeEditorSnapshot["rarity"];
@@ -58,13 +61,23 @@ const assistantContextGreetings: Record<WorkspaceStep, string> = {
   exercise:
     "Jeg hjælper med en tryg deløvelse, måling og sikkerhed. Du vælger selv, om et forslag skal bruges.",
   wardrobe:
-    "Jeg kan foreslå syntetiske, brandfrie garderobeeksempler. De er ikke gemt, før du vælger og tilpasser hvert forslag.",
+    "Jeg kan lave 16 syntetiske, brandfrie garderobebilleder med beskrivelser. De er ikke gemt, før du vælger og tilpasser hvert forslag.",
   review:
     "Jeg kan gennemgå den samlede kladde og pege på noget, du bør kontrollere. Intet ændres eller publiceres automatisk.",
 };
 
 export function getAssistantContextGreeting(step: WorkspaceStep): string {
   return assistantContextGreetings[step];
+}
+
+export function orderWardrobeSuggestions<
+  Suggestion extends { name: string; ordinal: number },
+>(suggestions: readonly Suggestion[]): Suggestion[] {
+  return [...suggestions].sort(
+    (left, right) =>
+      left.ordinal - right.ordinal ||
+      left.name.localeCompare(right.name, "da-DK"),
+  );
 }
 
 export function assistantResponseBelongsToContext(input: {
@@ -137,8 +150,10 @@ export function wardrobeSnapshotHasChanges(
   };
   const normalizeSnapshot = (snapshot: WardrobeEditorSnapshot) => ({
     ...snapshot,
+    description: snapshot.description.replace(/\r\n?/gu, "\n").trim(),
     editorialNote: snapshot.editorialNote.replace(/\r\n?/gu, "\n").trim(),
     icon: snapshot.icon.trim(),
+    imagePath: snapshot.imagePath.trim(),
     name: snapshot.name.trim(),
     points: normalizePoints(snapshot.points),
     unlockRule: snapshot.unlockRule.replace(/\s+/gu, " ").trim(),
@@ -148,9 +163,11 @@ export function wardrobeSnapshotHasChanges(
 
   return (
     normalizedCurrent.category !== normalizedSaved.category ||
+    normalizedCurrent.description !== normalizedSaved.description ||
     normalizedCurrent.editorialNote !== normalizedSaved.editorialNote ||
     normalizedCurrent.equipSlot !== normalizedSaved.equipSlot ||
     normalizedCurrent.icon !== normalizedSaved.icon ||
+    normalizedCurrent.imagePath !== normalizedSaved.imagePath ||
     normalizedCurrent.name !== normalizedSaved.name ||
     normalizedCurrent.points !== normalizedSaved.points ||
     normalizedCurrent.rarity !== normalizedSaved.rarity ||
@@ -164,9 +181,11 @@ export function wardrobeSuggestionSnapshot(
 ): WardrobeEditorSnapshot {
   return {
     category: item.category,
+    description: item.description,
     editorialNote: item.reason,
     equipSlot: item.equipSlot,
-    icon: item.icon,
+    icon: "✨",
+    imagePath: item.imagePath,
     name: item.name,
     points: item.points > 0 ? item.points.toString() : "0",
     rarity: item.rarity,

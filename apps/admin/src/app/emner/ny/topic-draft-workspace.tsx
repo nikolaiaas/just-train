@@ -1339,6 +1339,11 @@ export function TopicDraftWorkspace({
 
   function openWardrobeAssistant() {
     selectAssistantMode("wardrobe");
+    if (!assistantMessage.trim()) {
+      setAssistantMessage(
+        "Lav 16 emnespecifikke garderobeting som ét 4×4-billedark, og beskriv tydeligt hvad der er på hvert billede.",
+      );
+    }
     window.requestAnimationFrame(() => assistantInputRef.current?.focus());
   }
 
@@ -1782,7 +1787,10 @@ export function TopicDraftWorkspace({
                 ))}
                 {assistantWorkingHere ? (
                   <p className={styles.thinkingMessage} role="status">
-                    <span aria-hidden="true">✦</span> Udarbejder et forslag…
+                    <span aria-hidden="true">✦</span>{" "}
+                    {assistantMode === "wardrobe"
+                      ? "Forbereder 16 idéer, tegner 4×4-billedarket og beskærer billederne…"
+                      : "Udarbejder et forslag…"}
                   </p>
                 ) : null}
                 <span ref={chatEndRef} aria-hidden="true" />

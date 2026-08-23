@@ -24,7 +24,7 @@ select results_eq(
       and operation.id = version.operation_id
     where operation.operation_key = 'content.draft_review'
   $$,
-  $$ values (2, 'openrouter'::text, 'openai'::text, 'openai/gpt-5-mini'::text) $$,
+  $$ values (3, 'openrouter'::text, 'openai'::text, 'openai/gpt-5-mini'::text) $$,
   'the review operation pins its immutable OpenAI-only route'
 );
 

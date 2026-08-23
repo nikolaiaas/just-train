@@ -35,7 +35,7 @@ export type AssistantEditorialContext = {
   topic: AssistantTopicContext;
   goal: AssistantGoalContext;
   exercise: AssistantExerciseContext;
-  wardrobeExamples: AssistantWardrobeItem[];
+  wardrobeExamples: AssistantWardrobeReviewItem[];
 };
 
 type TopicEditorialInput = {
@@ -71,7 +71,13 @@ type ReviewEditorialInput = {
   topic: AssistantTopicContext;
   goal: AssistantGoalContext;
   exercise: AssistantExerciseContext;
-  wardrobeExamples: AssistantWardrobeItem[];
+  wardrobeExamples: AssistantWardrobeReviewItem[];
+  history: AssistantHistoryMessage[];
+};
+
+export type WardrobeGridPlanInput = {
+  message: string;
+  topic: Pick<AssistantTopicContext, "title" | "description">;
   history: AssistantHistoryMessage[];
 };
 
@@ -81,13 +87,14 @@ export type AssistantRequest = {
     | "content.topic_brief"
     | "content.goal_draft"
     | "content.exercise_draft"
-    | "content.wardrobe_examples"
+    | "content.wardrobe_grid_plan"
     | "content.draft_review";
   requestId: string;
   inputData:
     | TopicEditorialInput
     | GoalEditorialInput
     | ExerciseEditorialInput
+    | WardrobeGridPlanInput
     | ReviewEditorialInput;
 };
 
@@ -130,7 +137,7 @@ export type AssistantSuggestion =
   | GoalAssistantSuggestion
   | ExerciseAssistantSuggestion;
 
-export type AssistantWardrobeItem = {
+export type AssistantWardrobeReviewItem = {
   name: string;
   icon: string;
   category: "clothing" | "equipment" | "effect";
@@ -139,6 +146,21 @@ export type AssistantWardrobeItem = {
   points: number;
   unlockRule: string;
   reason: string;
+};
+
+export type AssistantWardrobeItem = {
+  ordinal: number;
+  name: string;
+  description: string;
+  visualDescription: string;
+  category: "clothing" | "equipment" | "effect";
+  equipSlot: "head" | "body" | "held" | "feet" | "accessory";
+  rarity: "common" | "rare" | "special";
+  points: number;
+  unlockRule: string;
+  reason: string;
+  imagePath: string;
+  imageUrl: string;
 };
 
 export type AssistantDraftReviewCheck = {
@@ -184,7 +206,7 @@ const FIELD_NAMES = [
   "history",
   "context",
 ] as const;
-const WARDROBE_EQUIP_SLOTS = new Set<AssistantWardrobeItem["equipSlot"]>([
+const WARDROBE_EQUIP_SLOTS = new Set<AssistantWardrobeReviewItem["equipSlot"]>([
   "head",
   "body",
   "held",
@@ -439,16 +461,17 @@ function parseExerciseContext(value: unknown): AssistantExerciseContext | null {
 function parseWardrobeExamples(
   value: unknown,
   minimumItems: number,
-): AssistantWardrobeItem[] | null {
+  maximumItems = 16,
+): AssistantWardrobeReviewItem[] | null {
   if (
     !Array.isArray(value) ||
     value.length < minimumItems ||
-    value.length > 6
+    value.length > maximumItems
   ) {
     return null;
   }
 
-  const items: AssistantWardrobeItem[] = [];
+  const items: AssistantWardrobeReviewItem[] = [];
 
   for (const item of value) {
     const hasLegacyShape =
@@ -491,7 +514,7 @@ function parseWardrobeExamples(
         item.category !== "effect") ||
       typeof equipSlot !== "string" ||
       !WARDROBE_EQUIP_SLOTS.has(
-        equipSlot as AssistantWardrobeItem["equipSlot"],
+        equipSlot as AssistantWardrobeReviewItem["equipSlot"],
       ) ||
       (item.rarity !== "common" &&
         item.rarity !== "rare" &&
@@ -514,7 +537,7 @@ function parseWardrobeExamples(
       name: item.name,
       icon: item.icon,
       category: item.category,
-      equipSlot: equipSlot as AssistantWardrobeItem["equipSlot"],
+      equipSlot: equipSlot as AssistantWardrobeReviewItem["equipSlot"],
       rarity: item.rarity,
       points: item.points as number,
       unlockRule: item.unlockRule,
@@ -557,7 +580,7 @@ function operationForMode(
   if (mode === "topic") return "content.topic_brief";
   if (mode === "goal") return "content.goal_draft";
   if (mode === "exercise") return "content.exercise_draft";
-  if (mode === "wardrobe") return "content.wardrobe_examples";
+  if (mode === "wardrobe") return "content.wardrobe_grid_plan";
   return "content.draft_review";
 }
 
@@ -655,6 +678,25 @@ export function validateAssistantRequest(
       goal: context.goal,
       exercise: context.exercise,
       wardrobeExamples: context.wardrobeExamples,
+    };
+  } else if (mode === "wardrobe") {
+    if (
+      context.topic.title.length === 0 ||
+      context.topic.description.length === 0
+    ) {
+      return {
+        ok: false,
+        message:
+          "Gem emnets navn og beskrivelse, før du laver garderobebilleder. Billedgeneratoren bruger begge dele som kontekst.",
+      };
+    }
+
+    inputData = {
+      ...common,
+      topic: {
+        title: context.topic.title,
+        description: context.topic.description,
+      },
     };
   } else {
     inputData = { ...common, draft: context.topic };
@@ -864,17 +906,78 @@ function parseExerciseOutput(
 function parseWardrobeOutput(
   value: UnknownRecord,
 ): ParsedAssistantOutput | null {
-  if (
-    !hasExactKeys(value, ["reply", "items"]) ||
-    !isBoundedString(value.reply, 1, 1_500)
-  ) {
+  if (!hasExactKeys(value, ["items"])) {
     return null;
   }
 
-  const items = parseWardrobeExamples(value.items, 3);
-  if (!items) return null;
+  if (!Array.isArray(value.items) || value.items.length !== 16) return null;
 
-  return { reply: value.reply, suggestion: null, items };
+  const items: AssistantWardrobeItem[] = [];
+
+  for (const [index, item] of value.items.entries()) {
+    if (
+      !isRecord(item) ||
+      !hasExactKeys(item, [
+        "ordinal",
+        "name",
+        "description",
+        "visualDescription",
+        "category",
+        "equipSlot",
+        "rarity",
+        "points",
+        "unlockRule",
+        "reason",
+      ]) ||
+      item.ordinal !== index + 1 ||
+      !isBoundedString(item.name, 1, 80) ||
+      !isBoundedString(item.description, 1, 240) ||
+      !isBoundedString(item.visualDescription, 1, 500) ||
+      (item.category !== "clothing" &&
+        item.category !== "equipment" &&
+        item.category !== "effect") ||
+      typeof item.equipSlot !== "string" ||
+      !WARDROBE_EQUIP_SLOTS.has(
+        item.equipSlot as AssistantWardrobeItem["equipSlot"],
+      ) ||
+      (item.rarity !== "common" &&
+        item.rarity !== "rare" &&
+        item.rarity !== "special") ||
+      !Number.isInteger(item.points) ||
+      (item.points as number) < 0 ||
+      (item.points as number) > 1_000 ||
+      !isBoundedString(item.unlockRule, 0, 200) ||
+      !isBoundedString(item.reason, 1, 300) ||
+      !(
+        ((item.points as number) >= 1 && item.unlockRule.length === 0) ||
+        ((item.points as number) === 0 && item.unlockRule.length >= 1)
+      )
+    ) {
+      return null;
+    }
+
+    items.push({
+      ordinal: item.ordinal,
+      name: item.name,
+      description: item.description,
+      visualDescription: item.visualDescription,
+      category: item.category,
+      equipSlot: item.equipSlot as AssistantWardrobeItem["equipSlot"],
+      rarity: item.rarity,
+      points: item.points as number,
+      unlockRule: item.unlockRule,
+      reason: item.reason,
+      imagePath: "",
+      imageUrl: "",
+    });
+  }
+
+  return {
+    reply:
+      "Her er ét 4×4-billedark beskåret til 16 emnespecifikke garderobeforslag. Vælg kun de ting, du vil gemme som kladder.",
+    suggestion: null,
+    items,
+  };
 }
 
 function parseReviewCheck(

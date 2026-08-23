@@ -68,12 +68,16 @@ const wardrobeItem = {
   contentVersion: 1,
   createdAt: "2026-08-22T07:03:00.000Z",
   createdBy: "40000000-0000-4000-8000-000000000001",
+  description: "Et glimtende stjernedrys til barnets figur.",
   editorialNote: "Et syntetisk eksempel.",
   editorialStatus: "draft",
   equipSlot: "accessory",
   hasPendingRevision: false,
   icon: "✨",
   id: "50000000-0000-4000-8000-000000000001",
+  imagePath: "70000000-0000-4000-8000-000000000001/01.png",
+  imageUrl:
+    "https://cdn.example.test/70000000-0000-4000-8000-000000000001/01.png",
   name: "Stjernestøv",
   points: 0,
   publishedAt: null,
@@ -333,12 +337,14 @@ test("resume loads unpublished drafts and avoids occupied content positions", as
           content_version: wardrobeItem.contentVersion,
           created_at: wardrobeItem.createdAt,
           created_by: wardrobeItem.createdBy,
+          description: wardrobeItem.description,
           editorial_note: wardrobeItem.editorialNote,
           editorial_status: wardrobeItem.editorialStatus,
           equip_slot: wardrobeItem.equipSlot,
           has_pending_revision: wardrobeItem.hasPendingRevision,
           icon: wardrobeItem.icon,
           id: wardrobeItem.id,
+          image_path: wardrobeItem.imagePath,
           is_published: false,
           name: wardrobeItem.name,
           points: null,
@@ -408,6 +414,18 @@ test("resume loads unpublished drafts and avoids occupied content positions", as
       const response = responses[responseIndex++];
       calls.push({ args, name, operation: "rpc" });
       return Promise.resolve(response);
+    },
+    storage: {
+      from(bucket) {
+        assert.equal(bucket, "wardrobe-images");
+        return {
+          getPublicUrl(path) {
+            return {
+              data: { publicUrl: `https://cdn.example.test/${path}` },
+            };
+          },
+        };
+      },
     },
   };
 

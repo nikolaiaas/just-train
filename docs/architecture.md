@@ -116,30 +116,40 @@ remain roadmap work rather than claims of current protection. The decision
 history is recorded in
 [`ai-image-provider-review.md`](./ai-image-provider-review.md).
 
-Administration uses five additional bounded operations:
-`content.topic_brief`, `content.goal_draft`, `content.exercise_draft`,
-`content.wardrobe_examples`, and `content.draft_review`. Their prompts and
-strict JSON contracts live in immutable database versions. They pin
-`openai/gpt-5-mini` through OpenRouter to OpenAI-only routing with fallback
-disabled. The browser can provide the current draft and a short bounded
-conversation, but cannot select a provider, model, prompt, cost limit,
-publication state, or database identity. A redaktør must explicitly copy a
-proposal into the form and save an unpublished draft. The review operation
-returns only a structured checklist and next actions; it has no save, approval,
-or publication shape.
+Administration uses bounded operations for topic, goal, exercise, wardrobe,
+and full-draft review. Their prompts and strict JSON contracts live in
+immutable database versions. Structured operations pin `openai/gpt-5-mini`
+through OpenRouter to OpenAI-only routing with fallback disabled. The browser
+can provide only validated editorial context and a short bounded conversation;
+it cannot select a provider, model, prompt, cost limit, publication state, or
+database identity. A redaktør must explicitly copy a proposal into the form
+and save an unpublished draft. The review operation returns only a structured
+checklist and next actions; it has no save, approval, or publication shape.
+
+The visual wardrobe flow deliberately uses two separately versioned
+operations. `content.wardrobe_grid_plan` turns the current topic title,
+description, and bounded editor direction into exactly 16 ordered item
+specifications. `content.wardrobe_grid_image` pins `openai/gpt-image-2` and
+receives that same topic text plus all 16 visual descriptions. Its editable
+database prompt asks for one square 4×4 sheet in row-major order with no text,
+logos, people, or cross-cell bleed. Trusted Edge code validates the returned
+PNG, crops it mechanically into cells 01 through 16, and stores the sheet and
+crops under the image job id. No image prompt, provider choice, crop path, or
+raw image byte is accepted from the public client.
 
 Topic-specific reward authoring is persisted separately in `wardrobe_items`.
-Each row belongs to one topic and carries either a bounded point price or a
-bounded unlock rule, plus category, rarity, editorial note, order, and an
-explicit `draft`, `approved`, or `rejected` decision. RLS allows content
-administrators to manage unpublished rows while public readers can see only
-approved rows that have been published under a published topic. AI wardrobe
-output remains a transient suggestion until an administrator opens it in the
-editor and saves it; any later content edit resets the decision to `draft`.
-Public client grants omit editorial notes and creator provenance; the admin
-workspace reads those fields through a narrowly scoped, administrator-only
-database function.
-Atomic topic publication and child inventory remain separate roadmap work.
+Each row belongs to one topic and carries a nullable synthetic image path and
+child-facing description, either a bounded point price or bounded unlock rule,
+category, exclusive body slot, rarity, editorial note, order, and an explicit
+`draft`, `approved`, or `rejected` decision. The dedicated public-read
+`wardrobe-images` bucket contains synthetic shared catalogue art only; writes
+remain service-role-only. It must never contain child photos or other personal
+media. AI output remains a transient 16-card proposal until an administrator
+opens a card in the editor and saves it. Published-row edits, including image
+and description changes, stay in the private pending revision and become
+child-visible only after another approval and topic publication. Legacy rows
+may have no image, but new interfaces show an explicit missing-image state
+rather than presenting the old emoji as catalogue artwork.
 
 ## First vertical slice
 

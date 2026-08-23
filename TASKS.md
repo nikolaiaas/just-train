@@ -170,6 +170,7 @@ Exit condition: pilot screens can be assembled from reviewed components rather t
 - [x] Add topics with a simple mutable published/unpublished state, goals, ordered exercise steps, equipment, and safety text for the private play app.
 - [x] Add goal enrolments, training sessions, attempts, personal bests, and difficulty ratings.
 - [x] Add child wardrobe inventory with one atomic, exclusive equipped item per head, body, hand, feet, or accessory position; one feet item represents a complete pair of shoes.
+- [x] Replace wardrobe-item emoji artwork with one topic-aware GPT Image 2 generation that produces an exact 4×4 sheet, stores the sheet, crops it row by row into 16 individual images, and keeps every generated item inside the existing human review and publication flow.
 - [ ] Add the append-only point ledger and reward-acquisition flow that grants catalog items to child inventory.
 - [x] Add stable AI operations, immutable prompt/provider versions, generic family/admin jobs, private media metadata, named media slots, and worker-only attempt audit.
 - [x] Store the initial cartoon prompt in the database and let an administrator atomically publish a replacement while existing jobs remain pinned.
@@ -292,7 +293,7 @@ Exit condition: a failed permission test, migration, type check, or core-flow sm
 
 - Direct child email login and account recovery.
 - All 18 child screens and all 7 administration screens at production depth.
-- Advanced wardrobe visuals, manual catalog ordering, and the complete point/reward economy.
+- Manual catalog ordering and the complete point/reward economy.
 - Production AI-assisted content authoring.
 - Automated video anonymization and personalized completion videos.
 - Push notifications.

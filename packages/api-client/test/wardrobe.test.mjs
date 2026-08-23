@@ -12,6 +12,7 @@ const otherChildId = "30000000-0000-4000-8000-000000000002";
 const shoesId = "f1000000-0000-4000-8000-000000000001";
 const helmetId = "f1000000-0000-4000-8000-000000000003";
 const topicId = "10000000-0000-4000-8000-000000000001";
+const imageJobId = "a9ed2205-4ab3-4a28-99d0-a8e61e4a2260";
 
 const shoesRow = Object.freeze({
   acquired_at: "2026-08-23T08:00:00.000Z",
@@ -19,9 +20,11 @@ const shoesRow = Object.freeze({
   catalog_item_id: shoesId,
   category: "clothing",
   child_profile_id: childId,
+  description: "Et helt par hurtige, syntetiske fodboldsko.",
   equip_slot: "feet",
   equipped_at: "2026-08-23T08:05:00.000Z",
   icon: "👟",
+  image_path: `${imageJobId}/01.png`,
   is_equipped: true,
   name: "Lynsko",
   rarity: "rare",
@@ -35,9 +38,11 @@ const helmetRow = Object.freeze({
   catalog_item_id: helmetId,
   category: "equipment",
   child_profile_id: childId,
+  description: "En venlig, syntetisk hjelm til boldlegen.",
   equip_slot: "head",
   equipped_at: null,
   icon: "🧢",
+  image_path: `${imageJobId}/02.png`,
   is_equipped: false,
   name: "Superhjelm",
   rarity: "special",
@@ -51,6 +56,20 @@ function rpcClient(response, calls = []) {
     async rpc(name, args) {
       calls.push({ operation: "rpc", name, args });
       return response;
+    },
+    storage: {
+      from(bucket) {
+        assert.equal(bucket, "wardrobe-images");
+        return {
+          getPublicUrl(path) {
+            return {
+              data: {
+                publicUrl: `https://example.supabase.test/storage/v1/object/public/wardrobe-images/${path}`,
+              },
+            };
+          },
+        };
+      },
     },
   };
 }
@@ -76,9 +95,12 @@ test("loads the RLS-filtered child wardrobe with exclusive slot state", async ()
       acquiredAt: shoesRow.acquired_at,
       category: "clothing",
       childProfileId: childId,
+      description: shoesRow.description,
       equipSlot: "feet",
       equippedAt: shoesRow.equipped_at,
       icon: "👟",
+      imagePath: shoesRow.image_path,
+      imageUrl: `https://example.supabase.test/storage/v1/object/public/wardrobe-images/${shoesRow.image_path}`,
       isEquipped: true,
       name: "Lynsko",
       rarity: "rare",
@@ -89,9 +111,12 @@ test("loads the RLS-filtered child wardrobe with exclusive slot state", async ()
       acquiredAt: helmetRow.acquired_at,
       category: "equipment",
       childProfileId: childId,
+      description: helmetRow.description,
       equipSlot: "head",
       equippedAt: null,
       icon: "🧢",
+      imagePath: helmetRow.image_path,
+      imageUrl: `https://example.supabase.test/storage/v1/object/public/wardrobe-images/${helmetRow.image_path}`,
       isEquipped: false,
       name: "Superhjelm",
       rarity: "special",

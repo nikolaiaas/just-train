@@ -90,11 +90,15 @@ const exerciseTwoRow = Object.freeze({
 const wardrobeOneRow = Object.freeze({
   category: "effect",
   content_version: 1,
+  description: "Et glimtende stjernedrys omkring barnets figur.",
   editorial_status: "approved",
   equip_slot: "accessory",
   has_pending_revision: false,
   icon: "✨",
   id: WARDROBE_ONE_ID,
+  image_path: "70000000-0000-4000-8000-000000000001/01.png",
+  image_url:
+    "https://cdn.example.test/70000000-0000-4000-8000-000000000001/01.png",
   is_published: true,
   name: "Stjernestøv",
   points: 40,
@@ -109,8 +113,12 @@ const wardrobeOneRow = Object.freeze({
 const wardrobeTwoRow = Object.freeze({
   ...wardrobeOneRow,
   category: "clothing",
+  description: "En blød hue med små balancestjerner.",
   icon: "🧢",
   id: WARDROBE_TWO_ID,
+  image_path: "70000000-0000-4000-8000-000000000001/02.png",
+  image_url:
+    "https://cdn.example.test/70000000-0000-4000-8000-000000000001/02.png",
   editorial_status: "draft",
   is_published: false,
   name: "Balancehue",
@@ -210,11 +218,14 @@ test("keeps a published wardrobe item's staged revision editable", () => {
   assert.deepEqual(detail.wardrobeItems[0], {
     category: "effect",
     contentVersion: 1,
+    description: wardrobeOneRow.description,
     editorialStatus: "draft",
     equipSlot: "feet",
     hasPendingRevision: true,
     icon: "👟",
     id: WARDROBE_ONE_ID,
+    imagePath: wardrobeOneRow.image_path,
+    imageUrl: wardrobeOneRow.image_url,
     name: "Stjernesko",
     points: 40,
     publishedAt: PUBLISHED_AT,
@@ -353,6 +364,18 @@ function clientForResponses(responses) {
     rpc(name, args) {
       calls.push({ args, name, operation: "rpc" });
       return Promise.resolve(responses[name] ?? { data: [], error: null });
+    },
+    storage: {
+      from(bucket) {
+        assert.equal(bucket, "wardrobe-images");
+        return {
+          getPublicUrl(path) {
+            return {
+              data: { publicUrl: `https://cdn.example.test/${path}` },
+            };
+          },
+        };
+      },
     },
   };
 }

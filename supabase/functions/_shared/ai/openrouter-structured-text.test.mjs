@@ -155,6 +155,26 @@ test("accepts only bounded server-owned text options", () => {
   }
 });
 
+test("accepts the wardrobe grid plan token ceiling pinned by the database", () => {
+  const wardrobeGridPlanOptions = {
+    ...OPTIONS,
+    max_tokens: 4_096,
+  };
+
+  assert.deepEqual(
+    parseOpenRouterStructuredTextOptions(wardrobeGridPlanOptions),
+    wardrobeGridPlanOptions,
+  );
+
+  const request = createOpenRouterStructuredTextRequest({
+    ...REQUEST_INPUT,
+    options: wardrobeGridPlanOptions,
+    schemaName: "admin_wardrobe_grid_plan",
+  });
+
+  assert.equal(request.max_tokens, 4_096);
+});
+
 test("builds strict JSON-schema chat messages without tools or browsing", () => {
   const request = createOpenRouterStructuredTextRequest(REQUEST_INPUT);
 

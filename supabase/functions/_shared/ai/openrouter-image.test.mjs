@@ -3,7 +3,9 @@ import test from "node:test";
 
 import {
   createOpenRouterImageRequest,
+  createOpenRouterTextToImageRequest,
   generateOpenRouterImage,
+  generateOpenRouterTextToImage,
   OpenRouterImageError,
   parseOpenRouterImageOptions,
   parseOpenRouterImageResponse,
@@ -96,6 +98,28 @@ test("builds a data URL request without accepting a client-selected model", () =
         retryable: false,
       }),
   );
+});
+
+test("builds a pinned text-to-image request without input references", () => {
+  const body = createOpenRouterTextToImageRequest({
+    model: "openai/gpt-image-2",
+    options: OPTIONS,
+    prompt: PROMPT,
+  });
+
+  assert.deepEqual(body, {
+    aspect_ratio: "1:1",
+    background: "opaque",
+    model: "openai/gpt-image-2",
+    n: 1,
+    prompt: PROMPT,
+    provider: {
+      allow_fallbacks: false,
+      only: ["openai"],
+    },
+    quality: "low",
+  });
+  assert.equal(Object.hasOwn(body, "input_references"), false);
 });
 
 test("rejects a declared MIME type that disagrees with the image signature", () => {
@@ -270,6 +294,38 @@ test("posts only to the dedicated Images endpoint and maps throttling", async ()
     allow_fallbacks: false,
     only: ["openai"],
   });
+});
+
+test("posts a text-only GPT Image 2 request and parses its PNG response", async () => {
+  let capturedBody;
+  const result = await generateOpenRouterTextToImage({
+    apiKey: "sk-or-v1-test-only",
+    fetchImpl: async (_url, init) => {
+      capturedBody = JSON.parse(init.body);
+      return Response.json(
+        {
+          data: [
+            {
+              b64_json: Buffer.from(PNG_BYTES).toString("base64"),
+              media_type: "image/png",
+            },
+          ],
+          usage: { cost: 0.01, total_tokens: 4 },
+        },
+        { headers: { "x-generation-id": "gen-text-image-1" } },
+      );
+    },
+    model: "openai/gpt-image-2",
+    options: OPTIONS,
+    prompt: PROMPT,
+    timeoutMs: 1_000,
+  });
+
+  assert.equal(capturedBody.model, "openai/gpt-image-2");
+  assert.equal(Object.hasOwn(capturedBody, "input_references"), false);
+  assert.deepEqual(result.bytes, PNG_BYTES);
+  assert.equal(result.costMicrousd, 10_000);
+  assert.equal(result.providerRequestId, "gen-text-image-1");
 });
 
 test("maps an empty provider failure from its HTTP status", async () => {

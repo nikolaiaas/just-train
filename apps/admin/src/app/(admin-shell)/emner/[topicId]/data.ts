@@ -38,11 +38,14 @@ export type AdminTopicDetailGoal = {
 export type AdminTopicDetailWardrobeItem = {
   category: "clothing" | "equipment" | "effect";
   contentVersion: number;
+  description: string;
   editorialStatus: "draft" | "approved" | "rejected";
   equipSlot: "head" | "body" | "held" | "feet" | "accessory";
   hasPendingRevision: boolean;
   icon: string;
   id: string;
+  imagePath: string | null;
+  imageUrl: string | null;
   name: string;
   points: number | null;
   publishedAt: string | null;
@@ -102,6 +105,8 @@ const WARDROBE_EQUIP_SLOTS = new Set([
   "feet",
   "accessory",
 ]);
+const WARDROBE_IMAGE_PATH_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\/(?:0[1-9]|1[0-6])\.png$/i;
 
 const TOPIC_COLUMNS =
   "id, slug, title, description, icon, accent_color, content_version, is_published, published_at, updated_at" as const;
@@ -110,7 +115,7 @@ const GOAL_COLUMNS =
 const EXERCISE_COLUMNS =
   "id, goal_id, title, instructions, measurement, target_value, estimated_minutes, equipment, safety_notes, sort_order, content_version, is_published, published_at, updated_at" as const;
 const WARDROBE_COLUMNS =
-  "id, topic_id, name, icon, category, equip_slot, rarity, points, unlock_rule, sort_order, content_version, is_published, published_at, updated_at" as const;
+  "id, topic_id, name, icon, description, image_path, category, equip_slot, rarity, points, unlock_rule, sort_order, content_version, is_published, published_at, updated_at" as const;
 
 function isMissingWardrobeStorageError(error: unknown): boolean {
   return (
@@ -358,6 +363,9 @@ function parseWardrobeItemRow(
   const unlockRule = value.unlock_rule;
   const equipSlot = value.equip_slot ?? "accessory";
   const hasPendingRevision = value.has_pending_revision ?? false;
+  const description = value.description ?? "";
+  const imagePath = value.image_path ?? null;
+  const imageUrl = value.image_url ?? null;
   const rewardRuleIsValid =
     (Number.isInteger(points) &&
       (points as number) >= 1 &&
@@ -371,6 +379,12 @@ function parseWardrobeItemRow(
     !isUuid(value.topic_id) ||
     !isBoundedText(value.name, 80) ||
     !isBoundedText(value.icon, 16) ||
+    !isBoundedText(description, 240, true) ||
+    (imagePath !== null &&
+      (typeof imagePath !== "string" ||
+        !WARDROBE_IMAGE_PATH_PATTERN.test(imagePath))) ||
+    (imageUrl !== null &&
+      (typeof imageUrl !== "string" || !URL.canParse(imageUrl))) ||
     typeof value.category !== "string" ||
     !WARDROBE_CATEGORIES.has(value.category) ||
     typeof equipSlot !== "string" ||
@@ -395,12 +409,15 @@ function parseWardrobeItemRow(
   return {
     category: value.category as AdminTopicDetailWardrobeItem["category"],
     contentVersion: value.content_version,
+    description,
     editorialStatus:
       value.editorial_status as AdminTopicDetailWardrobeItem["editorialStatus"],
     equipSlot: equipSlot as AdminTopicDetailWardrobeItem["equipSlot"],
     hasPendingRevision,
     icon: value.icon,
     id: value.id.toLowerCase(),
+    imagePath: typeof imagePath === "string" ? imagePath.toLowerCase() : null,
+    imageUrl,
     name: value.name,
     points: points as number | null,
     publishedAt: publication.publishedAt,
@@ -575,12 +592,30 @@ export async function loadAdminTopicDetail(
     const wardrobeRows = draftWardrobeResponse.error
       ? publishedWardrobeResponse.error
         ? []
-        : publishedWardrobeResponse.data.map((item) => ({
-            ...item,
-            editorial_status: "approved",
-            has_pending_revision: false,
-          }))
+        : publishedWardrobeResponse.data.map((item: unknown) =>
+            isRecord(item)
+              ? {
+                  ...item,
+                  editorial_status: "approved",
+                  has_pending_revision: false,
+                }
+              : item,
+          )
       : draftWardrobeResponse.data;
+    const wardrobeImageBucket = client.storage.from("wardrobe-images");
+    const wardrobeRowsWithImages = wardrobeRows.map((item) => {
+      if (!isRecord(item)) return item;
+
+      if (typeof item.image_path !== "string") {
+        return { ...item, image_url: null };
+      }
+
+      return {
+        ...item,
+        image_url: wardrobeImageBucket.getPublicUrl(item.image_path).data
+          .publicUrl,
+      };
+    });
 
     const goalIds = goalsResponse.data.map((row) =>
       isRecord(row) && isUuid(row.id) ? row.id.toLowerCase() : null,
@@ -604,7 +639,7 @@ export async function loadAdminTopicDetail(
       exercises: exercisesResponse.data,
       goals: goalsResponse.data,
       topic: topicResponse.data,
-      wardrobeItems: wardrobeRows,
+      wardrobeItems: wardrobeRowsWithImages,
     });
 
     if (!detail) throw new AdminTopicDetailLoadError();

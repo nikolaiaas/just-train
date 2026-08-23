@@ -103,6 +103,71 @@ test("preserves immutable legacy wardrobe shape and rejects unknown slots", () =
   assert.equal(invalid, null);
 });
 
+function wardrobeGridItem(ordinal, overrides = {}) {
+  return {
+    ordinal,
+    name: `Fodboldting ${ordinal}`,
+    description: `En venlig garderobeting til fodbold ${ordinal}.`,
+    visualDescription: `A centered blue football item, variant ${ordinal}.`,
+    category: "clothing",
+    equipSlot: ordinal % 2 === 0 ? "feet" : "accessory",
+    rarity: "common",
+    points: 100,
+    unlockRule: "",
+    reason: "Passer til emnets legende udtryk.",
+    ...overrides,
+  };
+}
+
+test("normalizes exactly sixteen row-major wardrobe grid items without icons", () => {
+  const items = Array.from({ length: 16 }, (_, index) =>
+    wardrobeGridItem(index + 1, {
+      name: ` Fodbold\n ting ${index + 1} `,
+      description: ` Beskrivelse ${index + 1}. `,
+    }),
+  );
+
+  const normalized = normalizeAdminContentOutput("content.wardrobe_grid_plan", {
+    items,
+  });
+
+  assert.equal(normalized?.items.length, 16);
+  assert.equal(normalized?.items[0].ordinal, 1);
+  assert.equal(normalized?.items[15].ordinal, 16);
+  assert.equal(normalized?.items[0].name, "Fodbold ting 1");
+  assert.equal(normalized?.items[0].description, "Beskrivelse 1.");
+  assert.equal(Object.hasOwn(normalized?.items[0] ?? {}, "icon"), false);
+});
+
+test("rejects incomplete, reordered, icon-bearing, and invalid-reward grid plans", () => {
+  const validItems = Array.from({ length: 16 }, (_, index) =>
+    wardrobeGridItem(index + 1),
+  );
+
+  for (const items of [
+    validItems.slice(0, 15),
+    validItems.map((item, index) =>
+      index === 1 ? { ...item, ordinal: 3 } : item,
+    ),
+    validItems.map((item, index) =>
+      index === 0 ? { ...item, icon: "👟" } : item,
+    ),
+    validItems.map((item, index) =>
+      index === 0 ? { ...item, points: 0, unlockRule: "" } : item,
+    ),
+    validItems.map((item, index) =>
+      index === 0
+        ? { ...item, points: 100, unlockRule: "Efter tre øvelser" }
+        : item,
+    ),
+  ]) {
+    assert.equal(
+      normalizeAdminContentOutput("content.wardrobe_grid_plan", { items }),
+      null,
+    );
+  }
+});
+
 test("fails closed when canonicalization removes required copy", () => {
   assert.equal(
     normalizeAdminContentOutput("content.topic_brief", {

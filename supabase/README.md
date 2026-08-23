@@ -82,6 +82,18 @@ or the administration assistant. The tracked Codex project action **Start
 local AI** runs the same command. Hosted Development uses separately deployed
 Functions and does not depend on this local process.
 
+The administration wardrobe flow uses two additional immutable operations.
+`content.wardrobe_grid_plan` produces exactly 16 ordered synthetic item
+descriptions from the current topic title, topic description, and bounded
+editor direction. `content.wardrobe_grid_image` then passes the same topic
+context and all 16 visual descriptions to `openai/gpt-image-2`, generates one
+square 4×4 PNG, and crops it row by row into `01.png` through `16.png`. The
+sheet and crops live in the dedicated public-read `wardrobe-images` bucket,
+which is restricted to synthetic shared catalogue art and service-role writes.
+Never put child or family media in that bucket. Generated cards remain ordinary
+unpublished wardrobe proposals until an administrator saves, approves, and
+publishes them.
+
 Do not put that key in Expo, Next.js public variables, Git, task evidence, or
 logs. The hosted secret is already present, but a key alone does not deploy the
 migration or Edge Function.

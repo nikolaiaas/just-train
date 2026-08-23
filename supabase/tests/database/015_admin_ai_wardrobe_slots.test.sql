@@ -97,7 +97,7 @@ select results_eq(
   $$,
   $$
     values
-      ('content.draft_review'::text, 2),
+      ('content.draft_review'::text, 3),
       ('content.wardrobe_examples'::text, 2)
   $$,
   'slot-aware wardrobe and review contracts are active immutable revisions'
@@ -118,7 +118,7 @@ select results_eq(
   $$,
   $$
     values
-      ('content.draft_review'::text, 2::bigint),
+      ('content.draft_review'::text, 3::bigint),
       ('content.wardrobe_examples'::text, 2::bigint)
   $$,
   'each operation keeps its immutable legacy version beside the new revision'

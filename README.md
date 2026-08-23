@@ -23,6 +23,11 @@ to OpenAI with provider fallback disabled. An authenticated family member can su
 photo for the currently selected child; the prompt and provider configuration
 are versioned in the database. The OpenRouter secret remains server-only and
 must never be included in the mobile bundle or a `NEXT_PUBLIC_*` variable.
+The administration uses the same server boundary for synthetic wardrobe art:
+topic text is turned into exactly 16 descriptions, GPT Image 2 draws one 4×4
+sheet, and trusted code crops it into 16 catalogue images. Those prompts also
+remain database-versioned, so an administrator can improve them without an app
+release.
 
 ## Requirements
 

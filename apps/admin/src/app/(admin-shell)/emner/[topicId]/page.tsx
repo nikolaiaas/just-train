@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { getAdminAccessSession } from "@/lib/auth/dal";
+import { WardrobeItemImage } from "@/app/emner/wardrobe-item-image";
 
 import {
   loadAdminTopicDetail,
@@ -452,14 +453,27 @@ export default async function TopicDetailPage({
           <ul className={styles.wardrobeGrid} role="list">
             {topic.wardrobeItems.map((item) => (
               <li className={styles.wardrobeCard} key={item.id}>
-                <span className={styles.rewardIcon} aria-hidden="true">
-                  {item.icon}
-                </span>
+                <WardrobeItemImage
+                  alt={
+                    item.description
+                      ? `${item.name}. ${item.description}`
+                      : item.name
+                  }
+                  className={styles.rewardMedia}
+                  imageClassName={styles.rewardMediaImage}
+                  imageUrl={item.imageUrl}
+                  placeholderClassName={styles.rewardMediaPlaceholder}
+                />
                 <div className={styles.rewardContent}>
                   <div className={styles.rewardTitleLine}>
                     <h3>{item.name}</h3>
                     <WardrobeStatusBadge item={item} />
                   </div>
+                  {item.description ? (
+                    <p className={styles.rewardDescription}>
+                      {item.description}
+                    </p>
+                  ) : null}
                   <p className={styles.rewardMeta}>
                     {categoryLabels[item.category]} ·{" "}
                     {rarityLabels[item.rarity]} ·{" "}

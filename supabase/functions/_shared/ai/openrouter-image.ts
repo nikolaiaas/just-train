@@ -109,13 +109,7 @@ export function parseOpenRouterImageOptions(
   return value as OpenRouterImageOptions;
 }
 
-export function createOpenRouterImageRequest(input: {
-  inputBytes: Uint8Array;
-  inputMimeType: "image/jpeg" | "image/png" | "image/webp";
-  model: string;
-  options: unknown;
-  prompt: string;
-}): Record<string, unknown> {
+function validateImageRequest(input: { model: string; prompt: string }): void {
   if (input.model !== "openai/gpt-image-2") {
     throw new OpenRouterImageError({
       attemptCode: "unsupported_model",
@@ -135,6 +129,31 @@ export function createOpenRouterImageRequest(input: {
       retryable: false,
     });
   }
+}
+
+export function createOpenRouterTextToImageRequest(input: {
+  model: string;
+  options: unknown;
+  prompt: string;
+}): Record<string, unknown> {
+  validateImageRequest(input);
+  const options = parseOpenRouterImageOptions(input.options);
+
+  return {
+    model: input.model,
+    prompt: input.prompt,
+    ...options,
+  };
+}
+
+export function createOpenRouterImageRequest(input: {
+  inputBytes: Uint8Array;
+  inputMimeType: "image/jpeg" | "image/png" | "image/webp";
+  model: string;
+  options: unknown;
+  prompt: string;
+}): Record<string, unknown> {
+  validateImageRequest(input);
 
   // This operation has been live-verified with PNG and the native client emits
   // JPEG. Keep the shared detector broader for future operations, but accept
@@ -585,14 +604,10 @@ export function parseOpenRouterImageResponse(input: {
   };
 }
 
-export async function generateOpenRouterImage(input: {
+async function sendOpenRouterImageRequest(input: {
   apiKey: string;
   fetchImpl?: FetchLike;
-  inputBytes: Uint8Array;
-  inputMimeType: "image/jpeg" | "image/png" | "image/webp";
-  model: string;
-  options: unknown;
-  prompt: string;
+  requestBody: Record<string, unknown>;
   timeoutMs: number;
 }): Promise<OpenRouterImageResult> {
   if (!input.apiKey.startsWith("sk-or-")) {
@@ -603,7 +618,6 @@ export async function generateOpenRouterImage(input: {
     });
   }
 
-  const requestBody = createOpenRouterImageRequest(input);
   const fetchImpl = input.fetchImpl ?? fetch;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), input.timeoutMs);
@@ -615,7 +629,7 @@ export async function generateOpenRouterImage(input: {
         Authorization: `Bearer ${input.apiKey}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(requestBody),
+      body: JSON.stringify(input.requestBody),
       signal: controller.signal,
     });
     const providerRequestId =
@@ -666,4 +680,38 @@ export async function generateOpenRouterImage(input: {
   } finally {
     clearTimeout(timeout);
   }
+}
+
+export async function generateOpenRouterTextToImage(input: {
+  apiKey: string;
+  fetchImpl?: FetchLike;
+  model: string;
+  options: unknown;
+  prompt: string;
+  timeoutMs: number;
+}): Promise<OpenRouterImageResult> {
+  return sendOpenRouterImageRequest({
+    apiKey: input.apiKey,
+    fetchImpl: input.fetchImpl,
+    requestBody: createOpenRouterTextToImageRequest(input),
+    timeoutMs: input.timeoutMs,
+  });
+}
+
+export async function generateOpenRouterImage(input: {
+  apiKey: string;
+  fetchImpl?: FetchLike;
+  inputBytes: Uint8Array;
+  inputMimeType: "image/jpeg" | "image/png" | "image/webp";
+  model: string;
+  options: unknown;
+  prompt: string;
+  timeoutMs: number;
+}): Promise<OpenRouterImageResult> {
+  return sendOpenRouterImageRequest({
+    apiKey: input.apiKey,
+    fetchImpl: input.fetchImpl,
+    requestBody: createOpenRouterImageRequest(input),
+    timeoutMs: input.timeoutMs,
+  });
 }

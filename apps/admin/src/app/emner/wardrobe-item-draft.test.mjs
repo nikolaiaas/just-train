@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   MAX_WARDROBE_EDITORIAL_NOTE_LENGTH,
+  MAX_WARDROBE_DESCRIPTION_LENGTH,
   MAX_WARDROBE_ICON_LENGTH,
   MAX_WARDROBE_NAME_LENGTH,
   MAX_WARDROBE_POINTS,
@@ -20,6 +21,8 @@ function draftForm(overrides = {}) {
     topicId: TOPIC_ID,
     name: "  Regnbuebold  ",
     icon: "  🌈  ",
+    description: "  En farverig syntetisk bold til garderoben.  ",
+    imagePath: "A9ED2205-4AB3-4A28-99D0-A8E61E4A2260/01.PNG",
     category: "equipment",
     equipSlot: "held",
     rarity: "rare",
@@ -59,6 +62,8 @@ test("normalizes a point-priced wardrobe draft", () => {
       topicId: TOPIC_ID,
       name: "Regnbuebold",
       icon: "🌈",
+      description: "En farverig syntetisk bold til garderoben.",
+      imagePath: "a9ed2205-4ab3-4a28-99d0-a8e61e4a2260/01.png",
       category: "equipment",
       equipSlot: "held",
       rarity: "rare",
@@ -116,6 +121,7 @@ test("enforces bounded content and point values", () => {
   const cases = [
     ["name", "x".repeat(MAX_WARDROBE_NAME_LENGTH + 1)],
     ["icon", "🙂".repeat(MAX_WARDROBE_ICON_LENGTH + 1)],
+    ["description", "x".repeat(MAX_WARDROBE_DESCRIPTION_LENGTH + 1)],
     ["points", String(MAX_WARDROBE_POINTS + 1)],
     ["unlockRule", "x".repeat(MAX_WARDROBE_UNLOCK_RULE_LENGTH + 1)],
     ["editorialNote", "x".repeat(MAX_WARDROBE_EDITORIAL_NOTE_LENGTH + 1)],
@@ -129,6 +135,23 @@ test("enforces bounded content and point values", () => {
     const result = validateWardrobeItemDraftForm(draftForm(overrides));
     assert.equal(result.ok, false, field);
     assert.ok(!result.ok && result.fieldErrors[field], field);
+  }
+});
+
+test("allows legacy items without an image and rejects foreign image paths", () => {
+  const legacy = validateWardrobeItemDraftForm(
+    draftForm({ description: "", imagePath: "" }),
+  );
+  assert.equal(legacy.ok, true);
+
+  for (const imagePath of [
+    "https://example.com/item.png",
+    "a9ed2205-4ab3-4a28-99d0-a8e61e4a2260/sheet.png",
+    "a9ed2205-4ab3-4a28-99d0-a8e61e4a2260/17.png",
+  ]) {
+    const result = validateWardrobeItemDraftForm(draftForm({ imagePath }));
+    assert.equal(result.ok, false, imagePath);
+    assert.ok(!result.ok && result.fieldErrors.imagePath);
   }
 });
 
