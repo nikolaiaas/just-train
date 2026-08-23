@@ -1,0 +1,19 @@
+version = 1
+name = "Bare Træn"
+
+[setup]
+script = '''
+mise install
+mise exec -- corepack enable
+mise exec -- pnpm install --frozen-lockfile
+'''
+
+[[actions]]
+name = "Start administration"
+icon = "run"
+command = "mise exec -- pnpm preview:admin"
+
+[[actions]]
+name = "Start Dev Console"
+icon = "tool"
+command = "mise exec -- pnpm dev:console"

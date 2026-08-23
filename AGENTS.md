@@ -12,6 +12,7 @@
 - Use pnpm only. Do not switch to npm or yarn, and do not upgrade or downgrade dependencies unless the task explicitly requires it.
 - The mobile app uses Expo SDK 57. The App Store build of Expo Go is incompatible with this project; do not downgrade the app to make Expo Go work.
 - Prefer `mise exec -- pnpm dev:console` when the user wants the clickable local control page. It runs at `http://127.0.0.1:11009`; the root `Start Bare Træn.command` file is the Finder launcher.
+- Use `mise exec -- pnpm preview:admin` when the user asks ChatGPT/Codex to start only the administration preview. It reuses a responsive admin from this checkout, safely restarts a verified but unresponsive one, refuses an unrelated port owner, and stays attached when it starts the server.
 - Use `mise exec -- pnpm dev:web` for the admin app and mobile Safari preview.
 - Use `mise exec -- pnpm dev:iphone` after **Bare Træn Dev** has been installed through an EAS development build.
 - Use `mise exec -- pnpm supabase:start` only when a task needs the local backend. Supabase Studio is at `http://localhost:54323`.

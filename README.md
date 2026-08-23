@@ -54,6 +54,8 @@ The easiest everyday option on this Mac is the local development console:
 
 The console listens only on this Mac and exposes a fixed set of Bare Træn actions. Its iPhone button reuses the latest successful EAS `preview` build when the mobile build inputs still match; otherwise it can start one new internal-distribution build and shows its progress without starting Metro. It can stop a local preview that was started in another Terminal only after verifying that the process belongs to this checkout; it refuses to stop an unknown program that merely occupies the same port. It has no arbitrary command box, no production backend option, and no database-reset button. Its React interface is built with Vite and Tailwind, and its task board is stored in `tools/dev-console/tasks.json`; small task screenshots live under `tools/dev-console/evidence`. Both are tracked, so they must never contain credentials, sign-in codes or links, real child data, or other personal information. `TASKS.md` remains the complete project roadmap.
 
+Codex in the ChatGPT desktop app also gets a tracked **Start administration** project action. It runs `mise exec -- pnpm preview:admin`, uses the Dev Console's verified-process rules, and keeps the administration available at [http://localhost:11000](http://localhost:11000). A responsive preview from this checkout is reused; a verified but unresponsive preview is restarted; an unknown port owner is left untouched.
+
 For a terminal-based start, use the commands below.
 
 Start the administration app and mobile Safari preview together:

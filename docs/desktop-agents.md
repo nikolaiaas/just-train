@@ -17,16 +17,14 @@ That means the prompts below can stay plain and short while both agents receive 
 4. Paste one of the prompts below.
 5. Codex can keep the development command open in its integrated terminal. Open the reported URLs in Safari.
 
-Optional convenience: in the project's local-environment settings, add actions with these names and commands:
+The tracked `.codex/environments/environment.toml` adds these project actions to Codex in the ChatGPT desktop app:
 
-| Action               | Command                                                                           |
-| -------------------- | --------------------------------------------------------------------------------- |
-| Open Dev Console     | `mise exec -- pnpm dev:console`                                                   |
-| Start Safari preview | `mise exec -- pnpm dev:web`                                                       |
-| Start iPhone server  | `mise exec -- pnpm dev:iphone`                                                    |
-| Run project checks   | `mise exec -- pnpm typecheck && mise exec -- pnpm lint && mise exec -- pnpm test` |
+| Action               | Command                           |
+| -------------------- | --------------------------------- |
+| Start administration | `mise exec -- pnpm preview:admin` |
+| Start Dev Console    | `mise exec -- pnpm dev:console`   |
 
-Actions become reusable buttons in Codex's desktop interface. The agent can also run the same commands directly.
+The **Start administration** action uses the same process ownership checks as the Dev Console. It reuses a responsive preview from this checkout, restarts one that is verified but no longer answers HTTP, and refuses to replace an unknown process or a preview from another worktree. The action remains open in the integrated terminal while it owns the server. The agent can also run the same command directly.
 
 ## Claude Desktop
 

@@ -10,6 +10,7 @@
     "dev:console": "pnpm --dir tools/dev-console build && node tools/dev-console/server/index.mjs",
     "dev": "concurrently -n admin,mobile -c blue,green \"pnpm dev:admin\" \"pnpm dev:mobile\"",
     "dev:admin": "pnpm --filter @bare-traen/admin dev",
+    "preview:admin": "node tools/dev-console/server/admin-preview.mjs",
     "dev:mobile": "pnpm --filter @bare-traen/mobile start",
     "dev:web": "concurrently -k -n admin,mobile-web -c blue,green \"pnpm dev:admin\" \"pnpm --filter @bare-traen/mobile exec expo start --web --lan --port 11001\"",
     "dev:iphone": "pnpm --filter @bare-traen/mobile exec expo start --dev-client --lan --port 11001",
