@@ -752,20 +752,28 @@ select is(
 );
 select lives_ok(
   $$
-    update public.goals
-    set is_published = true
-    where id in (
-      'd1000000-0000-4000-8000-000000000001',
-      'd1000000-0000-4000-8000-000000000002'
+    select *
+    from public.publish_admin_topic(
+      'd0000000-0000-4000-8000-000000000001',
+      now()
     );
-    update public.exercises
-    set is_published = true
-    where id in (
-      'd2000000-0000-4000-8000-000000000001',
-      'd2000000-0000-4000-8000-000000000002'
+    select *
+    from public.unpublish_admin_topic(
+      'd0000000-0000-4000-8000-000000000001',
+      now()
+    );
+    select *
+    from public.publish_admin_topic(
+      'd0000000-0000-4000-8000-000000000002',
+      now()
+    );
+    select *
+    from public.unpublish_admin_topic(
+      'd0000000-0000-4000-8000-000000000002',
+      now()
     );
   $$,
-  'an administrator can review child steps without publishing their topic'
+  'the guarded lifecycle preserves reviewed child steps beneath unpublished topics'
 );
 select is(
   (
@@ -788,7 +796,7 @@ select is(
       and published_at is not null
   ),
   4,
-  'publishing child steps records their publication timestamps'
+  'the guarded lifecycle records publication timestamps on every child step'
 );
 
 reset role;
@@ -983,14 +991,18 @@ select results_eq(
 
 select lives_ok(
   $$
-    update public.topics
-    set is_published = true
-    where id in (
+    select *
+    from public.publish_admin_topic(
       'd0000000-0000-4000-8000-000000000001',
-      'd0000000-0000-4000-8000-000000000002'
+      now()
+    );
+    select *
+    from public.publish_admin_topic(
+      'd0000000-0000-4000-8000-000000000002',
+      now()
     )
   $$,
-  'an administrator can publish the reviewed parent topics'
+  'an administrator can publish the reviewed topics through the guarded lifecycle'
 );
 
 reset role;

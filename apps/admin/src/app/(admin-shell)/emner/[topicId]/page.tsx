@@ -11,6 +11,7 @@ import {
   type AdminTopicDetailWardrobeItem,
 } from "./data";
 import styles from "./page.module.css";
+import { TopicLifecycleControls } from "./topic-lifecycle-controls";
 
 export const metadata: Metadata = {
   title: "Emnedetaljer · Bare Træn Administration",
@@ -47,6 +48,14 @@ const rarityLabels = {
   special: "Særlig",
 } as const;
 
+const equipSlotLabels = {
+  accessory: "Tilbehør",
+  body: "På kroppen",
+  feet: "På fødderne · ét helt par",
+  head: "På hovedet",
+  held: "I hånden",
+} as const;
+
 type DisplayStatus = AdminTopicDetailStatus | "approved";
 
 const statusLabels: Record<DisplayStatus, string> = {
@@ -77,8 +86,11 @@ function StatusBadge({ status }: { status: DisplayStatus }) {
 }
 
 function WardrobeStatusBadge({ item }: { item: AdminTopicDetailWardrobeItem }) {
-  const status: DisplayStatus =
-    item.status === "published"
+  const status: DisplayStatus = item.hasPendingRevision
+    ? item.editorialStatus === "approved"
+      ? "approved"
+      : "draft"
+    : item.status === "published"
       ? "published"
       : item.editorialStatus === "approved"
         ? "approved"
@@ -169,6 +181,17 @@ export default async function TopicDetailPage({
     (total, goal) => total + goal.exercises.length,
     0,
   );
+  const hasPublishableDrafts =
+    topic.goals.some(
+      (goal) =>
+        goal.status === "draft" ||
+        goal.exercises.some((exercise) => exercise.status === "draft"),
+    ) ||
+    topic.wardrobeItems.some(
+      (item) =>
+        item.editorialStatus === "approved" &&
+        (item.status === "draft" || item.hasPendingRevision),
+    );
 
   return (
     <article className={styles.page} aria-labelledby="topic-title">
@@ -200,24 +223,34 @@ export default async function TopicDetailPage({
           </div>
         </div>
 
-        <Link
-          className={styles.editButton}
-          href={getContentEditHref({ topicId: topic.id })}
-        >
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.8"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
+        <div className={styles.heroActions}>
+          <Link
+            className={styles.editButton}
+            href={getContentEditHref({ topicId: topic.id })}
           >
-            <path d="M12 20h9" />
-            <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z" />
-          </svg>
-          Rediger emne
-        </Link>
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M12 20h9" />
+              <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z" />
+            </svg>
+            Rediger emne
+          </Link>
+          <TopicLifecycleControls
+            key={`${topic.id}:${topic.status}:${topic.updatedAt}`}
+            expectedUpdatedAt={topic.updatedAt}
+            hasPublishableDrafts={hasPublishableDrafts}
+            isPublished={topic.status === "published"}
+            topicId={topic.id}
+            topicTitle={topic.title}
+          />
+        </div>
       </header>
 
       <dl className={styles.summary} aria-label="Emnets status og indhold">
@@ -429,7 +462,8 @@ export default async function TopicDetailPage({
                   </div>
                   <p className={styles.rewardMeta}>
                     {categoryLabels[item.category]} ·{" "}
-                    {rarityLabels[item.rarity]}
+                    {rarityLabels[item.rarity]} ·{" "}
+                    {equipSlotLabels[item.equipSlot]}
                   </p>
                   <WardrobeUnlock item={item} />
                 </div>

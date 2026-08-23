@@ -12,6 +12,7 @@ import {
 import type {
   AdminWardrobeItemDraft,
   AdminWardrobeCategory,
+  AdminWardrobeEquipSlot,
   AdminWardrobeRarity,
 } from "@bare-traen/api-client";
 
@@ -24,6 +25,7 @@ import {
 } from "./actions";
 import styles from "./page.module.css";
 import {
+  wardrobeSuggestionSnapshot,
   wardrobeSnapshotHasChanges,
   type WardrobeEditorSnapshot,
 } from "./workspace-ux";
@@ -59,6 +61,14 @@ const rarityLabels: Record<AdminWardrobeRarity, string> = {
   special: "Særlig",
 };
 
+const equipSlotLabels: Record<AdminWardrobeEquipSlot, string> = {
+  head: "På hovedet",
+  body: "På kroppen",
+  held: "I hånden",
+  feet: "På fødderne (ét par)",
+  accessory: "Tilbehør",
+};
+
 const statusLabels: Record<AdminWardrobeItemDraft["editorialStatus"], string> =
   {
     draft: "Kladde",
@@ -66,10 +76,23 @@ const statusLabels: Record<AdminWardrobeItemDraft["editorialStatus"], string> =
     rejected: "Afvist",
   };
 
+function itemStatusLabel(item: AdminWardrobeItemDraft): string {
+  if (item.status === "published" && !item.hasPendingRevision) {
+    return "Publiceret";
+  }
+
+  return statusLabels[item.editorialStatus];
+}
+
+function itemCanBeReviewed(item: AdminWardrobeItemDraft): boolean {
+  return item.status === "draft" || item.hasPendingRevision;
+}
+
 function emptySnapshot(): WardrobeEditorSnapshot {
   return {
     category: "clothing",
     editorialNote: "",
+    equipSlot: "",
     icon: "✨",
     name: "",
     points: "100",
@@ -83,21 +106,7 @@ function itemSnapshot(item: AdminWardrobeItemDraft): WardrobeEditorSnapshot {
   return {
     category: item.category,
     editorialNote: item.editorialNote,
-    icon: item.icon,
-    name: item.name,
-    points: item.points > 0 ? item.points.toString() : "0",
-    rarity: item.rarity,
-    unlockMode: item.points > 0 ? "points" : "rule",
-    unlockRule: item.unlockRule,
-  };
-}
-
-function suggestionSnapshot(
-  item: AssistantWardrobeItem,
-): WardrobeEditorSnapshot {
-  return {
-    category: item.category,
-    editorialNote: item.reason,
+    equipSlot: item.equipSlot,
     icon: item.icon,
     name: item.name,
     points: item.points > 0 ? item.points.toString() : "0",
@@ -160,6 +169,7 @@ export function WardrobeAuthoring({
   const [name, setName] = useState("");
   const [icon, setIcon] = useState("✨");
   const [category, setCategory] = useState<AdminWardrobeCategory>("clothing");
+  const [equipSlot, setEquipSlot] = useState<AdminWardrobeEquipSlot | "">("");
   const [rarity, setRarity] = useState<AdminWardrobeRarity>("common");
   const [points, setPoints] = useState("100");
   const [unlockMode, setUnlockMode] = useState<UnlockMode>("points");
@@ -186,6 +196,7 @@ export function WardrobeAuthoring({
   const currentSnapshot: WardrobeEditorSnapshot = {
     category,
     editorialNote,
+    equipSlot,
     icon,
     name,
     points,
@@ -233,6 +244,7 @@ export function WardrobeAuthoring({
     setName(snapshot.name);
     setIcon(snapshot.icon);
     setCategory(snapshot.category);
+    setEquipSlot(snapshot.equipSlot);
     setRarity(snapshot.rarity);
     setPoints(snapshot.points);
     setUnlockMode(snapshot.unlockMode);
@@ -407,7 +419,8 @@ export function WardrobeAuthoring({
                   <strong>{item.name}</strong>
                   <small>
                     {categoryLabels[item.category]} ·{" "}
-                    {rarityLabels[item.rarity]}
+                    {rarityLabels[item.rarity]} ·{" "}
+                    {equipSlotLabels[item.equipSlot]}
                   </small>
                   <p>
                     {item.points > 0 ? `${item.points} point` : item.unlockRule}
@@ -417,7 +430,9 @@ export function WardrobeAuthoring({
                     type="button"
                     className={styles.cardButton}
                     disabled={alreadySaved || busy || dirty}
-                    onClick={() => startCreating(suggestionSnapshot(item))}
+                    onClick={() =>
+                      startCreating(wardrobeSuggestionSnapshot(item))
+                    }
                   >
                     {alreadySaved ? "Allerede gemt" : "Brug forslag"}
                   </button>
@@ -438,7 +453,7 @@ export function WardrobeAuthoring({
       >
         <header>
           <div>
-            <p className={styles.eyebrow}>Databasekladder</p>
+            <p className={styles.eyebrow}>Garderobeting</p>
             <h3 id="saved-wardrobe-title">Gemte garderobeting</h3>
           </div>
           <span>{items.length} gemt</span>
@@ -461,12 +476,13 @@ export function WardrobeAuthoring({
                     <span
                       className={`${styles.editorialBadge} ${styles[`editorialBadge_${item.editorialStatus}`]}`}
                     >
-                      {statusLabels[item.editorialStatus]}
+                      {itemStatusLabel(item)}
                     </span>
                   </div>
                   <small>
                     {categoryLabels[item.category]} ·{" "}
-                    {rarityLabels[item.rarity]}
+                    {rarityLabels[item.rarity]} ·{" "}
+                    {equipSlotLabels[item.equipSlot]}
                   </small>
                   <p>
                     {item.points > 0 ? `${item.points} point` : item.unlockRule}
@@ -482,7 +498,8 @@ export function WardrobeAuthoring({
                   >
                     Rediger
                   </button>
-                  {item.editorialStatus !== "approved" ? (
+                  {itemCanBeReviewed(item) &&
+                  item.editorialStatus !== "approved" ? (
                     <form
                       action={decisionAction}
                       onSubmit={() => {
@@ -510,7 +527,8 @@ export function WardrobeAuthoring({
                       </button>
                     </form>
                   ) : null}
-                  {item.editorialStatus !== "rejected" ? (
+                  {itemCanBeReviewed(item) &&
+                  item.editorialStatus !== "rejected" ? (
                     <form
                       action={decisionAction}
                       onSubmit={() => {
@@ -562,7 +580,11 @@ export function WardrobeAuthoring({
                   : "Tilpas garderobetinget før du gemmer"}
               </h3>
             </div>
-            <span>Ikke publiceret</span>
+            <span>
+              {editingItem?.status === "published"
+                ? "Live version bevares"
+                : "Ikke publiceret"}
+            </span>
           </header>
           <form
             action={editorMode === "edit" ? updateAction : createAction}
@@ -660,6 +682,35 @@ export function WardrobeAuthoring({
                 {fieldErrors.category ? (
                   <small>{fieldErrors.category}</small>
                 ) : null}
+              </label>
+              <label>
+                <span>Placering på barnet</span>
+                <select
+                  name="equipSlot"
+                  required
+                  value={equipSlot}
+                  disabled={busy}
+                  aria-invalid={Boolean(fieldErrors.equipSlot)}
+                  onChange={(event) =>
+                    setEquipSlot(
+                      event.target.value as AdminWardrobeEquipSlot | "",
+                    )
+                  }
+                >
+                  <option value="">Vælg placering</option>
+                  <option value="head">På hovedet</option>
+                  <option value="body">På kroppen</option>
+                  <option value="held">I hånden</option>
+                  <option value="feet">På fødderne (ét helt par sko)</option>
+                  <option value="accessory">Tilbehør</option>
+                </select>
+                {fieldErrors.equipSlot ? (
+                  <small>{fieldErrors.equipSlot}</small>
+                ) : (
+                  <span className={styles.helpText}>
+                    Barnet kan kun have én ting i hver placering ad gangen.
+                  </span>
+                )}
               </label>
               <label>
                 <span>Sjældenhed</span>
@@ -787,7 +838,9 @@ export function WardrobeAuthoring({
             <div className={styles.draftFooter}>
               <p className={styles.idleMessage}>
                 {editorMode === "edit"
-                  ? "En indholdsændring sætter status tilbage til Kladde."
+                  ? editingItem?.status === "published"
+                    ? "Ændringen gemmes som kladde. Den nuværende publicerede version vises, indtil kladden godkendes og publiceres."
+                    : "En indholdsændring sætter status tilbage til Kladde."
                   : "Gemmer kun dette element som en upubliceret kladde."}
               </p>
               <div className={styles.inlineActions}>
@@ -806,6 +859,7 @@ export function WardrobeAuthoring({
                     busy ||
                     !name.trim() ||
                     !icon.trim() ||
+                    !equipSlot ||
                     (editorMode === "edit" && !dirty)
                   }
                 >

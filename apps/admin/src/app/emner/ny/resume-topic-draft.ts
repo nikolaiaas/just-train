@@ -52,6 +52,69 @@ export type ResumableTopicDraft = {
 
 export type ResumableEditorStep = "topic" | "goal" | "exercise" | "wardrobe";
 
+export type TopicEditorOutlineExercise = {
+  id: string;
+  sortOrder: number;
+  status: AdminContentStatus;
+  title: string;
+};
+
+export type TopicEditorOutlineGoal = {
+  exercises: TopicEditorOutlineExercise[];
+  id: string;
+  sortOrder: number;
+  status: AdminContentStatus;
+  title: string;
+};
+
+export function buildTopicEditorHref({
+  createExercise = false,
+  exerciseId,
+  goalId,
+  topicId,
+}: {
+  createExercise?: boolean;
+  exerciseId?: string;
+  goalId?: string;
+  topicId: string;
+}): string {
+  const search = new URLSearchParams({ topic: topicId });
+  if (goalId) search.set("goal", goalId);
+  if (exerciseId) search.set("exercise", exerciseId);
+  if (createExercise) search.set("add", "exercise");
+  return `/emner/ny?${search.toString()}`;
+}
+
+export function addExerciseToTopicEditorOutline(
+  outline: TopicEditorOutlineGoal[],
+  input: {
+    goalId: string;
+    id: string;
+    sortOrder: number;
+    title: string;
+  },
+): TopicEditorOutlineGoal[] {
+  return outline.map((goal) => {
+    if (goal.id !== input.goalId) return goal;
+    if (goal.exercises.some((exercise) => exercise.id === input.id)) {
+      return goal;
+    }
+
+    return {
+      ...goal,
+      exercises: [
+        ...goal.exercises,
+        {
+          id: input.id,
+          sortOrder: input.sortOrder,
+          status: "draft" as const,
+          title: input.title,
+        },
+      ].sort((left, right) => left.sortOrder - right.sortOrder),
+    };
+  });
+}
+
 export type ResumeTopicSelection =
   | {
       exerciseId: null;
@@ -76,15 +139,23 @@ export type ResumeTopicSelection =
       goalId: string;
       startingStep: "exercise";
       topicId: string;
+    }
+  | {
+      exerciseId: null;
+      goalId: string;
+      startingStep: "new-exercise";
+      topicId: string;
     };
 
 type ResumeTopicQuery = {
+  add?: string | string[];
   exercise?: string | string[];
   goal?: string | string[];
   topic?: string | string[];
 };
 
 type RequestedChildSelection = {
+  createExercise?: boolean;
   exerciseId?: string | null;
   goalId?: string | null;
 };
@@ -121,11 +192,12 @@ export function parseResumeTopicId(
 export function parseResumeTopicSelection(
   query: ResumeTopicQuery,
 ): ResumeTopicSelection | null {
+  const hasAdd = query.add !== undefined;
   const hasTopic = query.topic !== undefined;
   const hasGoal = query.goal !== undefined;
   const hasExercise = query.exercise !== undefined;
 
-  if (!hasTopic && !hasGoal && !hasExercise) {
+  if (!hasTopic && !hasGoal && !hasExercise && !hasAdd) {
     return {
       exerciseId: null,
       goalId: null,
@@ -137,7 +209,7 @@ export function parseResumeTopicSelection(
   const topicId = parseResumeTopicId(query.topic);
   if (!topicId) return null;
 
-  if (!hasGoal && !hasExercise) {
+  if (!hasGoal && !hasExercise && !hasAdd) {
     return {
       exerciseId: null,
       goalId: null,
@@ -148,6 +220,17 @@ export function parseResumeTopicSelection(
 
   const goalId = parseResumeTopicId(query.goal);
   if (!goalId || (!hasGoal && hasExercise)) return null;
+
+  if (hasAdd) {
+    if (query.add !== "exercise" || hasExercise) return null;
+
+    return {
+      exerciseId: null,
+      goalId,
+      startingStep: "new-exercise",
+      topicId,
+    };
+  }
 
   if (!hasExercise) {
     return {
@@ -171,8 +254,10 @@ export function parseResumeTopicSelection(
 
 export function getResumeStartingStep(
   draft: ResumableTopicDraft | null,
-  requestedStep: "goal" | "exercise" | null = null,
+  requestedStep: "goal" | "exercise" | "new-exercise" | null = null,
 ): ResumableEditorStep {
+  if (requestedStep === "new-exercise" && draft?.goal) return "exercise";
+
   if (requestedStep === "exercise" && draft?.goal && draft.exercise) {
     return "exercise";
   }
@@ -268,32 +353,34 @@ export async function loadResumableTopicDraft(
   let nextExerciseSortOrder = 0;
 
   if (goalResponse.data) {
-    let exerciseQuery = client
+    const exerciseResponse = requestedChild.createExercise
+      ? { data: null, error: null }
+      : await (() => {
+          let exerciseQuery = client
+            .from("exercises")
+            .select(
+              "id, title, instructions, measurement, target_value, estimated_minutes, equipment, safety_notes, video_url, sort_order, is_published, published_at, updated_at",
+            )
+            .eq("goal_id", goalResponse.data.id);
+
+          if (requestedChild.exerciseId) {
+            exerciseQuery = exerciseQuery.eq("id", requestedChild.exerciseId);
+          } else {
+            exerciseQuery = exerciseQuery
+              .order("sort_order", { ascending: true })
+              .order("created_at", { ascending: true })
+              .limit(1);
+          }
+
+          return exerciseQuery.maybeSingle();
+        })();
+    const latestExerciseOrderResponse = await client
       .from("exercises")
-      .select(
-        "id, title, instructions, measurement, target_value, estimated_minutes, equipment, safety_notes, video_url, sort_order, is_published, published_at, updated_at",
-      )
-      .eq("goal_id", goalResponse.data.id);
-
-    if (requestedChild.exerciseId) {
-      exerciseQuery = exerciseQuery.eq("id", requestedChild.exerciseId);
-    } else {
-      exerciseQuery = exerciseQuery
-        .order("sort_order", { ascending: true })
-        .order("created_at", { ascending: true })
-        .limit(1);
-    }
-
-    const [exerciseResponse, latestExerciseOrderResponse] = await Promise.all([
-      exerciseQuery.maybeSingle(),
-      client
-        .from("exercises")
-        .select("sort_order")
-        .eq("goal_id", goalResponse.data.id)
-        .order("sort_order", { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-    ]);
+      .select("sort_order")
+      .eq("goal_id", goalResponse.data.id)
+      .order("sort_order", { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     if (exerciseResponse.error || latestExerciseOrderResponse.error) {
       throw new Error("The topic exercise draft could not be loaded.");
@@ -360,14 +447,16 @@ export async function loadResumableTopicDraft(
       createdBy: item.created_by,
       editorialNote: item.editorial_note ?? "",
       editorialStatus: item.editorial_status,
+      equipSlot: item.equip_slot,
+      hasPendingRevision: item.has_pending_revision,
       icon: item.icon,
       id: item.id,
       name: item.name,
       points: item.points ?? 0,
-      publishedAt: null,
+      publishedAt: item.published_at,
       rarity: item.rarity,
       sortOrder: item.sort_order,
-      status: "draft",
+      status: item.is_published ? "published" : "draft",
       topicId: item.topic_id,
       unlockRule: item.unlock_rule ?? "",
       updatedAt: item.updated_at,
@@ -377,4 +466,51 @@ export async function loadResumableTopicDraft(
       latestGoalOrderResponse.data?.sort_order,
     ),
   };
+}
+
+export async function loadTopicEditorOutline(
+  client: BareTraenClient,
+  topicId: string,
+): Promise<TopicEditorOutlineGoal[]> {
+  const goalsResponse = await client
+    .from("goals")
+    .select("id, title, sort_order, is_published")
+    .eq("topic_id", topicId)
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: true });
+
+  if (goalsResponse.error) {
+    throw new Error("The topic editor outline could not be loaded.");
+  }
+
+  if (goalsResponse.data.length === 0) return [];
+
+  const exercisesResponse = await client
+    .from("exercises")
+    .select("id, goal_id, title, sort_order, is_published")
+    .in(
+      "goal_id",
+      goalsResponse.data.map((goal) => goal.id),
+    )
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: true });
+
+  if (exercisesResponse.error) {
+    throw new Error("The topic exercise outline could not be loaded.");
+  }
+
+  return goalsResponse.data.map((goal) => ({
+    exercises: exercisesResponse.data
+      .filter((exercise) => exercise.goal_id === goal.id)
+      .map((exercise) => ({
+        id: exercise.id,
+        sortOrder: exercise.sort_order,
+        status: exercise.is_published ? "published" : "draft",
+        title: exercise.title,
+      })),
+    id: goal.id,
+    sortOrder: goal.sort_order,
+    status: goal.is_published ? "published" : "draft",
+    title: goal.title,
+  }));
 }

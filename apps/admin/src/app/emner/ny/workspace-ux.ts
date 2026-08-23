@@ -31,11 +31,23 @@ export type ExerciseEditorSnapshot = {
 export type WardrobeEditorSnapshot = {
   category: "clothing" | "equipment" | "effect";
   editorialNote: string;
+  equipSlot: "" | "head" | "body" | "held" | "feet" | "accessory";
   icon: string;
   name: string;
   points: string;
   rarity: "common" | "rare" | "special";
   unlockMode: "points" | "rule";
+  unlockRule: string;
+};
+
+export type WardrobeSuggestionSnapshotInput = {
+  category: WardrobeEditorSnapshot["category"];
+  equipSlot: Exclude<WardrobeEditorSnapshot["equipSlot"], "">;
+  icon: string;
+  name: string;
+  points: number;
+  rarity: WardrobeEditorSnapshot["rarity"];
+  reason: string;
   unlockRule: string;
 };
 
@@ -137,6 +149,7 @@ export function wardrobeSnapshotHasChanges(
   return (
     normalizedCurrent.category !== normalizedSaved.category ||
     normalizedCurrent.editorialNote !== normalizedSaved.editorialNote ||
+    normalizedCurrent.equipSlot !== normalizedSaved.equipSlot ||
     normalizedCurrent.icon !== normalizedSaved.icon ||
     normalizedCurrent.name !== normalizedSaved.name ||
     normalizedCurrent.points !== normalizedSaved.points ||
@@ -144,6 +157,22 @@ export function wardrobeSnapshotHasChanges(
     normalizedCurrent.unlockMode !== normalizedSaved.unlockMode ||
     normalizedCurrent.unlockRule !== normalizedSaved.unlockRule
   );
+}
+
+export function wardrobeSuggestionSnapshot(
+  item: WardrobeSuggestionSnapshotInput,
+): WardrobeEditorSnapshot {
+  return {
+    category: item.category,
+    editorialNote: item.reason,
+    equipSlot: item.equipSlot,
+    icon: item.icon,
+    name: item.name,
+    points: item.points > 0 ? item.points.toString() : "0",
+    rarity: item.rarity,
+    unlockMode: item.points > 0 ? "points" : "rule",
+    unlockRule: item.unlockRule,
+  };
 }
 
 /**

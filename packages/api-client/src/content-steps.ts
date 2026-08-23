@@ -1,3 +1,9 @@
+import {
+  WARDROBE_EQUIP_SLOTS,
+  type Database,
+  type WardrobeEquipSlot,
+} from "@bare-traen/domain";
+
 import type { BareTraenClient } from "./index.ts";
 
 export type AdminContentDifficulty = "beginner" | "intermediate" | "advanced";
@@ -8,6 +14,8 @@ export type AdminExerciseMeasurement =
 export type AdminContentStatus = "draft" | "published";
 
 export type AdminWardrobeCategory = "clothing" | "equipment" | "effect";
+
+export type AdminWardrobeEquipSlot = WardrobeEquipSlot;
 
 export type AdminWardrobeRarity = "common" | "rare" | "special";
 
@@ -65,14 +73,17 @@ export type AdminWardrobeItemDraft = {
   createdBy: string | null;
   editorialNote: string;
   editorialStatus: AdminWardrobeEditorialStatus;
+  equipSlot: AdminWardrobeEquipSlot;
+  /** True when the editable values are staged over an unchanged live item. */
+  hasPendingRevision: boolean;
   icon: string;
   id: string;
   name: string;
   points: number;
-  publishedAt: null;
+  publishedAt: string | null;
   rarity: AdminWardrobeRarity;
   sortOrder: number;
-  status: "draft";
+  status: AdminContentStatus;
   topicId: string;
   unlockRule: string;
   updatedAt: string;
@@ -117,6 +128,11 @@ export type CreateAdminWardrobeItemDraftInput = {
   authenticatedUserId: string;
   category: AdminWardrobeCategory;
   editorialNote: string;
+  /**
+   * The exclusive avatar position occupied by the item. Omission is accepted
+   * temporarily for older installed clients and maps to `accessory`.
+   */
+  equipSlot?: AdminWardrobeEquipSlot;
   icon: string;
   name: string;
   /** `0` means the item uses `unlockRule` instead of a point price. */
@@ -146,7 +162,7 @@ export type UpdateAdminExerciseDraftInput = CreateAdminExerciseDraftInput & {
   expectedUpdatedAt: string;
 };
 
-/** Uses `requestId` as the id of the existing unpublished wardrobe item. */
+/** Uses `requestId` as the id of an existing wardrobe item. */
 export type UpdateAdminWardrobeItemDraftInput =
   CreateAdminWardrobeItemDraftInput & {
     /** The revision returned by the last successful load or save. */
@@ -236,6 +252,7 @@ export type AdminContentStepErrorCode =
   | "invalid_wardrobe_decision"
   | "invalid_wardrobe_decision_result"
   | "invalid_wardrobe_editorial_note"
+  | "invalid_wardrobe_equip_slot"
   | "invalid_wardrobe_icon"
   | "invalid_wardrobe_item_id"
   | "invalid_wardrobe_name"
@@ -300,6 +317,7 @@ const ERROR_MESSAGES: Record<AdminContentStepErrorCode, string> = {
   invalid_wardrobe_decision_result:
     "Wardrobe review returned an invalid result.",
   invalid_wardrobe_editorial_note: "The wardrobe editorial note is invalid.",
+  invalid_wardrobe_equip_slot: "The wardrobe equipment position is invalid.",
   invalid_wardrobe_icon: "The wardrobe item icon is invalid.",
   invalid_wardrobe_item_id: "The wardrobe item id is invalid.",
   invalid_wardrobe_name: "The wardrobe item name is invalid.",
@@ -354,6 +372,9 @@ const WARDROBE_RARITIES = new Set<AdminWardrobeRarity>([
   "rare",
   "special",
 ]);
+const WARDROBE_EQUIP_SLOT_VALUES = new Set<AdminWardrobeEquipSlot>(
+  WARDROBE_EQUIP_SLOTS,
+);
 const WARDROBE_EDITORIAL_STATUSES = new Set<AdminWardrobeEditorialStatus>([
   "draft",
   "approved",
@@ -402,10 +423,16 @@ type NormalizedExerciseDraft = Omit<
 
 type NormalizedWardrobeItemDraft = Omit<
   CreateAdminWardrobeItemDraftInput,
-  "category" | "editorialNote" | "points" | "rarity" | "unlockRule"
+  | "category"
+  | "editorialNote"
+  | "equipSlot"
+  | "points"
+  | "rarity"
+  | "unlockRule"
 > & {
   category: AdminWardrobeCategory;
   editorialNote: string | null;
+  equipSlot: AdminWardrobeEquipSlot;
   points: number | null;
   rarity: AdminWardrobeRarity;
   unlockRule: string | null;
@@ -417,6 +444,9 @@ type NormalizedWardrobeDecision = Omit<
 > & {
   decision: AdminWardrobeDecision;
 };
+
+type SaveWardrobeItemDraftRpcArgs =
+  Database["public"]["Functions"]["save_admin_wardrobe_item_draft"]["Args"];
 
 function isRecord(value: unknown): value is UnknownRecord {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -745,6 +775,19 @@ function normalizeWardrobeRarity(value: unknown): AdminWardrobeRarity {
   return value as AdminWardrobeRarity;
 }
 
+function normalizeWardrobeEquipSlot(value: unknown): AdminWardrobeEquipSlot {
+  const slot = value ?? "accessory";
+
+  if (
+    typeof slot !== "string" ||
+    !WARDROBE_EQUIP_SLOT_VALUES.has(slot as AdminWardrobeEquipSlot)
+  ) {
+    throw new AdminContentStepError("invalid_wardrobe_equip_slot");
+  }
+
+  return slot as AdminWardrobeEquipSlot;
+}
+
 function normalizeWardrobeItemDraft(
   input: CreateAdminWardrobeItemDraftInput,
 ): NormalizedWardrobeItemDraft {
@@ -779,6 +822,7 @@ function normalizeWardrobeItemDraft(
     ),
     category: normalizeWardrobeCategory(input.category),
     editorialNote: editorialNote || null,
+    equipSlot: normalizeWardrobeEquipSlot(input.equipSlot),
     icon: normalizeSingleLine(
       input.icon,
       "invalid_wardrobe_icon",
@@ -1075,6 +1119,10 @@ function parseWardrobeItemDraft(value: unknown): AdminWardrobeItemDraft | null {
     !isReturnedSingleLine(value.icon, MAX_WARDROBE_ICON_LENGTH) ||
     typeof value.category !== "string" ||
     !WARDROBE_CATEGORIES.has(value.category as AdminWardrobeCategory) ||
+    typeof value.equip_slot !== "string" ||
+    !WARDROBE_EQUIP_SLOT_VALUES.has(
+      value.equip_slot as AdminWardrobeEquipSlot,
+    ) ||
     typeof value.rarity !== "string" ||
     !WARDROBE_RARITIES.has(value.rarity as AdminWardrobeRarity) ||
     !rewardRuleIsValid ||
@@ -1088,8 +1136,15 @@ function parseWardrobeItemDraft(value: unknown): AdminWardrobeItemDraft | null {
     (value.sort_order as number) > MAX_SORT_ORDER ||
     !Number.isInteger(value.content_version) ||
     (value.content_version as number) < 1 ||
-    value.is_published !== false ||
-    value.published_at !== null ||
+    typeof value.is_published !== "boolean" ||
+    (value.is_published
+      ? !isTimestamp(value.published_at)
+      : value.published_at !== null) ||
+    typeof value.has_pending_revision !== "boolean" ||
+    (value.has_pending_revision && !value.is_published) ||
+    (value.is_published &&
+      !value.has_pending_revision &&
+      value.editorial_status !== "approved") ||
     (value.created_by !== null && !isUuid(value.created_by)) ||
     !isTimestamp(value.created_at) ||
     !isTimestamp(value.updated_at)
@@ -1104,14 +1159,16 @@ function parseWardrobeItemDraft(value: unknown): AdminWardrobeItemDraft | null {
     createdBy: value.created_by?.toLowerCase() ?? null,
     editorialNote: (value.editorial_note as string | null) ?? "",
     editorialStatus: value.editorial_status as AdminWardrobeEditorialStatus,
+    equipSlot: value.equip_slot as AdminWardrobeEquipSlot,
+    hasPendingRevision: value.has_pending_revision,
     icon: value.icon,
     id: value.id.toLowerCase(),
     name: value.name,
     points: (value.points as number | null) ?? 0,
-    publishedAt: null,
+    publishedAt: value.published_at as string | null,
     rarity: value.rarity as AdminWardrobeRarity,
     sortOrder: value.sort_order as number,
-    status: "draft",
+    status: value.is_published ? "published" : "draft",
     topicId: value.topic_id.toLowerCase(),
     unlockRule: (value.unlock_rule as string | null) ?? "",
     updatedAt: value.updated_at,
@@ -1270,6 +1327,7 @@ async function insertWardrobeItemDraft(
       category: input.category,
       created_by: input.authenticatedUserId,
       editorial_note: input.editorialNote,
+      equip_slot: input.equipSlot,
       icon: input.icon,
       id: input.requestId,
       name: input.name,
@@ -1377,24 +1435,28 @@ async function updateWardrobeItemDraft(
   input: NormalizedWardrobeItemDraft,
   expectedUpdatedAt: string,
 ) {
-  return client
-    .from("wardrobe_items")
-    .update({
-      category: input.category,
-      editorial_note: input.editorialNote,
-      icon: input.icon,
-      name: input.name,
-      points: input.points,
-      rarity: input.rarity,
-      sort_order: input.sortOrder,
-      unlock_rule: input.unlockRule,
-    })
-    .eq("id", input.requestId)
-    .eq("topic_id", input.topicId)
-    .eq("is_published", false)
-    .eq("updated_at", expectedUpdatedAt)
-    .select("id")
-    .maybeSingle();
+  // PostgreSQL does not expose function-parameter nullability, so generated
+  // Supabase Args mark these three nullable SQL inputs as non-null. These
+  // field-level assertions affect only TypeScript; null still reaches the
+  // guarded RPC for the database's exclusive points/unlock representation.
+  const args: SaveWardrobeItemDraftRpcArgs = {
+    p_category: input.category,
+    p_editorial_note:
+      input.editorialNote as SaveWardrobeItemDraftRpcArgs["p_editorial_note"],
+    p_equip_slot: input.equipSlot,
+    p_expected_updated_at: expectedUpdatedAt,
+    p_icon: input.icon,
+    p_name: input.name,
+    p_points: input.points as SaveWardrobeItemDraftRpcArgs["p_points"],
+    p_rarity: input.rarity,
+    p_sort_order: input.sortOrder,
+    p_topic_id: input.topicId,
+    p_unlock_rule:
+      input.unlockRule as SaveWardrobeItemDraftRpcArgs["p_unlock_rule"],
+    p_wardrobe_item_id: input.requestId,
+  };
+
+  return client.rpc("save_admin_wardrobe_item_draft", args).maybeSingle();
 }
 
 async function decideWardrobeItemDraft(
@@ -1402,13 +1464,12 @@ async function decideWardrobeItemDraft(
   input: NormalizedWardrobeDecision,
 ) {
   return client
-    .from("wardrobe_items")
-    .update({ editorial_status: input.decision })
-    .eq("id", input.wardrobeItemId)
-    .eq("topic_id", input.topicId)
-    .eq("is_published", false)
-    .eq("updated_at", input.expectedUpdatedAt)
-    .select("id")
+    .rpc("decide_admin_wardrobe_item_draft", {
+      p_decision: input.decision,
+      p_expected_updated_at: input.expectedUpdatedAt,
+      p_topic_id: input.topicId,
+      p_wardrobe_item_id: input.wardrobeItemId,
+    })
     .maybeSingle();
 }
 
@@ -1476,6 +1537,8 @@ function matchesWardrobeItemDraft(
     item.points === (input.points ?? 0) &&
     item.unlockRule === (input.unlockRule ?? "") &&
     item.editorialNote === (input.editorialNote ?? "") &&
+    item.equipSlot === input.equipSlot &&
+    !item.hasPendingRevision &&
     item.editorialStatus === "draft" &&
     item.sortOrder === input.sortOrder &&
     item.contentVersion === 1 &&
@@ -1545,10 +1608,12 @@ function matchesUpdatedWardrobeItemDraft(
     item.points === (input.points ?? 0) &&
     item.unlockRule === (input.unlockRule ?? "") &&
     item.editorialNote === (input.editorialNote ?? "") &&
+    item.equipSlot === input.equipSlot &&
     item.editorialStatus === "draft" &&
     item.sortOrder === input.sortOrder &&
-    item.status === "draft" &&
-    item.publishedAt === null
+    (item.status === "draft"
+      ? !item.hasPendingRevision && item.publishedAt === null
+      : item.hasPendingRevision && item.publishedAt !== null)
   );
 }
 
@@ -1560,8 +1625,9 @@ function matchesWardrobeDecision(
     item.id === input.wardrobeItemId &&
     item.topicId === input.topicId &&
     item.editorialStatus === input.decision &&
-    item.status === "draft" &&
-    item.publishedAt === null
+    (item.status === "draft"
+      ? !item.hasPendingRevision && item.publishedAt === null
+      : item.hasPendingRevision && item.publishedAt !== null)
   );
 }
 
@@ -1980,8 +2046,9 @@ export async function updateAdminExerciseDraft(
 }
 
 /**
- * Updates one existing unpublished wardrobe item and returns it to editorial
- * draft state. The topic, author, publication state, and version are unchanged.
+ * Updates one existing wardrobe item and returns the editable version to
+ * editorial draft state. A published item is staged without changing its live
+ * catalog version until the topic is published again.
  */
 export async function updateAdminWardrobeItemDraft(
   client: BareTraenClient,
@@ -2002,6 +2069,10 @@ export async function updateAdminWardrobeItemDraft(
   }
 
   if (response.error) {
+    if (databaseErrorCode(response.error) === "40001") {
+      throw new AdminContentStepError("wardrobe_draft_conflict");
+    }
+
     throw mapDatabaseFailure(response.error, "wardrobe_update_failed");
   }
 
@@ -2031,8 +2102,9 @@ export async function updateAdminWardrobeItemDraft(
 }
 
 /**
- * Records an explicit approve/reject decision for one unpublished item. The
- * revision precondition prevents one editor from overwriting another review.
+ * Records an explicit approve/reject decision for an unpublished item or a
+ * published item's staged revision. The revision precondition prevents one
+ * editor from overwriting another review.
  */
 export async function decideAdminWardrobeItemDraft(
   client: BareTraenClient,
@@ -2048,6 +2120,10 @@ export async function decideAdminWardrobeItemDraft(
   }
 
   if (response.error) {
+    if (databaseErrorCode(response.error) === "40001") {
+      throw new AdminContentStepError("wardrobe_draft_conflict");
+    }
+
     throw mapDatabaseFailure(response.error, "wardrobe_review_failed");
   }
 

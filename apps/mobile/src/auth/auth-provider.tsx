@@ -7,10 +7,12 @@ import {
   completeParentOnboarding,
   createChildProfile,
   getAiMediaJob,
+  loadChildWardrobe,
   logout as logoutSession,
   onAuthSessionChange,
   requestEmailSignIn,
   restoreSession,
+  setChildWardrobeItemEquipped as saveChildWardrobeEquipment,
   startAiMediaJob,
   prepareAiMediaJob,
   uploadAiMediaInput,
@@ -19,6 +21,8 @@ import {
   type AiMediaMimeType,
   type AiMediaOutput,
   type BareTraenAuthSession,
+  type ChildWardrobeEquipmentState,
+  type ChildWardrobeItem,
   type PreparedAiMediaJob,
 } from "@bare-traen/api-client";
 import {
@@ -41,6 +45,7 @@ import {
   type ChildAvatarPreset,
   type PendingChildCreation,
 } from "@/children/child-setup";
+import { resolveSelectedChildWardrobeId } from "@/wardrobe/core";
 
 import { parseMobileAuthCallbackUrl } from "./callback";
 import { normalizeParentOnboarding, secondsUntilResend } from "./core";
@@ -86,6 +91,11 @@ type SubmitAiCartoonInput = {
   mimeType: AiMediaMimeType;
 };
 
+type SetSelectedChildWardrobeItemEquippedInput = {
+  equipped: boolean;
+  wardrobeItemId: string;
+};
+
 type AuthContextValue = {
   authNotice: string | null;
   authStatus: AuthStatus;
@@ -94,7 +104,11 @@ type AuthContextValue = {
   createChild(input: CreateChildInput): Promise<ParentChild>;
   getAiCartoonJob(jobId: string): Promise<AiMediaJob>;
   getAiCartoonOutput(jobId: string): Promise<AiMediaOutput>;
+  loadSelectedChildWardrobe(): Promise<ChildWardrobeItem[]>;
   reconcileAiCartoonJob(jobId: string): Promise<void>;
+  setSelectedChildWardrobeItemEquipped(
+    input: SetSelectedChildWardrobeItemEquippedInput,
+  ): Promise<ChildWardrobeEquipmentState>;
   submitAiCartoon(input: SubmitAiCartoonInput): Promise<PreparedAiMediaJob>;
   completeMagicLink(callbackUrl: string): Promise<void>;
   completeOnboarding(input: {
@@ -400,6 +414,41 @@ export function AuthProvider({ children }: PropsWithChildren) {
       userId: sessionUserId,
     };
   }, [bootstrap, getClient, sessionUserId]);
+
+  const getSelectedChildWardrobeContext = useCallback(() => {
+    const childProfileId = resolveSelectedChildWardrobeId({
+      availableChildIds:
+        bootstrap.status === "ready"
+          ? bootstrap.data.children.map((child) => child.id)
+          : [],
+      bootstrapProfileId:
+        bootstrap.status === "ready" ? bootstrap.data.profile.id : null,
+      currentSessionUserId: currentSessionUserId.current,
+      selectedChildId,
+      sessionUserId,
+    });
+
+    return { childProfileId, client: getClient() };
+  }, [bootstrap, getClient, selectedChildId, sessionUserId]);
+
+  const loadSelectedChildWardrobe = useCallback(() => {
+    const context = getSelectedChildWardrobeContext();
+    return loadChildWardrobe(context.client, {
+      childProfileId: context.childProfileId,
+    });
+  }, [getSelectedChildWardrobeContext]);
+
+  const setSelectedChildWardrobeItemEquipped = useCallback(
+    (input: SetSelectedChildWardrobeItemEquippedInput) => {
+      const context = getSelectedChildWardrobeContext();
+      return saveChildWardrobeEquipment(context.client, {
+        childProfileId: context.childProfileId,
+        equipped: input.equipped,
+        wardrobeItemId: input.wardrobeItemId,
+      });
+    },
+    [getSelectedChildWardrobeContext],
+  );
 
   const submitAiCartoon = useCallback(
     async (input: SubmitAiCartoonInput): Promise<PreparedAiMediaJob> => {
@@ -824,6 +873,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       emailFlow,
       getAiCartoonJob,
       getAiCartoonOutput,
+      loadSelectedChildWardrobe,
       logout,
       logoutError,
       pendingChildCreation,
@@ -845,6 +895,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         emailFlow ? secondsUntilResend(emailFlow.sentAt, now) : 0,
       selectChild,
       selectedChild,
+      setSelectedChildWardrobeItemEquipped,
       session,
       submitAiCartoon,
       verifyCode,
@@ -859,6 +910,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       emailFlow,
       getAiCartoonJob,
       getAiCartoonOutput,
+      loadSelectedChildWardrobe,
       logout,
       logoutError,
       pendingChildCreation,
@@ -869,6 +921,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       retryAuth,
       selectChild,
       selectedChild,
+      setSelectedChildWardrobeItemEquipped,
       session,
       submitAiCartoon,
       verifyCode,

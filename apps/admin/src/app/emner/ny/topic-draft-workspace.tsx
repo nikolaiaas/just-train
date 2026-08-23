@@ -31,9 +31,12 @@ import {
 } from "./actions";
 import styles from "./page.module.css";
 import {
+  addExerciseToTopicEditorOutline,
+  buildTopicEditorHref,
   getResumeStartingStep,
   type ResumableEditorStep,
   type ResumableTopicDraft,
+  type TopicEditorOutlineGoal,
 } from "./resume-topic-draft";
 import {
   assistantResponseBelongsToContext,
@@ -61,7 +64,9 @@ type TopicDraftWorkspaceProps = {
   exerciseRequestId: string;
   goalRequestId: string;
   initialDraft: ResumableTopicDraft | null;
-  initialStep: Extract<ResumableEditorStep, "goal" | "exercise"> | null;
+  initialOutline: TopicEditorOutlineGoal[];
+  initialStep:
+    Extract<ResumableEditorStep, "goal" | "exercise"> | "new-exercise" | null;
   profileName: string;
   topicRequestId: string;
   wardrobeRequestId: string;
@@ -229,6 +234,7 @@ export function TopicDraftWorkspace({
   exerciseRequestId,
   goalRequestId,
   initialDraft,
+  initialOutline,
   initialStep,
   profileName,
   topicRequestId,
@@ -430,6 +436,8 @@ export function TopicDraftWorkspace({
   const [navigationWarning, setNavigationWarning] = useState<string | null>(
     null,
   );
+  const [editorOutline, setEditorOutline] =
+    useState<TopicEditorOutlineGoal[]>(initialOutline);
 
   const handledAssistantRequest = useRef<string | null>(null);
   const submittedAssistantMessage = useRef<{
@@ -470,6 +478,18 @@ export function TopicDraftWorkspace({
   const topicCreated = topicState.status === "success";
   const goalCreated = goalState.status === "success";
   const exerciseCreated = exerciseState.status === "success";
+  const selectedGoalId =
+    goalState.status === "success"
+      ? goalState.goalId
+      : (initialDraft?.goal?.id ?? null);
+  const selectedExerciseId =
+    exerciseState.status === "success"
+      ? exerciseState.exerciseId
+      : (initialDraft?.exercise?.id ?? null);
+  const addingExercise =
+    initialStep === "new-exercise" &&
+    !exerciseCreated &&
+    Boolean(selectedGoalId);
   const currentTopicSnapshot: TopicEditorSnapshot = {
     accentColor,
     description,
@@ -500,10 +520,25 @@ export function TopicDraftWorkspace({
     goalEditing &&
     goalCreated &&
     goalSnapshotHasChanges(currentGoalSnapshot, savedGoalSnapshot);
+  const newExerciseDirty =
+    addingExercise &&
+    Boolean(
+      exerciseTitle.trim() ||
+      exerciseInstructions.trim() ||
+      exerciseTarget.trim() ||
+      exerciseMinutes.trim() ||
+      exerciseEquipment.trim() ||
+      exerciseSafety.trim() ||
+      exerciseMeasurement !== "completion",
+    );
   const exerciseDirty =
-    exerciseEditing &&
-    exerciseCreated &&
-    exerciseSnapshotHasChanges(currentExerciseSnapshot, savedExerciseSnapshot);
+    (exerciseEditing &&
+      exerciseCreated &&
+      exerciseSnapshotHasChanges(
+        currentExerciseSnapshot,
+        savedExerciseSnapshot,
+      )) ||
+    newExerciseDirty;
   const dirtyEditingStep: "topic" | "goal" | "exercise" | "wardrobe" | null =
     topicDirty
       ? "topic"
@@ -652,12 +687,41 @@ export function TopicDraftWorkspace({
       pendingExerciseSnapshot.current = null;
       setExerciseUpdatedAt(exerciseState.updatedAt);
       setNavigationWarning(null);
+      if (selectedGoalId) {
+        setEditorOutline((current) =>
+          addExerciseToTopicEditorOutline(current, {
+            goalId: selectedGoalId,
+            id: exerciseState.exerciseId,
+            sortOrder: initialDraft?.nextExerciseSortOrder ?? 0,
+            title: normalizeText(exerciseTitle, 120) || "Ny deløvelse",
+          }),
+        );
+
+        const topicId = initialDraft?.topic.id;
+        if (topicId) {
+          window.history.replaceState(
+            null,
+            "",
+            buildTopicEditorHref({
+              exerciseId: exerciseState.exerciseId,
+              goalId: selectedGoalId,
+              topicId,
+            }),
+          );
+        }
+      }
       setActiveStep("wardrobe");
       resetAssistantContext("wardrobe");
       setStepAnnouncement("Deløvelsen er gemt. Trin 4 af 5: Garderobe.");
       focusStepAfterRender();
     }
-  }, [exerciseState]);
+  }, [
+    exerciseState,
+    exerciseTitle,
+    initialDraft?.nextExerciseSortOrder,
+    initialDraft?.topic.id,
+    selectedGoalId,
+  ]);
 
   useEffect(() => {
     if (topicUpdateState === handledTopicUpdateState.current) return;
@@ -703,6 +767,18 @@ export function TopicDraftWorkspace({
           pendingGoalSnapshot.current = null;
         }
         setGoalUpdatedAt(goalUpdateState.updatedAt);
+        if (selectedGoalId) {
+          setEditorOutline((current) =>
+            current.map((goal) =>
+              goal.id === selectedGoalId
+                ? {
+                    ...goal,
+                    title: normalizeText(goalTitle, 120) || goal.title,
+                  }
+                : goal,
+            ),
+          );
+        }
         setGoalEditing(false);
         setNavigationWarning(null);
         setAssistantErrorMessage(null);
@@ -721,7 +797,7 @@ export function TopicDraftWorkspace({
         if (frame !== null) window.cancelAnimationFrame(frame);
       };
     }
-  }, [goalUpdateState, isPublishedGoal]);
+  }, [goalTitle, goalUpdateState, isPublishedGoal, selectedGoalId]);
 
   useEffect(() => {
     if (exerciseUpdateState === handledExerciseUpdateState.current) return;
@@ -735,6 +811,22 @@ export function TopicDraftWorkspace({
           pendingExerciseSnapshot.current = null;
         }
         setExerciseUpdatedAt(exerciseUpdateState.updatedAt);
+        if (selectedExerciseId) {
+          setEditorOutline((current) =>
+            current.map((goal) => ({
+              ...goal,
+              exercises: goal.exercises.map((exercise) =>
+                exercise.id === selectedExerciseId
+                  ? {
+                      ...exercise,
+                      title:
+                        normalizeText(exerciseTitle, 120) || exercise.title,
+                    }
+                  : exercise,
+              ),
+            })),
+          );
+        }
         setExerciseEditing(false);
         setNavigationWarning(null);
         setAssistantErrorMessage(null);
@@ -753,7 +845,12 @@ export function TopicDraftWorkspace({
         if (frame !== null) window.cancelAnimationFrame(frame);
       };
     }
-  }, [exerciseUpdateState, isPublishedExercise]);
+  }, [
+    exerciseTitle,
+    exerciseUpdateState,
+    isPublishedExercise,
+    selectedExerciseId,
+  ]);
 
   useEffect(() => {
     if (
@@ -870,6 +967,7 @@ export function TopicDraftWorkspace({
           .filter((item) => item.editorialStatus !== "rejected")
           .map((item) => ({
             category: item.category,
+            equipSlot: item.equipSlot,
             icon: item.icon,
             name: item.name,
             points: item.points,
@@ -1326,6 +1424,10 @@ export function TopicDraftWorkspace({
     : currentStatus && !currentStepIsEditing && activeStep !== "wardrobe"
       ? "Gemt kladde"
       : "Redigerbar kladde";
+  const outlineExerciseCount = editorOutline.reduce(
+    (total, goal) => total + goal.exercises.length,
+    0,
+  );
 
   return (
     <main className={styles.viewport}>
@@ -1421,6 +1523,179 @@ export function TopicDraftWorkspace({
               );
             })}
           </nav>
+
+          {initialDraft ? (
+            <nav
+              className={styles.contentOutline}
+              aria-labelledby="content-outline-title"
+            >
+              <header className={styles.contentOutlineHeader}>
+                <div>
+                  <p className={styles.eyebrow}>Indhold i emnet</p>
+                  <h2 id="content-outline-title">Vælg mål eller deløvelse</h2>
+                  <p>
+                    Alle mål og deløvelser er samlet her. Vælg en for at
+                    redigere den, eller tilføj en ny deløvelse under det rette
+                    mål.
+                  </p>
+                </div>
+                <span className={styles.outlineCount}>
+                  {editorOutline.length} mål · {outlineExerciseCount}{" "}
+                  {outlineExerciseCount === 1 ? "deløvelse" : "deløvelser"}
+                </span>
+              </header>
+
+              {editorOutline.length === 0 ? (
+                <p className={styles.outlineEmpty}>
+                  Der er ingen mål endnu. Opret det første mål på trin 2.
+                </p>
+              ) : (
+                <div className={styles.outlineGoals}>
+                  {editorOutline.map((goal, goalIndex) => {
+                    const goalIsSelected =
+                      selectedGoalId === goal.id &&
+                      (activeStep === "goal" || activeStep === "exercise");
+
+                    return (
+                      <section
+                        className={
+                          goalIsSelected
+                            ? styles.outlineGoalSelected
+                            : styles.outlineGoal
+                        }
+                        aria-labelledby={`outline-goal-${goal.id}`}
+                        key={goal.id}
+                      >
+                        <Link
+                          className={styles.outlineGoalLink}
+                          href={buildTopicEditorHref({
+                            goalId: goal.id,
+                            topicId: initialDraft.topic.id,
+                          })}
+                          aria-current={
+                            goalIsSelected && activeStep === "goal"
+                              ? "page"
+                              : undefined
+                          }
+                          onClick={(event) => {
+                            if (goalIsSelected && activeStep === "goal") {
+                              event.preventDefault();
+                              return;
+                            }
+                            if (
+                              preventDirtyNavigation(
+                                `åbner målet ${goal.title}`,
+                              )
+                            ) {
+                              event.preventDefault();
+                            }
+                          }}
+                        >
+                          <span className={styles.outlineNumber}>
+                            {goalIndex + 1}
+                          </span>
+                          <span>
+                            <small>Mål</small>
+                            <strong id={`outline-goal-${goal.id}`}>
+                              {goal.title}
+                            </strong>
+                          </span>
+                          <span className={styles.outlineStatus}>
+                            {goal.status === "published"
+                              ? "Publiceret"
+                              : "Kladde"}
+                          </span>
+                        </Link>
+
+                        <div className={styles.outlineExercises}>
+                          {goal.exercises.map((exercise, exerciseIndex) => {
+                            const exerciseIsSelected =
+                              selectedExerciseId === exercise.id &&
+                              !addingExercise &&
+                              activeStep === "exercise";
+
+                            return (
+                              <Link
+                                className={
+                                  exerciseIsSelected
+                                    ? styles.outlineExerciseSelected
+                                    : styles.outlineExercise
+                                }
+                                href={buildTopicEditorHref({
+                                  exerciseId: exercise.id,
+                                  goalId: goal.id,
+                                  topicId: initialDraft.topic.id,
+                                })}
+                                aria-current={
+                                  exerciseIsSelected ? "page" : undefined
+                                }
+                                onClick={(event) => {
+                                  if (exerciseIsSelected) {
+                                    event.preventDefault();
+                                    return;
+                                  }
+                                  if (
+                                    preventDirtyNavigation(
+                                      `åbner deløvelsen ${exercise.title}`,
+                                    )
+                                  ) {
+                                    event.preventDefault();
+                                  }
+                                }}
+                                key={exercise.id}
+                              >
+                                <span>{exerciseIndex + 1}</span>
+                                <strong>{exercise.title}</strong>
+                                <small>
+                                  {exercise.status === "published"
+                                    ? "Publiceret"
+                                    : "Kladde"}
+                                </small>
+                              </Link>
+                            );
+                          })}
+
+                          <Link
+                            className={
+                              addingExercise && goalIsSelected
+                                ? styles.outlineAddExerciseActive
+                                : styles.outlineAddExercise
+                            }
+                            href={buildTopicEditorHref({
+                              createExercise: true,
+                              goalId: goal.id,
+                              topicId: initialDraft.topic.id,
+                            })}
+                            aria-current={
+                              addingExercise && goalIsSelected
+                                ? "page"
+                                : undefined
+                            }
+                            onClick={(event) => {
+                              if (addingExercise && goalIsSelected) {
+                                event.preventDefault();
+                                return;
+                              }
+                              if (
+                                preventDirtyNavigation(
+                                  `tilføjer en ny deløvelse under ${goal.title}`,
+                                )
+                              ) {
+                                event.preventDefault();
+                              }
+                            }}
+                          >
+                            <span aria-hidden="true">+</span>
+                            Ny deløvelse
+                          </Link>
+                        </div>
+                      </section>
+                    );
+                  })}
+                </div>
+              )}
+            </nav>
+          ) : null}
 
           <div className={styles.workspace}>
             <section
@@ -1587,7 +1862,10 @@ export function TopicDraftWorkspace({
                         : activeStep === "goal"
                           ? goalTitle || "Første mål"
                           : activeStep === "exercise"
-                            ? exerciseTitle || "Første deløvelse"
+                            ? exerciseTitle ||
+                              (addingExercise
+                                ? "Ny deløvelse"
+                                : "Første deløvelse")
                             : activeStep === "wardrobe"
                               ? "Garderobeeksempler"
                               : "Gennemgang"}
@@ -2081,9 +2359,9 @@ export function TopicDraftWorkspace({
                     type="hidden"
                     name="sortOrder"
                     value={
-                      exerciseCreated
-                        ? (initialDraft?.exercise?.sortOrder ?? 0)
-                        : (initialDraft?.nextExerciseSortOrder ?? 0)
+                      initialDraft?.exercise?.sortOrder ??
+                      initialDraft?.nextExerciseSortOrder ??
+                      0
                     }
                   />
 
@@ -2300,6 +2578,20 @@ export function TopicDraftWorkspace({
                       </>
                     ) : (
                       <>
+                        {addingExercise &&
+                        initialDraft &&
+                        selectedGoalId &&
+                        !exerciseBusy ? (
+                          <Link
+                            className={styles.secondaryButton}
+                            href={buildTopicEditorHref({
+                              goalId: selectedGoalId,
+                              topicId: initialDraft.topic.id,
+                            })}
+                          >
+                            Annuller ny deløvelse
+                          </Link>
+                        ) : null}
                         {exerciseEditing ? (
                           <button
                             className={styles.secondaryButton}

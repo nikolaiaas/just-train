@@ -64,6 +64,7 @@ test("canonicalizes topic, exercise, and wardrobe output without changing struct
       name: `Regnbue\n ting ${index + 1}`,
       icon: "🌈",
       category: "equipment",
+      equipSlot: index === 0 ? "feet" : "accessory",
       rarity: "common",
       points: 100,
       unlockRule: "",
@@ -75,6 +76,31 @@ test("canonicalizes topic, exercise, and wardrobe output without changing struct
   assert.equal(topic?.suggestion.description, "Leg\nmed bold");
   assert.deepEqual(exercise?.suggestion.equipment, ["Bold"]);
   assert.equal(wardrobe?.items[0].name, "Regnbue ting 1");
+  assert.equal(wardrobe?.items[0].equipSlot, "feet");
+});
+
+test("preserves immutable legacy wardrobe shape and rejects unknown slots", () => {
+  const legacyItems = Array.from({ length: 3 }, (_, index) => ({
+    name: `Legacyting ${index + 1}`,
+    icon: "🌟",
+    category: "clothing",
+    rarity: "common",
+    points: 100,
+    unlockRule: "",
+    reason: "Et ældre versionsbundet forslag.",
+  }));
+
+  const legacy = normalizeAdminContentOutput("content.wardrobe_examples", {
+    reply: "Tre ældre forslag.",
+    items: legacyItems,
+  });
+  const invalid = normalizeAdminContentOutput("content.wardrobe_examples", {
+    reply: "Tre forslag med en forkert placering.",
+    items: legacyItems.map((item) => ({ ...item, equipSlot: "left-foot" })),
+  });
+
+  assert.equal(Object.hasOwn(legacy?.items[0] ?? {}, "equipSlot"), false);
+  assert.equal(invalid, null);
 });
 
 test("fails closed when canonicalization removes required copy", () => {

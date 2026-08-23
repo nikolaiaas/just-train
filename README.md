@@ -56,6 +56,8 @@ The console listens only on this Mac and exposes a fixed set of Bare Træn actio
 
 Codex in the ChatGPT desktop app also gets a tracked **Start administration** project action. It runs `mise exec -- pnpm preview:admin`, uses the Dev Console's verified-process rules, and keeps the administration available at [http://localhost:11000](http://localhost:11000). A responsive preview from this checkout is reused; a verified but unresponsive preview is restarted; an unknown port owner is left untouched.
 
+For AI features against Local Supabase, Codex also gets a tracked **Start local AI** action. Start Local Supabase in the Dev Console first, then keep the AI action running while testing. It serves both the family image worker and the administration assistant from the ignored local Function environment; Hosted Development does not need this local process.
+
 For a terminal-based start, use the commands below.
 
 Start the administration app and mobile Safari preview together:
@@ -95,9 +97,10 @@ Start the local backend and Supabase Studio:
 pnpm supabase:start
 pnpm supabase:status
 pnpm supabase:reset
+pnpm dev:ai
 ```
 
-Studio is normally available at [http://localhost:54323](http://localhost:54323). Starting local Supabase does not silently redirect either app. The administration login on localhost has a hidden **Udviklingsmiljø** selector for Local Supabase or Hosted Development, with separate sessions and no Production option. The mobile app still uses the backend configured in its ignored `.env.local`; a physical iPhone should normally stay on Hosted Development. Never use the service-role key in an app.
+Studio is normally available at [http://localhost:54323](http://localhost:54323). `dev:ai` is a separate attached process, so keep that Terminal or Codex action running while using either local AI feature. Starting local Supabase does not silently redirect either app. The administration login on localhost has a hidden **Udviklingsmiljø** selector for Local Supabase or Hosted Development, with separate sessions and no Production option. The mobile app still uses the backend configured in its ignored `.env.local`; a physical iPhone should normally stay on Hosted Development. Never use the service-role key in an app.
 
 The local Supabase stack is development-only and must not be exposed to the public internet. A physical iPhone should normally use the hosted development project rather than the Mac's local database.
 

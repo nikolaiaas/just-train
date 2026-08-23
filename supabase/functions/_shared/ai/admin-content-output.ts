@@ -10,6 +10,14 @@ type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue };
 type JsonObject = { [key: string]: JsonValue };
 type UnknownRecord = Record<string, unknown>;
 
+const WARDROBE_EQUIP_SLOTS = new Set([
+  "head",
+  "body",
+  "held",
+  "feet",
+  "accessory",
+]);
+
 const DISALLOWED_MULTILINE_CONTROL_CHARACTER_PATTERN =
   /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f]/gu;
 const SINGLE_LINE_SEPARATOR_PATTERN = /[\s\u0000-\u001f\u007f-\u009f]+/gu;
@@ -211,6 +219,7 @@ function normalizeWardrobeOutput(value: UnknownRecord): JsonObject | null {
     const icon = normalizeRequiredSingleLine(candidate.icon);
     const unlockRule = normalizeMultiline(candidate.unlockRule);
     const reason = normalizeRequiredMultiline(candidate.reason);
+    const equipSlot = candidate.equipSlot;
 
     if (
       !name ||
@@ -219,13 +228,16 @@ function normalizeWardrobeOutput(value: UnknownRecord): JsonObject | null {
       !reason ||
       typeof candidate.category !== "string" ||
       typeof candidate.rarity !== "string" ||
-      typeof candidate.points !== "number"
+      typeof candidate.points !== "number" ||
+      (equipSlot !== undefined &&
+        (typeof equipSlot !== "string" || !WARDROBE_EQUIP_SLOTS.has(equipSlot)))
     ) {
       return null;
     }
 
     items.push({
       category: candidate.category,
+      ...(typeof equipSlot === "string" ? { equipSlot } : {}),
       icon,
       name,
       points: candidate.points,

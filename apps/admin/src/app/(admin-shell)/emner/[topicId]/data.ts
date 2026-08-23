@@ -39,6 +39,8 @@ export type AdminTopicDetailWardrobeItem = {
   category: "clothing" | "equipment" | "effect";
   contentVersion: number;
   editorialStatus: "draft" | "approved" | "rejected";
+  equipSlot: "head" | "body" | "held" | "feet" | "accessory";
+  hasPendingRevision: boolean;
   icon: string;
   id: string;
   name: string;
@@ -93,6 +95,13 @@ const MEASUREMENTS = new Set(["completion", "repetitions", "duration"]);
 const WARDROBE_CATEGORIES = new Set(["clothing", "equipment", "effect"]);
 const WARDROBE_RARITIES = new Set(["common", "rare", "special"]);
 const WARDROBE_EDITORIAL_STATUSES = new Set(["draft", "approved", "rejected"]);
+const WARDROBE_EQUIP_SLOTS = new Set([
+  "head",
+  "body",
+  "held",
+  "feet",
+  "accessory",
+]);
 
 const TOPIC_COLUMNS =
   "id, slug, title, description, icon, accent_color, content_version, is_published, published_at, updated_at" as const;
@@ -101,13 +110,15 @@ const GOAL_COLUMNS =
 const EXERCISE_COLUMNS =
   "id, goal_id, title, instructions, measurement, target_value, estimated_minutes, equipment, safety_notes, sort_order, content_version, is_published, published_at, updated_at" as const;
 const WARDROBE_COLUMNS =
-  "id, topic_id, name, icon, category, rarity, points, unlock_rule, sort_order, content_version, is_published, published_at, updated_at" as const;
+  "id, topic_id, name, icon, category, equip_slot, rarity, points, unlock_rule, sort_order, content_version, is_published, published_at, updated_at" as const;
 
 function isMissingWardrobeStorageError(error: unknown): boolean {
   return (
     isRecord(error) &&
     typeof error.code === "string" &&
     (error.code === "42P01" ||
+      error.code === "42703" ||
+      error.code === "PGRST204" ||
       error.code === "PGRST202" ||
       error.code === "PGRST205")
   );
@@ -130,6 +141,20 @@ function isTimestamp(value: unknown): value is string {
     typeof value === "string" &&
     value.length > 0 &&
     Number.isFinite(Date.parse(value))
+  );
+}
+
+function timestampMicroseconds(value: string): bigint {
+  const match = value.match(
+    /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.(\d{1,6}))?(Z|[+-]\d{2}:\d{2})$/,
+  );
+
+  if (!match) return BigInt(Date.parse(value)) * BigInt(1_000);
+
+  const [, second, fraction = "", offset] = match;
+  return (
+    BigInt(Date.parse(`${second}${offset}`)) * BigInt(1_000) +
+    BigInt(fraction.padEnd(6, "0"))
   );
 }
 
@@ -331,6 +356,8 @@ function parseWardrobeItemRow(
   const publication = parsePublication(value);
   const points = value.points;
   const unlockRule = value.unlock_rule;
+  const equipSlot = value.equip_slot ?? "accessory";
+  const hasPendingRevision = value.has_pending_revision ?? false;
   const rewardRuleIsValid =
     (Number.isInteger(points) &&
       (points as number) >= 1 &&
@@ -346,11 +373,16 @@ function parseWardrobeItemRow(
     !isBoundedText(value.icon, 16) ||
     typeof value.category !== "string" ||
     !WARDROBE_CATEGORIES.has(value.category) ||
+    typeof equipSlot !== "string" ||
+    !WARDROBE_EQUIP_SLOTS.has(equipSlot) ||
+    typeof hasPendingRevision !== "boolean" ||
+    (hasPendingRevision && publication.status !== "published") ||
     typeof value.rarity !== "string" ||
     !WARDROBE_RARITIES.has(value.rarity) ||
     typeof value.editorial_status !== "string" ||
     !WARDROBE_EDITORIAL_STATUSES.has(value.editorial_status) ||
     (publication.status === "published" &&
+      !hasPendingRevision &&
       value.editorial_status !== "approved") ||
     !rewardRuleIsValid ||
     !isSortOrder(value.sort_order) ||
@@ -365,6 +397,8 @@ function parseWardrobeItemRow(
     contentVersion: value.content_version,
     editorialStatus:
       value.editorial_status as AdminTopicDetailWardrobeItem["editorialStatus"],
+    equipSlot: equipSlot as AdminTopicDetailWardrobeItem["equipSlot"],
+    hasPendingRevision,
     icon: value.icon,
     id: value.id.toLowerCase(),
     name: value.name,
@@ -427,6 +461,7 @@ export function parseAdminTopicDetailRows(
 
   const exercisesByGoalId = new Map<string, AdminTopicDetailExercise[]>();
   const exerciseIds = new Set<string>();
+  const exercises: AdminTopicDetailExercise[] = [];
 
   for (const value of rows.exercises) {
     const exercise = parseExerciseRow(value);
@@ -440,12 +475,14 @@ export function parseAdminTopicDetailRows(
     }
 
     exerciseIds.add(exercise.id);
+    exercises.push(exercise);
     const siblings = exercisesByGoalId.get(exercise.goalId) ?? [];
     siblings.push(exercise);
     exercisesByGoalId.set(exercise.goalId, siblings);
   }
 
   const wardrobeItems: AdminTopicDetailWardrobeItem[] = [];
+  const allWardrobeItems: AdminTopicDetailWardrobeItem[] = [];
   const wardrobeIds = new Set<string>();
 
   for (const value of rows.wardrobeItems) {
@@ -456,9 +493,21 @@ export function parseAdminTopicDetailRows(
     }
 
     wardrobeIds.add(item.id);
+    allWardrobeItems.push(item);
     if (item.editorialStatus === "rejected") continue;
     wardrobeItems.push(item);
   }
+
+  const updatedAt = [
+    topic.updatedAt,
+    ...goals.map((goal) => goal.updatedAt),
+    ...exercises.map((exercise) => exercise.updatedAt),
+    ...allWardrobeItems.map((item) => item.updatedAt),
+  ].reduce((latest, candidate) =>
+    timestampMicroseconds(candidate) > timestampMicroseconds(latest)
+      ? candidate
+      : latest,
+  );
 
   return {
     ...topic,
@@ -468,6 +517,7 @@ export function parseAdminTopicDetailRows(
         compareOrderedContent,
       ),
     })),
+    updatedAt,
     wardrobeItems: wardrobeItems.sort(compareOrderedContent),
   };
 }
@@ -522,15 +572,15 @@ export async function loadAdminTopicDetail(
       throw new AdminTopicDetailLoadError();
     }
 
-    const wardrobeRows = [
-      ...(publishedWardrobeResponse.error
+    const wardrobeRows = draftWardrobeResponse.error
+      ? publishedWardrobeResponse.error
         ? []
         : publishedWardrobeResponse.data.map((item) => ({
             ...item,
             editorial_status: "approved",
-          }))),
-      ...(draftWardrobeResponse.error ? [] : draftWardrobeResponse.data),
-    ];
+            has_pending_revision: false,
+          }))
+      : draftWardrobeResponse.data;
 
     const goalIds = goalsResponse.data.map((row) =>
       isRecord(row) && isUuid(row.id) ? row.id.toLowerCase() : null,
