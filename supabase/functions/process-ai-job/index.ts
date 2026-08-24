@@ -1,13 +1,20 @@
 import { createClient } from "npm:@supabase/supabase-js@2.112.3";
 
 import {
-  generateOpenRouterImage,
+  generateOpenRouterMultiImage,
   OpenRouterImageError,
+  type OpenRouterImageReference,
 } from "../_shared/ai/openrouter-image.ts";
 import {
   detectSupportedImageMimeType,
   sha256Hex,
 } from "../_shared/ai/bytes.ts";
+import {
+  parseChildTopicPortraitJobReconciliation,
+  parseChildTopicPortraitClaimInputs,
+  planChildTopicPortraitClaim,
+  type ClaimedPortraitInput,
+} from "../_shared/ai/child-topic-portrait-inputs.ts";
 
 type EdgeRuntimeApi = { waitUntil(promise: Promise<unknown>): void };
 type EdgeGlobal = typeof globalThis & { EdgeRuntime?: EdgeRuntimeApi };
@@ -27,6 +34,7 @@ type Claim = {
   request_options: unknown;
   storage_bucket: string;
   timeout_ms: number;
+  input_images?: unknown;
 };
 
 const corsHeaders = {
@@ -77,6 +85,22 @@ function isUuid(value: unknown): value is string {
       value,
     )
   );
+}
+
+function readClaimedInputs(claim: Claim): ClaimedPortraitInput[] {
+  const value = claim.input_images;
+
+  if (value === undefined) {
+    return [
+      {
+        bucket: claim.storage_bucket,
+        mimeType: claim.input_mime_type as "image/jpeg" | "image/png",
+        objectPath: claim.input_object_path,
+      },
+    ];
+  }
+
+  return parseChildTopicPortraitClaimInputs(value);
 }
 
 async function readBoundedRequestJson(
@@ -163,14 +187,54 @@ async function processJob(jobId: string): Promise<void> {
   const admin = createClient(supabaseUrl, secretKey, {
     auth: { persistSession: false },
   });
-  const { data: claimRows, error: claimError } = await admin.rpc(
-    "claim_ai_media_job_for_worker",
+  const portraitClaim = await admin.rpc(
+    "claim_child_topic_portrait_job_for_worker",
     { p_job_id: jobId },
   );
+  let claimRows = portraitClaim.data as unknown[] | null;
+  let claimError: unknown = portraitClaim.error;
 
-  if (claimError) {
+  const portraitClaimPlan = planChildTopicPortraitClaim({
+    error: claimError,
+    hasClaimRow: Boolean(claimRows?.[0]),
+  });
+
+  if (portraitClaimPlan === "fail_closed") {
     console.error(JSON.stringify({ event: "ai_claim_failed", jobId }));
     return;
+  }
+
+  if (portraitClaimPlan === "inspect_portrait_table") {
+    const { data: portraitRender, error: portraitRenderError } = await admin
+      .from("child_topic_portrait_renders")
+      .select("job_id")
+      .eq("job_id", jobId)
+      .maybeSingle();
+
+    if (portraitRenderError) {
+      console.error(JSON.stringify({ event: "ai_claim_failed", jobId }));
+      return;
+    }
+
+    if (portraitRender) {
+      return;
+    }
+  }
+
+  if (
+    portraitClaimPlan === "fallback_legacy" ||
+    portraitClaimPlan === "inspect_portrait_table"
+  ) {
+    const legacyClaim = await admin.rpc("claim_ai_media_job_for_worker", {
+      p_job_id: jobId,
+    });
+    claimRows = legacyClaim.data as unknown[] | null;
+    claimError = legacyClaim.error;
+
+    if (claimError) {
+      console.error(JSON.stringify({ event: "ai_claim_failed", jobId }));
+      return;
+    }
   }
 
   const claim = (claimRows?.[0] ?? null) as Claim | null;
@@ -192,45 +256,64 @@ async function processJob(jobId: string): Promise<void> {
       });
     }
 
-    const { data: inputBlob, error: downloadError } = await admin.storage
-      .from(claim.storage_bucket)
-      .download(claim.input_object_path);
+    const claimedInputs = readClaimedInputs(claim);
+    const inputReferences: OpenRouterImageReference[] = [];
+    let totalInputBytes = 0;
 
-    if (downloadError || !inputBlob) {
-      const status = readStorageStatus(downloadError);
-      throw new OpenRouterImageError({
-        attemptCode: "input_download_failed",
-        publicCode:
-          status === 404 || !downloadError
-            ? "invalid_input_image"
-            : "worker_interrupted",
-        retryable: status !== 404 && Boolean(downloadError),
+    for (const claimedInput of claimedInputs) {
+      const { data: inputBlob, error: downloadError } = await admin.storage
+        .from(claimedInput.bucket)
+        .download(claimedInput.objectPath);
+
+      if (downloadError || !inputBlob) {
+        const status = readStorageStatus(downloadError);
+        throw new OpenRouterImageError({
+          attemptCode: "input_download_failed",
+          publicCode:
+            status === 404 || !downloadError
+              ? "invalid_input_image"
+              : "worker_interrupted",
+          retryable: status !== 404 && Boolean(downloadError),
+        });
+      }
+
+      if (inputBlob.size === 0 || inputBlob.size > 8 * 1024 * 1024) {
+        throw new OpenRouterImageError({
+          attemptCode: "input_size_invalid",
+          publicCode: "invalid_input_image",
+          retryable: false,
+        });
+      }
+
+      totalInputBytes += inputBlob.size;
+      if (totalInputBytes > 32 * 1024 * 1024) {
+        throw new OpenRouterImageError({
+          attemptCode: "total_input_size_invalid",
+          publicCode: "invalid_input_image",
+          retryable: false,
+        });
+      }
+
+      const inputBytes = new Uint8Array(await inputBlob.arrayBuffer());
+      const detectedInputType = detectSupportedImageMimeType(inputBytes);
+
+      if (!detectedInputType || detectedInputType !== claimedInput.mimeType) {
+        throw new OpenRouterImageError({
+          attemptCode: "input_signature_mismatch",
+          publicCode: "invalid_input_image",
+          retryable: false,
+        });
+      }
+
+      inputReferences.push({
+        bytes: inputBytes,
+        mimeType: claimedInput.mimeType,
       });
     }
 
-    if (inputBlob.size === 0 || inputBlob.size > 8 * 1024 * 1024) {
-      throw new OpenRouterImageError({
-        attemptCode: "input_size_invalid",
-        publicCode: "invalid_input_image",
-        retryable: false,
-      });
-    }
-
-    const inputBytes = new Uint8Array(await inputBlob.arrayBuffer());
-    const detectedInputType = detectSupportedImageMimeType(inputBytes);
-
-    if (!detectedInputType || detectedInputType !== claim.input_mime_type) {
-      throw new OpenRouterImageError({
-        attemptCode: "input_signature_mismatch",
-        publicCode: "invalid_input_image",
-        retryable: false,
-      });
-    }
-
-    const result = await generateOpenRouterImage({
+    const result = await generateOpenRouterMultiImage({
       apiKey: readRequiredEnvironment("OPENROUTER_API_KEY"),
-      inputBytes,
-      inputMimeType: detectedInputType,
+      inputReferences,
       model: claim.model,
       options: claim.request_options,
       prompt: claim.prompt_template,
@@ -397,12 +480,38 @@ Deno.serve(async (request) => {
       .eq("id", jobId)
       .maybeSingle();
 
-    if (jobError || !job || job.requested_by !== identity.user.id) {
+    if (jobError || !job) {
       return jsonResponse({ error: "job_not_found" }, 404);
     }
 
-    if (job.status === "succeeded") {
+    let observedStatus = job.status;
+    let mayProcess = job.requested_by === identity.user.id;
+
+    if (!mayProcess) {
+      const { data: reconciliationRows, error: reconciliationError } =
+        await userClient.rpc("reconcile_child_topic_portrait_job_start", {
+          p_expected_user_id: identity.user.id,
+          p_job_id: jobId,
+        });
+      const reconciliation = parseChildTopicPortraitJobReconciliation(
+        reconciliationRows,
+        jobId,
+      );
+
+      if (reconciliationError || !reconciliation) {
+        return jsonResponse({ error: "job_not_found" }, 404);
+      }
+
+      observedStatus = reconciliation.status;
+      mayProcess = reconciliation.mayProcess;
+    }
+
+    if (observedStatus === "succeeded") {
       return jsonResponse({ jobId, status: "succeeded" }, 200);
+    }
+
+    if (!mayProcess) {
+      return jsonResponse({ jobId, status: "accepted" }, 202);
     }
 
     const work = processJob(jobId);

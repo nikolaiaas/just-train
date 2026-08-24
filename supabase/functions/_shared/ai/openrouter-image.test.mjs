@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   createOpenRouterImageRequest,
+  createOpenRouterMultiImageRequest,
   createOpenRouterTextToImageRequest,
   generateOpenRouterImage,
   generateOpenRouterTextToImage,
@@ -95,6 +96,45 @@ test("builds a data URL request without accepting a client-selected model", () =
       assertImageError(error, {
         attemptCode: "unsupported_model",
         publicCode: "server_configuration",
+        retryable: false,
+      }),
+  );
+});
+
+test("builds one ordered request from an immutable base and all wardrobe images", () => {
+  const wardrobeBytes = new Uint8Array([...PNG_BYTES, 0x01]);
+  const body = createOpenRouterMultiImageRequest({
+    inputReferences: [
+      { bytes: PNG_BYTES, mimeType: "image/png" },
+      { bytes: wardrobeBytes, mimeType: "image/png" },
+    ],
+    model: "openai/gpt-image-2",
+    options: OPTIONS,
+    prompt: PROMPT,
+  });
+
+  assert.equal(body.input_references.length, 2);
+  assert.match(
+    body.input_references[0].image_url.url,
+    /^data:image\/png;base64,/,
+  );
+  assert.notEqual(
+    body.input_references[0].image_url.url,
+    body.input_references[1].image_url.url,
+  );
+
+  assert.throws(
+    () =>
+      createOpenRouterMultiImageRequest({
+        inputReferences: [],
+        model: "openai/gpt-image-2",
+        options: OPTIONS,
+        prompt: PROMPT,
+      }),
+    (error) =>
+      assertImageError(error, {
+        attemptCode: "invalid_input_reference_count",
+        publicCode: "invalid_input_image",
         retryable: false,
       }),
   );

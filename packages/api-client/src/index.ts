@@ -9,11 +9,13 @@ export * from "./auth.ts";
 export * from "./ai-media.ts";
 export * from "./child.ts";
 export * from "./child-topic-photo.ts";
+export * from "./child-topic-portrait.ts";
 export * from "./content.ts";
 export * from "./content-steps.ts";
 export * from "./parent.ts";
 export * from "./wardrobe.ts";
 export * from "./topic-lifecycle.ts";
+export * from "./training.ts";
 
 export type BareTraenClient = SupabaseClient<Database>;
 
