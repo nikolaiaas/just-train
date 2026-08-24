@@ -661,7 +661,7 @@ select results_eq(
       'a2000000-0000-4000-8000-000000000002'
     )
   $$,
-  $$ values (3) $$,
+  $$ values (4) $$,
   'an admin can atomically publish a replacement prompt without an app release'
 );
 select is(
@@ -672,7 +672,7 @@ select is(
       on operation.active_version_id = version.id
     where operation.operation_key = 'portrait.cartoon_3d'
   ),
-  3,
+  4,
   'the operation points to the newly published prompt version'
 );
 select throws_ok(

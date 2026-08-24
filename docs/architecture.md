@@ -81,12 +81,13 @@ deadline in metadata, not proof that the bytes are physically deleted; an
 automatic deletion worker is still required before a broader rollout.
 
 The first operation, `portrait.cartoon_3d`, preserves the unsuccessful
-Microsoft `microsoft/mai-image-2.5` Azure route as immutable version 1 history.
-Its active version 2 pins OpenAI `openai/gpt-image-2` to OpenRouter's OpenAI
-image endpoint with provider fallback disabled and keeps the prompt in the
-database:
+Microsoft `microsoft/mai-image-2.5` Azure route as immutable version 1 history
+and the first successful OpenAI route as immutable version 2 history. Its
+active version 3 pins OpenAI `openai/gpt-image-2` to OpenRouter's OpenAI image
+endpoint with provider fallback disabled, isolates the person on a plain white
+canvas, and keeps the prompt in the database:
 
-> Create a friendly stylized 3D cartoon version of this person. Preserve their recognizable face, hairstyle, skin tone and distinctive features.
+> Create a friendly stylized 3D cartoon version of this person. Preserve their recognizable face, hairstyle, skin tone and distinctive features. Remove the original background completely. Show only the person, isolated with clean edges against a plain solid white background. Do not add scenery, props, other people, text, borders, frames, shadows or decorative elements.
 
 This is a private authenticated family feature. A family member submits one
 gallery image for a currently selected active child, and the database verifies
