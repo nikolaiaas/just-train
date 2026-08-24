@@ -428,6 +428,7 @@ export type Database = {
       };
       child_profiles: {
         Row: {
+          avatar_media_asset_id: string | null;
           avatar_seed: string | null;
           avatar_url: string | null;
           created_at: string;
@@ -440,6 +441,7 @@ export type Database = {
           updated_at: string;
         };
         Insert: {
+          avatar_media_asset_id?: string | null;
           avatar_seed?: string | null;
           avatar_url?: string | null;
           created_at?: string;
@@ -452,6 +454,7 @@ export type Database = {
           updated_at?: string;
         };
         Update: {
+          avatar_media_asset_id?: string | null;
           avatar_seed?: string | null;
           avatar_url?: string | null;
           created_at?: string;
@@ -465,6 +468,13 @@ export type Database = {
         };
         Relationships: [
           {
+            foreignKeyName: "child_profiles_avatar_media_child_fkey";
+            columns: ["avatar_media_asset_id", "family_id", "id"];
+            isOneToOne: false;
+            referencedRelation: "media_assets";
+            referencedColumns: ["id", "family_id", "child_profile_id"];
+          },
+          {
             foreignKeyName: "child_profiles_created_by_fkey";
             columns: ["created_by"];
             isOneToOne: false;
@@ -476,6 +486,75 @@ export type Database = {
             columns: ["family_id"];
             isOneToOne: false;
             referencedRelation: "families";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      child_topic_reference_photos: {
+        Row: {
+          child_profile_id: string;
+          created_at: string;
+          created_by: string;
+          family_id: string;
+          media_asset_id: string;
+          topic_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          child_profile_id: string;
+          created_at?: string;
+          created_by: string;
+          family_id: string;
+          media_asset_id: string;
+          topic_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          child_profile_id?: string;
+          created_at?: string;
+          created_by?: string;
+          family_id?: string;
+          media_asset_id?: string;
+          topic_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "child_topic_reference_photos_asset_lineage_fkey";
+            columns: [
+              "media_asset_id",
+              "family_id",
+              "child_profile_id",
+              "topic_id",
+            ];
+            isOneToOne: false;
+            referencedRelation: "media_assets";
+            referencedColumns: [
+              "id",
+              "family_id",
+              "child_profile_id",
+              "topic_id",
+            ];
+          },
+          {
+            foreignKeyName: "child_topic_reference_photos_child_family_fkey";
+            columns: ["child_profile_id", "family_id"];
+            isOneToOne: false;
+            referencedRelation: "child_profiles";
+            referencedColumns: ["id", "family_id"];
+          },
+          {
+            foreignKeyName: "child_topic_reference_photos_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "child_topic_reference_photos_topic_id_fkey";
+            columns: ["topic_id"];
+            isOneToOne: false;
+            referencedRelation: "topics";
             referencedColumns: ["id"];
           },
         ];
@@ -899,6 +978,7 @@ export type Database = {
           storage_bucket: string;
           storage_object_path: string;
           subject_kind: Database["public"]["Enums"]["media_subject_kind"];
+          topic_id: string | null;
           updated_at: string;
         };
         Insert: {
@@ -918,6 +998,7 @@ export type Database = {
           storage_bucket?: string;
           storage_object_path: string;
           subject_kind: Database["public"]["Enums"]["media_subject_kind"];
+          topic_id?: string | null;
           updated_at?: string;
         };
         Update: {
@@ -937,6 +1018,7 @@ export type Database = {
           storage_bucket?: string;
           storage_object_path?: string;
           subject_kind?: Database["public"]["Enums"]["media_subject_kind"];
+          topic_id?: string | null;
           updated_at?: string;
         };
         Relationships: [
@@ -959,6 +1041,13 @@ export type Database = {
             columns: ["family_id"];
             isOneToOne: false;
             referencedRelation: "families";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "media_assets_topic_id_fkey";
+            columns: ["topic_id"];
+            isOneToOne: false;
+            referencedRelation: "topics";
             referencedColumns: ["id"];
           },
         ];
@@ -1278,6 +1367,23 @@ export type Database = {
         };
         Returns: undefined;
       };
+      finalize_child_topic_reference_photo: {
+        Args: {
+          p_child_profile_id: string;
+          p_client_request_id: string;
+          p_expected_user_id: string;
+          p_family_id: string;
+          p_topic_id: string;
+        };
+        Returns: {
+          changed: boolean;
+          current_media_asset_id: string;
+          photo_updated_at: string;
+          previous_media_asset_id: string;
+          request_media_asset_id: string;
+          request_status: string;
+        }[];
+      };
       list_admin_wardrobe_item_drafts: {
         Args: { p_topic_id: string; p_wardrobe_item_id?: string };
         Returns: {
@@ -1302,6 +1408,27 @@ export type Database = {
           topic_id: string;
           unlock_rule: string;
           updated_at: string;
+        }[];
+      };
+      list_child_published_topics_with_photo: {
+        Args: {
+          p_child_profile_id: string;
+          p_expected_user_id: string;
+          p_family_id: string;
+        };
+        Returns: {
+          accent_color: string;
+          description: string;
+          icon: string;
+          photo_media_asset_id: string;
+          photo_mime_type: string;
+          photo_storage_bucket: string;
+          photo_storage_object_path: string;
+          photo_updated_at: string;
+          slug: string;
+          sort_order: number;
+          title: string;
+          topic_id: string;
         }[];
       };
       list_child_wardrobe: {
@@ -1355,6 +1482,25 @@ export type Database = {
           storage_bucket: string;
         }[];
       };
+      prepare_child_topic_reference_photo: {
+        Args: {
+          p_child_profile_id: string;
+          p_client_request_id: string;
+          p_expected_user_id: string;
+          p_family_id: string;
+          p_input_mime_type: string;
+          p_topic_id: string;
+        };
+        Returns: {
+          created: boolean;
+          input_mime_type: string;
+          media_asset_id: string;
+          request_id: string;
+          request_status: string;
+          storage_bucket: string;
+          storage_object_path: string;
+        }[];
+      };
       publish_admin_topic: {
         Args: { p_expected_updated_at: string; p_topic_id: string };
         Returns: {
@@ -1378,6 +1524,20 @@ export type Database = {
           operation_id: string;
           operation_version_id: string;
           version: number;
+        }[];
+      };
+      remove_child_topic_reference_photo: {
+        Args: {
+          p_child_profile_id: string;
+          p_expected_media_asset_id: string;
+          p_expected_user_id: string;
+          p_family_id: string;
+          p_topic_id: string;
+        };
+        Returns: {
+          delete_after: string;
+          removed: boolean;
+          removed_media_asset_id: string;
         }[];
       };
       save_admin_wardrobe_item_draft: {
@@ -1418,6 +1578,19 @@ export type Database = {
         };
         Returns: {
           id: string;
+        }[];
+      };
+      set_child_profile_avatar_from_ai_job: {
+        Args: {
+          p_child_profile_id: string;
+          p_expected_user_id: string;
+          p_job_id: string;
+        };
+        Returns: {
+          avatar_media_asset_id: string;
+          changed: boolean;
+          child_profile_id: string;
+          previous_avatar_media_asset_id: string;
         }[];
       };
       set_child_wardrobe_item_equipped: {
