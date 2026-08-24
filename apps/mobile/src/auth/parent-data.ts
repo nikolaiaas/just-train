@@ -12,6 +12,7 @@ export type ParentFamily = {
 };
 
 export type ParentChild = {
+  avatarMediaAssetId: string | null;
   avatarSeed: string | null;
   displayName: string;
   familyId: string;
@@ -110,7 +111,9 @@ export async function loadParentBootstrap(
         .maybeSingle(),
       client
         .from("child_profiles")
-        .select("id, family_id, display_name, avatar_seed, is_active")
+        .select(
+          "id, family_id, display_name, avatar_seed, avatar_media_asset_id, is_active",
+        )
         .eq("family_id", membership.family_id)
         .eq("is_active", true)
         .order("created_at", { ascending: true }),
@@ -126,6 +129,7 @@ export async function loadParentBootstrap(
   }
 
   const children = (childrenResponse.data ?? []).map((child) => ({
+    avatarMediaAssetId: child.avatar_media_asset_id,
     avatarSeed: child.avatar_seed,
     displayName: child.display_name,
     familyId: child.family_id,

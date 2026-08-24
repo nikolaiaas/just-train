@@ -33,9 +33,9 @@ The app uses the single backend configured by the two public Expo variables; the
 
 A parent enters an email address and receives both a six-digit code and a magic-link choice. The first successful login may create the parent account. A magic link must return to the same browser/app installation that requested it because the PKCE verifier stays on that device; the six-digit code is the fallback when the mail is opened elsewhere. Child profiles remain parent-owned and do not get Auth accounts in this phase.
 
-After login, the app loads only the authenticated adult's profile, first family membership, and active child profiles under Row-Level Security. A new adult can create the first family through a retry-safe authenticated database operation. Existing children can be selected, while a family without children gets an honest empty state.
+After login, the app loads only the authenticated adult's profile, first family membership, and active child profiles under Row-Level Security. A new adult can create the first family through a retry-safe authenticated database operation. The active child is remembered for that adult, family, app variant, and backend. Child switching, child creation, and logout live under `Min profil` instead of staying on the child's home screen.
 
-The family owner can create a child profile with only a nickname and one of four preset avatars. The child receives no Auth account, email, password, age, or photo. Creation requires acknowledgement of the current versioned guardian notice, records that acknowledgement in a private database table, and stops at 10 active children per family. The client persists a caller- and backend-scoped request identity before submission, so an interrupted or uncertain request can be retried without creating a duplicate child.
+The family owner creates a child profile with only a nickname and one of four preset avatars. No photo is collected during child creation, and the child receives no Auth account, email, password, or age. Later, a family member may explicitly promote a reviewed private cartoon result to the child's profile image; the preset remains the fallback. Creation requires acknowledgement of the current versioned guardian notice, records that acknowledgement in a private database table, and stops at 10 active children per family. The client persists a caller- and backend-scoped request identity before submission, so an interrupted or uncertain request can be retried without creating a duplicate child.
 
 This acknowledgement protects child-profile creation, but it is not approval of the final legal basis or wording for a broader release. Legal/privacy review, withdrawal, deletion, and retention remain separate product work before distribution beyond the private family prototype.
 
@@ -53,8 +53,10 @@ through the server-side OpenRouter worker. The app downsizes the long edge to
 1536 pixels, uploads at most 8 MiB to a reserved private object, and displays
 the generated PNG through a short-lived signed URL. Camera and microphone
 permissions stay disabled. Both the input and result are linked to the selected
-child, but the generated image does not automatically replace the preset
-avatar.
+child. After reviewing the result, the family member can explicitly save it as
+the child's profile image; the original source photo is never used as the
+profile image. Short-lived signed URLs are minted when the image is read, and
+the preset avatar remains the safe fallback.
 
 The entry point has no feature toggle or tester allowlist. The current database
 migration selects GPT Image 2 as active version 2 without a separate enable
@@ -71,6 +73,21 @@ configuration used by existing jobs.
 
 The screen polls the same idempotent job and may ask the worker to reconcile a
 stale lease, but it never repeats the paid image-generation POST automatically.
+The active job identity is stored without image bytes or signed URLs and is
+scoped to the adult, family, child, app variant, and backend, so an interrupted
+generation can be resumed and reviewed after the app is opened again.
+
+## Private topic reference photos
+
+The app lists the real published topics for the selected child. A family member
+may optionally add one private reference photo per child and topic—for example
+a full football-clothes photo for Football. The flow supports review,
+replacement, removal, and an explicit skip. The profile image and topic photo
+use separate database pointers, and topic photos never enter the public
+wardrobe catalogue. Optional photo failures do not block the topic list, and
+bounded reservation limits prevent unlimited private uploads while retention
+cleanup remains separate work. This slice stores the private reference safely;
+applying generated wardrobe items to that photo remains later product work.
 
 ## EAS builds for an iPhone
 

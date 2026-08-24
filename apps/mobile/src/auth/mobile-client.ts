@@ -11,27 +11,57 @@ import * as Updates from "expo-updates";
 import { Platform } from "react-native";
 
 import {
-  createAuthRedirect,
-  resolveMobileAuthBackend,
-  resolveMobileAppVariant,
-  type MobilePlatform,
-} from "./core";
-import { createMobileAuthStorage } from "./storage";
+  createAiCartoonResumeStorageKey,
+  parseAiCartoonResume,
+  serializeAiCartoonResume,
+  type AiCartoonResume,
+  type AiCartoonResumeScope,
+} from "@/ai/cartoon-resume";
+import {
+  createSelectedChildStorageKey,
+  parseSelectedChildId,
+  serializeSelectedChildId,
+} from "@/children/child-selection";
 import {
   parsePendingChildCreation,
   serializePendingChildCreation,
   type PendingChildCreation,
 } from "@/children/child-setup";
 
+import {
+  createAuthRedirect,
+  resolveMobileAuthBackend,
+  resolveMobileAppVariant,
+  type MobilePlatform,
+} from "./core";
+import { createMobileAuthStorage } from "./storage";
+
+type SelectedChildStorageContext = {
+  familyId: string;
+  userId: string;
+};
+
 export type MobileAuthClient = {
+  clearAiCartoonResume(input: AiCartoonResumeScope): Promise<void>;
   clearPendingChildCreation(userId: string): Promise<void>;
+  clearSelectedChildId(input: SelectedChildStorageContext): Promise<void>;
   clearStoredSession(): Promise<void>;
   client: BareTraenClient;
+  loadAiCartoonResume(
+    input: AiCartoonResumeScope,
+  ): Promise<AiCartoonResume | null>;
   loadPendingChildCreation(
     userId: string,
   ): Promise<PendingChildCreation | null>;
+  loadSelectedChildId(
+    input: SelectedChildStorageContext,
+  ): Promise<string | null>;
   redirectTo: string;
+  saveAiCartoonResume(resume: AiCartoonResume): Promise<void>;
   savePendingChildCreation(pending: PendingChildCreation): Promise<void>;
+  saveSelectedChildId(
+    input: SelectedChildStorageContext & { childId: string },
+  ): Promise<void>;
 };
 
 export function createMobileAuthClient(): MobileAuthClient {
@@ -71,6 +101,10 @@ export function createMobileAuthClient(): MobileAuthClient {
   const storage = createMobileAuthStorage(storageKey);
   const pendingStorageKey = (userId: string) =>
     `${storageKey}.child-create.${userId.toLowerCase()}`;
+  const aiCartoonResumeStorageKey = (input: AiCartoonResumeScope) =>
+    createAiCartoonResumeStorageKey({ ...input, namespace: storageKey });
+  const selectedChildStorageKey = (input: SelectedChildStorageContext) =>
+    createSelectedChildStorageKey({ ...input, namespace: storageKey });
   const client = createBareTraenClient(config, {
     auth: {
       storage,
@@ -79,10 +113,29 @@ export function createMobileAuthClient(): MobileAuthClient {
   });
 
   return {
+    clearAiCartoonResume: (input) =>
+      storage.removeDurableItem(aiCartoonResumeStorageKey(input)),
     clearPendingChildCreation: (userId) =>
       storage.removeDurableItem(pendingStorageKey(userId)),
+    clearSelectedChildId: (input) =>
+      storage.removeDurableItem(selectedChildStorageKey(input)),
     clearStoredSession: () => storage.removeItem(storageKey),
     client,
+    async loadAiCartoonResume(input) {
+      const key = aiCartoonResumeStorageKey(input);
+      const serialized = await storage.getDurableItem(key);
+
+      if (serialized === null) {
+        return null;
+      }
+
+      try {
+        return parseAiCartoonResume(serialized, input);
+      } catch {
+        await storage.removeDurableItem(key);
+        return null;
+      }
+    },
     async loadPendingChildCreation(userId) {
       const key = pendingStorageKey(userId);
       const serialized = await storage.getDurableItem(key);
@@ -93,11 +146,36 @@ export function createMobileAuthClient(): MobileAuthClient {
 
       return parsePendingChildCreation(serialized, userId);
     },
+    async loadSelectedChildId(input) {
+      const key = selectedChildStorageKey(input);
+      const serialized = await storage.getDurableItem(key);
+
+      if (serialized === null) {
+        return null;
+      }
+
+      try {
+        return parseSelectedChildId(serialized);
+      } catch {
+        await storage.removeDurableItem(key);
+        return null;
+      }
+    },
     redirectTo,
+    saveAiCartoonResume: (resume) =>
+      storage.setDurableItem(
+        aiCartoonResumeStorageKey(resume),
+        serializeAiCartoonResume(resume),
+      ),
     savePendingChildCreation: (pending) =>
       storage.setDurableItem(
         pendingStorageKey(pending.userId),
         serializePendingChildCreation(pending),
+      ),
+    saveSelectedChildId: (input) =>
+      storage.setDurableItem(
+        selectedChildStorageKey(input),
+        serializeSelectedChildId(input.childId),
       ),
   };
 }

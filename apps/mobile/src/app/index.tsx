@@ -21,8 +21,6 @@ import {
 
 import { useAuth } from "@/auth/auth-provider";
 import type { ParentBootstrap, ParentChild } from "@/auth/parent-data";
-import { resolveChildAvatar } from "@/children/child-setup";
-
 import {
   ActionButton,
   Body,
@@ -32,12 +30,15 @@ import {
   SurfaceCard,
   Title,
 } from "@/components/bare-ui";
+import { ChildChooser } from "@/components/child-chooser";
+import { ChildProfileAvatar } from "@/components/child-profile-avatar";
 
 const goalProgress = getGoalProgress(demoGoal, demoProgress);
 const currentExercise = getCurrentExercise(demoExercises, demoProgress);
 const football = demoTopics.find((topic) => topic.id === demoGoal.topicId)!;
 const NEW_CHILD_ROUTE = "/child/new" as Href;
-const AI_CARTOON_ROUTE = "/ai/cartoon" as Href;
+const PROFILE_ROUTE = "/profile" as Href;
+const TOPICS_ROUTE = "/topics" as Href;
 const WARDROBE_ROUTE = "/wardrobe" as Href;
 
 export default function TodayScreen() {
@@ -94,7 +95,7 @@ export default function TodayScreen() {
     );
   }
 
-  if (bootstrap.data.children.length === 0 || !selectedChild) {
+  if (bootstrap.data.children.length === 0) {
     return (
       <NoChildren
         bootstrap={bootstrap.data}
@@ -104,15 +105,18 @@ export default function TodayScreen() {
     );
   }
 
-  return (
-    <FixtureToday
-      bootstrap={bootstrap.data}
-      logoutError={logoutError}
-      onLogout={logout}
-      onSelectChild={selectChild}
-      selectedChild={selectedChild}
-    />
-  );
+  if (!selectedChild) {
+    return (
+      <ChooseChild
+        bootstrap={bootstrap.data}
+        logoutError={logoutError}
+        onLogout={logout}
+        onSelectChild={selectChild}
+      />
+    );
+  }
+
+  return <FixtureToday selectedChild={selectedChild} />;
 }
 
 function ParentOnboarding({
@@ -279,106 +283,80 @@ function NoChildren({
   );
 }
 
-function FixtureToday({
+function ChooseChild({
   bootstrap,
   logoutError,
   onLogout,
   onSelectChild,
-  selectedChild,
 }: {
   bootstrap: ParentBootstrap;
   logoutError: string | null;
   onLogout(): Promise<void>;
   onSelectChild(childId: string): void;
-  selectedChild: ParentChild;
 }) {
   const router = useRouter();
-  const avatar = resolveChildAvatar(selectedChild.avatarSeed);
+
+  return (
+    <Screen contentStyle={styles.chooseChildScreen}>
+      <View style={styles.stateIcon}>
+        <Text style={styles.stateEmoji}>👋</Text>
+      </View>
+      <View style={styles.chooseChildHeading}>
+        <Kicker>{bootstrap.family?.name}</Kicker>
+        <Title style={styles.centerText}>Hvem skal træne?</Title>
+        <Body style={styles.centerText}>
+          Vælg én profil. Derefter åbner appen direkte for barnet, indtil en
+          voksen vælger en anden i Min profil.
+        </Body>
+      </View>
+
+      <View style={styles.childChoiceList}>
+        <ChildChooser onChoose={onSelectChild} profiles={bootstrap.children} />
+      </View>
+
+      <View style={styles.parentChoiceActions}>
+        {bootstrap.family?.role === "owner" &&
+          bootstrap.children.length < 10 && (
+            <ActionButton
+              variant="secondary"
+              onPress={() => router.push(NEW_CHILD_ROUTE)}
+            >
+              ＋ Opret et barn mere
+            </ActionButton>
+          )}
+        <ActionButton variant="secondary" onPress={() => void onLogout()}>
+          Log ud
+        </ActionButton>
+        {logoutError && <AccountError message={logoutError} />}
+      </View>
+    </Screen>
+  );
+}
+
+function FixtureToday({ selectedChild }: { selectedChild: ParentChild }) {
+  const router = useRouter();
 
   return (
     <Screen contentStyle={styles.screen}>
-      <View style={styles.accountRow}>
-        <View style={styles.accountCopy}>
-          <Kicker>{bootstrap.family?.name}</Kicker>
-          <Text style={styles.accountName}>
-            {bootstrap.profile.displayName}
-          </Text>
-        </View>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Log forælderen ud"
-          hitSlop={10}
-          onPress={() => void onLogout()}
-          style={({ pressed }) => [
-            styles.logoutButton,
-            pressed && styles.cardPressed,
-          ]}
-        >
-          <Text style={styles.logoutText}>Log ud</Text>
-        </Pressable>
-      </View>
-      {logoutError && <AccountError message={logoutError} />}
-
-      {bootstrap.children.length > 1 && (
-        <View style={styles.childPicker}>
-          <Kicker>Vælg barn</Kicker>
-          <View accessibilityRole="radiogroup" style={styles.childPickerRow}>
-            {bootstrap.children.map((child) => (
-              <Pressable
-                key={child.id}
-                accessibilityRole="radio"
-                accessibilityState={{ selected: child.id === selectedChild.id }}
-                onPress={() => onSelectChild(child.id)}
-                style={[
-                  styles.childChoice,
-                  child.id === selectedChild.id && styles.childChoiceSelected,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.childChoiceText,
-                    child.id === selectedChild.id &&
-                      styles.childChoiceTextSelected,
-                  ]}
-                >
-                  {child.displayName}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        </View>
-      )}
-
-      {bootstrap.family?.role === "owner" && bootstrap.children.length < 10 && (
-        <ActionButton
-          accessibilityLabel="Opret et barn mere i familien"
-          variant="secondary"
-          onPress={() => router.push(NEW_CHILD_ROUTE)}
-        >
-          ＋ Opret et barn mere
-        </ActionButton>
-      )}
-
-      {bootstrap.family?.role === "owner" &&
-        bootstrap.children.length >= 10 && (
-          <Body style={styles.centerText}>
-            Familien har nået grænsen på 10 aktive børneprofiler.
-          </Body>
-        )}
-
       <View style={styles.header}>
-        <View>
+        <View style={styles.headerCopy}>
           <Kicker>God eftermiddag</Kicker>
           <Title>Hej, {selectedChild.displayName}!</Title>
         </View>
-        <View
-          accessible
-          accessibilityRole="image"
-          accessibilityLabel={`${selectedChild.displayName}s avatar: ${avatar.label}`}
-          style={styles.avatar}
+        <Pressable
+          accessibilityHint="Åbner profil og familiemenu"
+          accessibilityLabel={`Åbn Min profil for ${selectedChild.displayName}`}
+          accessibilityRole="button"
+          hitSlop={8}
+          onPress={() => router.push(PROFILE_ROUTE)}
+          style={({ pressed }) => [
+            styles.avatarButton,
+            pressed && styles.cardPressed,
+          ]}
         >
-          <Text style={styles.avatarEmoji}>{avatar.symbol}</Text>
-        </View>
+          <ChildProfileAvatar child={selectedChild} decorative size={58} />
+          <Text style={styles.avatarMenuText}>Min profil</Text>
+        </Pressable>
       </View>
 
       <View style={styles.utilityRow}>
@@ -451,9 +429,9 @@ function FixtureToday({
         </View>
       </View>
 
-      <WardrobeCard child={selectedChild} />
+      <TopicsCard child={selectedChild} />
 
-      <AiCartoonLabCard child={selectedChild} />
+      <WardrobeCard child={selectedChild} />
 
       <View style={styles.previewNote}>
         <Text style={styles.previewNoteText}>
@@ -462,6 +440,26 @@ function FixtureToday({
         </Text>
       </View>
     </Screen>
+  );
+}
+
+function TopicsCard({ child }: { child: ParentChild }) {
+  const router = useRouter();
+
+  return (
+    <SurfaceCard style={styles.aiLabCard}>
+      <View style={styles.aiLabCopy}>
+        <Kicker>Vælg emne</Kicker>
+        <Text style={styles.weekTitle}>Hvad vil {child.displayName} øve?</Text>
+        <Body>
+          Se familiens emner. Til hvert emne kan en voksen hjælpe med et privat
+          billede, der passer til tøjet og udstyret.
+        </Body>
+      </View>
+      <ActionButton onPress={() => router.push(TOPICS_ROUTE)}>
+        Se alle emner
+      </ActionButton>
+    </SurfaceCard>
   );
 }
 
@@ -481,28 +479,6 @@ function WardrobeCard({ child }: { child: ParentChild }) {
       </View>
       <ActionButton onPress={() => router.push(WARDROBE_ROUTE)}>
         Åbn garderoben
-      </ActionButton>
-    </SurfaceCard>
-  );
-}
-
-function AiCartoonLabCard({ child }: { child: ParentChild }) {
-  const router = useRouter();
-
-  return (
-    <SurfaceCard style={styles.aiLabCard}>
-      <View style={styles.aiLabCopy}>
-        <Kicker>Privat AI-portræt</Kicker>
-        <Text style={styles.weekTitle}>
-          Lav {child.displayName} som tegneseriefigur
-        </Text>
-        <Body>
-          Vælg et billede. Portrættet gemmes privat og knyttes til{" "}
-          {child.displayName}.
-        </Body>
-      </View>
-      <ActionButton onPress={() => router.push(AI_CARTOON_ROUTE)}>
-        Lav tegneserieportræt
       </ActionButton>
     </SurfaceCard>
   );
@@ -533,6 +509,15 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: spacing.md,
   },
+  chooseChildScreen: {
+    minHeight: 590,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.lg,
+  },
+  chooseChildHeading: { alignItems: "center", gap: spacing.xs },
+  childChoiceList: { width: "100%", maxWidth: 400 },
+  parentChoiceActions: { width: "100%", maxWidth: 400, gap: spacing.sm },
   centerText: { maxWidth: 380, textAlign: "center" },
   stateIcon: {
     width: 86,
@@ -596,72 +581,26 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.body,
     fontWeight: typography.weights.bold,
   },
-  accountRow: {
+  header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     gap: spacing.md,
   },
-  accountCopy: { flex: 1 },
-  accountName: {
-    color: colors.ink,
-    fontFamily: typography.families.systemRounded,
-    fontSize: typography.sizes.body,
-    fontWeight: typography.weights.bold,
-  },
-  logoutButton: {
-    minHeight: 44,
+  headerCopy: { flex: 1 },
+  avatarButton: {
+    minWidth: 68,
+    minHeight: 76,
+    alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: spacing.sm,
+    gap: spacing.xxs,
   },
-  logoutText: {
+  avatarMenuText: {
     color: colors.primaryDeep,
     fontFamily: typography.families.systemRounded,
-    fontSize: typography.sizes.body,
+    fontSize: typography.sizes.caption,
     fontWeight: typography.weights.bold,
   },
-  childPicker: {
-    gap: spacing.sm,
-    borderRadius: radii.lg,
-    backgroundColor: colors.surface,
-    padding: spacing.md,
-  },
-  childPickerRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
-  childChoice: {
-    minHeight: 44,
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.full,
-    paddingHorizontal: spacing.md,
-  },
-  childChoiceSelected: {
-    borderColor: colors.primary,
-    backgroundColor: colors.soft,
-  },
-  childChoiceText: {
-    color: colors.muted,
-    fontFamily: typography.families.systemRounded,
-    fontSize: typography.sizes.body,
-    fontWeight: typography.weights.semibold,
-  },
-  childChoiceTextSelected: { color: colors.primaryDeep },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  avatar: {
-    width: 58,
-    height: 58,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 3,
-    borderColor: colors.yellow,
-    borderRadius: radii.full,
-    backgroundColor: colors.softWarm,
-  },
-  avatarEmoji: { fontSize: 31 },
   utilityRow: {
     flexDirection: "row",
     alignItems: "center",

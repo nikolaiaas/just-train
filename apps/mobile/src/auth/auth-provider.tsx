@@ -6,21 +6,31 @@ import {
   completeAuthCallback,
   completeParentOnboarding,
   createChildProfile,
+  finalizeChildTopicReferencePhoto,
   getAiMediaJob,
+  listChildPublishedTopicsWithPhoto,
+  loadChildProfileAvatar as loadProfileAvatar,
   loadChildWardrobe,
   logout as logoutSession,
   onAuthSessionChange,
+  prepareChildTopicReferencePhoto,
   requestEmailSignIn,
   restoreSession,
+  removeChildTopicReferencePhoto,
+  setChildProfileAvatarFromAiJob,
   setChildWardrobeItemEquipped as saveChildWardrobeEquipment,
   startAiMediaJob,
   prepareAiMediaJob,
   uploadAiMediaInput,
+  uploadChildTopicReferencePhoto,
   verifyEmailOtp,
   type AiMediaJob,
   type AiMediaMimeType,
   type AiMediaOutput,
   type BareTraenAuthSession,
+  type ChildProfileAvatar,
+  type ChildPublishedTopicWithPhoto,
+  type ChildTopicPhotoMimeType,
   type ChildWardrobeEquipmentState,
   type ChildWardrobeItem,
   type PreparedAiMediaJob,
@@ -37,6 +47,8 @@ import {
 } from "react";
 import { AppState, Platform } from "react-native";
 
+import type { AiCartoonResume } from "@/ai/cartoon-resume";
+import { resolveSelectedChildId } from "@/children/child-selection";
 import {
   isCurrentChildCreationContext,
   isSamePendingChildCreation,
@@ -96,16 +108,41 @@ type SetSelectedChildWardrobeItemEquippedInput = {
   wardrobeItemId: string;
 };
 
+type SaveSelectedChildTopicPhotoInput = {
+  bytes: Uint8Array;
+  clientRequestId: string;
+  mimeType: ChildTopicPhotoMimeType;
+  topicId: string;
+};
+
 type AuthContextValue = {
   authNotice: string | null;
   authStatus: AuthStatus;
   bootstrap: BootstrapState;
+  clearSelectedChildAiCartoonResume(): Promise<void>;
   clearAuthNotice(): void;
   createChild(input: CreateChildInput): Promise<ParentChild>;
   getAiCartoonJob(jobId: string): Promise<AiMediaJob>;
   getAiCartoonOutput(jobId: string): Promise<AiMediaOutput>;
+  loadChildProfileAvatar(
+    childProfileId: string,
+  ): Promise<ChildProfileAvatar | null>;
+  loadSelectedChildAiCartoonResume(): Promise<AiCartoonResume | null>;
+  loadSelectedChildTopics(): Promise<ChildPublishedTopicWithPhoto[]>;
   loadSelectedChildWardrobe(): Promise<ChildWardrobeItem[]>;
   reconcileAiCartoonJob(jobId: string): Promise<void>;
+  saveAiCartoonAsProfilePicture(jobId: string): Promise<void>;
+  saveSelectedChildAiCartoonResume(input: {
+    jobId: string;
+    requestId: string;
+  }): Promise<void>;
+  saveSelectedChildTopicPhoto(
+    input: SaveSelectedChildTopicPhotoInput,
+  ): Promise<void>;
+  removeSelectedChildTopicPhoto(input: {
+    mediaAssetId: string;
+    topicId: string;
+  }): Promise<void>;
   setSelectedChildWardrobeItemEquipped(
     input: SetSelectedChildWardrobeItemEquippedInput,
   ): Promise<ChildWardrobeEquipmentState>;
@@ -168,6 +205,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const bootstrapRequest = useRef(0);
   const currentSessionUserId = useRef<string | null>(null);
   const logoutAttemptInFlight = useRef(false);
+  const selectedChildIdRef = useRef<string | null>(null);
+
+  const applySelectedChildId = useCallback((childId: string | null) => {
+    selectedChildIdRef.current = childId;
+    setSelectedChildId(childId);
+  }, []);
 
   const applySession = useCallback(
     (nextSession: BareTraenAuthSession | null) => {
@@ -185,7 +228,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
       if (transition.userChanged) {
         setBootstrap({ status: "idle", data: null });
-        setSelectedChildId(null);
+        applySelectedChildId(null);
         pendingChildCreationRef.current = null;
         setPendingChildCreation(null);
         setPendingChildCreationStatus(nextUserId ? "loading" : "ready");
@@ -193,7 +236,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
       setSession(nextSession);
     },
-    [],
+    [applySelectedChildId],
   );
   const sessionUserId = session?.user.id ?? null;
 
@@ -348,7 +391,24 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
         return loadParentBootstrap(client);
       })
-      .then((data) => {
+      .then(async (data) => {
+        let storedChildId: string | null = null;
+
+        if (data.family) {
+          try {
+            storedChildId = await mobileClient.loadSelectedChildId({
+              familyId: data.family.id,
+              userId: requestedUserId,
+            });
+          } catch {
+            // A remembered child is a convenience, not an access boundary.
+            // The active family data remains usable if device storage fails.
+          }
+        }
+
+        return { data, storedChildId };
+      })
+      .then(({ data, storedChildId }) => {
         if (
           canAcceptBootstrapResult({
             activeRequestId: bootstrapRequest.current,
@@ -358,12 +418,34 @@ export function AuthProvider({ children }: PropsWithChildren) {
             requestedUserId,
           })
         ) {
+          const nextChildId = resolveSelectedChildId({
+            availableChildIds: data.children.map((child) => child.id),
+            currentChildId: selectedChildIdRef.current,
+            storedChildId,
+          });
+
+          applySelectedChildId(nextChildId);
           setBootstrap({ status: "ready", data });
-          setSelectedChildId((current) =>
-            current && data.children.some((child) => child.id === current)
-              ? current
-              : (data.children[0]?.id ?? null),
-          );
+
+          if (data.family) {
+            const storageContext = {
+              familyId: data.family.id,
+              userId: requestedUserId,
+            };
+
+            if (nextChildId && nextChildId !== storedChildId) {
+              void mobileClient
+                .saveSelectedChildId({
+                  ...storageContext,
+                  childId: nextChildId,
+                })
+                .catch(() => undefined);
+            } else if (!nextChildId && storedChildId) {
+              void mobileClient
+                .clearSelectedChildId(storageContext)
+                .catch(() => undefined);
+            }
+          }
         } else if (
           isCurrentBootstrapRequest({
             activeRequestId: bootstrapRequest.current,
@@ -387,7 +469,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
           setBootstrap({ status: "error", data: null });
         }
       });
-  }, [authStatus, bootstrapRevision, mobileClient, sessionUserId]);
+  }, [
+    applySelectedChildId,
+    authStatus,
+    bootstrapRevision,
+    mobileClient,
+    sessionUserId,
+  ]);
 
   const getClient = useCallback(() => {
     if (!mobileClient) {
@@ -430,6 +518,87 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
     return { childProfileId, client: getClient() };
   }, [bootstrap, getClient, selectedChildId, sessionUserId]);
+
+  const getChildMediaContext = useCallback(
+    (childProfileId: string) => {
+      const context = getAiRequestContext();
+
+      if (bootstrap.status !== "ready") {
+        throw new Error("Vælg et barn, før du åbner profilbilleder.");
+      }
+
+      const child = bootstrap.data.children.find(
+        (candidate) =>
+          candidate.id === childProfileId &&
+          candidate.familyId === context.familyId,
+      );
+
+      if (!child) {
+        throw new Error("Det valgte barn er ikke tilgængeligt i familien.");
+      }
+
+      return { ...context, child };
+    },
+    [bootstrap, getAiRequestContext],
+  );
+
+  const getSelectedChildMediaContext = useCallback(() => {
+    const childProfileId = selectedChildIdRef.current;
+
+    if (!childProfileId) {
+      throw new Error("Vælg et barn, før du åbner emner og billeder.");
+    }
+
+    return getChildMediaContext(childProfileId);
+  }, [getChildMediaContext]);
+
+  const clearSelectedChildAiCartoonResume = useCallback(() => {
+    const context = getSelectedChildMediaContext();
+
+    if (!mobileClient) {
+      throw new Error("Login er ikke klar endnu.");
+    }
+
+    return mobileClient.clearAiCartoonResume({
+      childProfileId: context.child.id,
+      familyId: context.familyId,
+      userId: context.userId,
+    });
+  }, [getSelectedChildMediaContext, mobileClient]);
+
+  const loadSelectedChildAiCartoonResume = useCallback(() => {
+    const context = getSelectedChildMediaContext();
+
+    if (!mobileClient) {
+      throw new Error("Login er ikke klar endnu.");
+    }
+
+    return mobileClient.loadAiCartoonResume({
+      childProfileId: context.child.id,
+      familyId: context.familyId,
+      userId: context.userId,
+    });
+  }, [getSelectedChildMediaContext, mobileClient]);
+
+  const saveSelectedChildAiCartoonResume = useCallback(
+    (input: { jobId: string; requestId: string }) => {
+      const context = getSelectedChildMediaContext();
+
+      if (!mobileClient) {
+        throw new Error("Login er ikke klar endnu.");
+      }
+
+      return mobileClient.saveAiCartoonResume({
+        childProfileId: context.child.id,
+        familyId: context.familyId,
+        jobId: input.jobId,
+        requestId: input.requestId,
+        userId: context.userId,
+        version: 1,
+      });
+    },
+    [getSelectedChildMediaContext, mobileClient],
+  );
 
   const loadSelectedChildWardrobe = useCallback(() => {
     const context = getSelectedChildWardrobeContext();
@@ -496,6 +665,123 @@ export function AuthProvider({ children }: PropsWithChildren) {
     (jobId: string) =>
       createAiMediaOutputUrl(getAiRequestContext().client, jobId),
     [getAiRequestContext],
+  );
+
+  const loadChildProfileAvatar = useCallback(
+    (childProfileId: string) => {
+      const context = getChildMediaContext(childProfileId);
+      return loadProfileAvatar(context.client, {
+        childProfileId: context.child.id,
+      });
+    },
+    [getChildMediaContext],
+  );
+
+  const saveAiCartoonAsProfilePicture = useCallback(
+    async (jobId: string) => {
+      const context = getSelectedChildMediaContext();
+      const saved = await setChildProfileAvatarFromAiJob(context.client, {
+        childProfileId: context.child.id,
+        expectedUserId: context.userId,
+        jobId,
+      });
+
+      if (
+        currentSessionUserId.current !== context.userId ||
+        selectedChildIdRef.current !== context.child.id
+      ) {
+        throw new Error("Profilen skiftede, mens billedet blev gemt.");
+      }
+
+      setBootstrap((current) => {
+        if (
+          current.status !== "ready" ||
+          current.data.profile.id !== context.userId
+        ) {
+          return current;
+        }
+
+        return {
+          status: "ready",
+          data: {
+            ...current.data,
+            children: current.data.children.map((child) =>
+              child.id === context.child.id
+                ? {
+                    ...child,
+                    avatarMediaAssetId: saved.avatarMediaAssetId,
+                  }
+                : child,
+            ),
+          },
+        };
+      });
+    },
+    [getSelectedChildMediaContext],
+  );
+
+  const loadSelectedChildTopics = useCallback(() => {
+    const context = getSelectedChildMediaContext();
+    return listChildPublishedTopicsWithPhoto(context.client, {
+      childProfileId: context.child.id,
+      expectedUserId: context.userId,
+      familyId: context.familyId,
+    });
+  }, [getSelectedChildMediaContext]);
+
+  const saveSelectedChildTopicPhoto = useCallback(
+    async (input: SaveSelectedChildTopicPhotoInput) => {
+      const context = getSelectedChildMediaContext();
+      const prepared = await prepareChildTopicReferencePhoto(context.client, {
+        childProfileId: context.child.id,
+        clientRequestId: input.clientRequestId,
+        expectedUserId: context.userId,
+        familyId: context.familyId,
+        inputMimeType: input.mimeType,
+        topicId: input.topicId,
+      });
+
+      if (prepared.requestStatus === "awaiting_upload") {
+        await uploadChildTopicReferencePhoto(
+          context.client,
+          prepared,
+          input.bytes,
+        );
+      } else if (prepared.requestStatus !== "current") {
+        throw new Error(
+          "Emnebilledet er blevet erstattet af en nyere ændring.",
+        );
+      }
+
+      const finalized = await finalizeChildTopicReferencePhoto(
+        context.client,
+        prepared,
+      );
+
+      if (
+        finalized.requestStatus !== "current" ||
+        finalized.currentMediaAssetId !== prepared.mediaAssetId
+      ) {
+        throw new Error(
+          "Emnebilledet er blevet erstattet af en nyere ændring.",
+        );
+      }
+    },
+    [getSelectedChildMediaContext],
+  );
+
+  const removeSelectedChildTopicPhoto = useCallback(
+    async (input: { mediaAssetId: string; topicId: string }) => {
+      const context = getSelectedChildMediaContext();
+      await removeChildTopicReferencePhoto(context.client, {
+        childProfileId: context.child.id,
+        expectedMediaAssetId: input.mediaAssetId,
+        expectedUserId: context.userId,
+        familyId: context.familyId,
+        topicId: input.topicId,
+      });
+    },
+    [getSelectedChildMediaContext],
   );
 
   const requestEmail = useCallback(
@@ -744,7 +1030,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
         }
 
         setBootstrap({ status: "ready", data: refreshed });
-        setSelectedChildId(createdChild.id);
+        applySelectedChildId(createdChild.id);
+        void activeMobileClient
+          .saveSelectedChildId({
+            childId: createdChild.id,
+            familyId: requestedFamilyId,
+            userId: requestedUserId,
+          })
+          .catch(() => undefined);
         pendingChildCreationRef.current = null;
         setPendingChildCreation(null);
         return createdChild;
@@ -774,7 +1067,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         childCreationInFlight.current = false;
       }
     },
-    [bootstrap, getClient, mobileClient, sessionUserId],
+    [applySelectedChildId, bootstrap, getClient, mobileClient, sessionUserId],
   );
 
   const logout = useCallback(async () => {
@@ -840,14 +1133,26 @@ export function AuthProvider({ children }: PropsWithChildren) {
     (childId: string) => {
       if (
         bootstrap.status !== "ready" ||
+        !bootstrap.data.family ||
+        !mobileClient ||
+        !sessionUserId ||
+        bootstrap.data.profile.id !== sessionUserId ||
+        currentSessionUserId.current !== sessionUserId ||
         !bootstrap.data.children.some((child) => child.id === childId)
       ) {
         return;
       }
 
-      setSelectedChildId(childId);
+      applySelectedChildId(childId);
+      void mobileClient
+        .saveSelectedChildId({
+          childId,
+          familyId: bootstrap.data.family.id,
+          userId: sessionUserId,
+        })
+        .catch(() => undefined);
     },
-    [bootstrap],
+    [applySelectedChildId, bootstrap, mobileClient, sessionUserId],
   );
 
   const selectedChild = useMemo(() => {
@@ -866,6 +1171,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       authNotice,
       authStatus,
       bootstrap,
+      clearSelectedChildAiCartoonResume,
       clearAuthNotice: () => setAuthNotice(null),
       createChild,
       completeMagicLink,
@@ -873,6 +1179,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
       emailFlow,
       getAiCartoonJob,
       getAiCartoonOutput,
+      loadChildProfileAvatar,
+      loadSelectedChildAiCartoonResume,
+      loadSelectedChildTopics,
       loadSelectedChildWardrobe,
       logout,
       logoutError,
@@ -880,6 +1189,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
       pendingChildCreationStatus,
       refreshParent: () => setBootstrapRevision((revision) => revision + 1),
       reconcileAiCartoonJob,
+      removeSelectedChildTopicPhoto,
+      saveAiCartoonAsProfilePicture,
+      saveSelectedChildAiCartoonResume,
+      saveSelectedChildTopicPhoto,
       retryPendingChildCreation: () => {
         setPendingChildCreationStatus("loading");
         setPendingChildStorageRevision((revision) => revision + 1);
@@ -904,12 +1217,16 @@ export function AuthProvider({ children }: PropsWithChildren) {
       authNotice,
       authStatus,
       bootstrap,
+      clearSelectedChildAiCartoonResume,
       createChild,
       completeMagicLink,
       completeOnboarding,
       emailFlow,
       getAiCartoonJob,
       getAiCartoonOutput,
+      loadChildProfileAvatar,
+      loadSelectedChildAiCartoonResume,
+      loadSelectedChildTopics,
       loadSelectedChildWardrobe,
       logout,
       logoutError,
@@ -917,8 +1234,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
       pendingChildCreationStatus,
       requestEmail,
       reconcileAiCartoonJob,
+      removeSelectedChildTopicPhoto,
       resendEmail,
       retryAuth,
+      saveAiCartoonAsProfilePicture,
+      saveSelectedChildAiCartoonResume,
+      saveSelectedChildTopicPhoto,
       selectChild,
       selectedChild,
       setSelectedChildWardrobeItemEquipped,

@@ -53,7 +53,7 @@ The recommended iPhone progression is:
 ## 0. Settle the pilot rules
 
 - [ ] Confirm the first pilot age range and supported devices.
-- [x] Confirm that the first release uses parent-owned child profiles with no child Auth account, email, password, age, or photo; direct child login is deferred.
+- [x] Confirm that child profiles stay parent-owned with no child Auth account, email, password, or age; creation collects no photo, while later optional profile and topic photos use explicit private family flows.
 - [x] Require the family owner to accept a versioned guardian notice before creating a persistent child profile, and record that acknowledgement privately.
 - [ ] Approve the legal/privacy basis, guardian wording, withdrawal, deletion, and retention flow before a broader real-child pilot; the owner has accepted the narrower risk for the private family cartoon prototype.
 - [ ] Define the first goal: `Fodbold → Lær at jonglere`, including its ordered exercises and completion thresholds.
@@ -181,7 +181,7 @@ Exit condition: pilot screens can be assembled from reviewed components rather t
 - [x] Implement administrator email/OTP sign-in with server-side session handling and an `is_admin` route guard.
 - [ ] Add CAPTCHA or server-side throttling before exposing passwordless login publicly.
 - [x] Implement parent email/OTP authentication, session restoration, and logout; verify the browser flow against Local Supabase.
-- [x] Keep child profiles parent-owned and collect no child Auth, email, password, age, or photo in this slice; direct child authentication remains deferred.
+- [x] Keep child profiles parent-owned and collect no child Auth, email, password, age, or photo during creation; direct child authentication remains deferred, and later optional images use guarded family-only pointers.
 - [x] Add administrator roles in protected metadata and server-side route guards.
 - [x] Write and test parent RLS for the current profile, family, membership, and child-profile tables, including owner-only child creation and default-deny private acknowledgement evidence.
 - [x] Resolve or explicitly document every current Supabase Database Advisor warning: review the platform `rls_auto_enable` execute grants, preserve the tested boundaries of the four intentional `SECURITY DEFINER` product RPCs, and measure or consolidate overlapping read policies for topics, goals, and exercises.
@@ -200,8 +200,12 @@ Exit condition: access is denied by the database itself when a client attempts t
 - [x] Require every portrait request to be linked to the selected active child in the authenticated family member's family, and preserve that link across the mobile contract, Storage metadata, preparation RPC, and worker claim.
 - [x] Add a gallery-only private family cartoon prototype using database-versioned prompts and `openai/gpt-image-2` through an OpenAI-only, no-fallback OpenRouter route; keep development and evidence synthetic.
 - [x] Persist a caller-scoped child-creation request identity and safely retry it after refresh or interruption without creating a duplicate child.
+- [x] Remember the active child per adult, family, app variant, and backend; remove adult controls from the child's home and put child switching, creation, and logout under `Min profil`.
+- [x] Let a family member review a completed cartoon result and explicitly save it as the child's private profile image, with short-lived signed reads and the preset avatar as fallback.
+- [x] List real published topics and support one optional private reference photo per child and topic, including review, retry-safe replacement, removal, and skip without mixing it with the profile image or public wardrobe assets.
+- [ ] Build the child-specific wardrobe rendering step that uses the private topic reference photo to preview equipped catalogue items while preserving exclusive body slots, review boundaries, and family-only media access.
 - [x] Show the selected child's acquired wardrobe and equip, replace, or remove exactly one item per head, body, hand, feet, or accessory position; one feet item is a complete pair of shoes.
-- [ ] Implement topic selection, goal list, and goal detail for the seeded football content.
+- [ ] Finish topic selection with persisted enrolment, goal list, and goal detail for the seeded football content; the real published topic list and optional topic-photo step are complete.
 - [ ] Implement goal enrolment and the child's home screen.
 - [ ] Implement the ordered goal journey with completed, current, and locked exercises.
 - [ ] Implement the training state machine: `ready → training → result → review → completed → pending sync`.
