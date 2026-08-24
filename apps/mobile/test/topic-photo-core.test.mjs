@@ -75,7 +75,11 @@ test("maps topic-photo failures to short child-safe messages", () => {
   );
   assert.match(
     getTopicPhotoErrorMessage({ code: "upload_limit_reached" }),
-    /spørg en voksen/,
+    /prøv igen senere/,
+  );
+  assert.doesNotMatch(
+    getTopicPhotoErrorMessage({ code: "upload_limit_reached" }),
+    /voksen/i,
   );
   assert.doesNotMatch(
     getTopicPhotoErrorMessage({ code: "upload_limit_reached" }),

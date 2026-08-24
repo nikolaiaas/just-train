@@ -31,6 +31,7 @@ export type TrainingGoalLike<
 > = {
   exercises: Exercise[];
   id: string;
+  isSelected: boolean;
   progress: TrainingProgressLike;
   title: string;
 };
@@ -40,8 +41,14 @@ export type TrainingSubjectLike<
 > = {
   goals: Goal[];
   id: string;
+  isEnrolled: boolean;
   progress: TrainingProgressLike;
   title: string;
+};
+
+export type TrainingSubjectGroups<Subject> = {
+  available: Subject[];
+  enrolled: Subject[];
 };
 
 export type NextTrainingStep = {
@@ -114,7 +121,7 @@ export function classifyTrainingSaveFailure(
     return {
       action: "reload",
       message:
-        "Øvelsen blev ændret af en voksen. Vi henter den nyeste version, så du kan fortsætte.",
+        "Øvelsen er blevet opdateret. Vi henter den nyeste version, så du kan fortsætte.",
       preserveRequestId: false,
     };
   }
@@ -198,7 +205,11 @@ export function getNextTrainingStep(
   subjects: readonly ChildTrainingSubject[],
 ): NextTrainingStep | null {
   for (const subject of subjects) {
+    if (!subject.isEnrolled) continue;
+
     for (const goal of subject.goals) {
+      if (!goal.isSelected) continue;
+
       const exercise = goal.exercises.find(
         (candidate) => candidate.progress.state !== "completed",
       );
@@ -210,6 +221,18 @@ export function getNextTrainingStep(
   }
 
   return null;
+}
+
+export function groupTrainingSubjects<Subject extends { isEnrolled: boolean }>(
+  subjects: readonly Subject[],
+): TrainingSubjectGroups<Subject> {
+  return subjects.reduce<TrainingSubjectGroups<Subject>>(
+    (groups, subject) => {
+      groups[subject.isEnrolled ? "enrolled" : "available"].push(subject);
+      return groups;
+    },
+    { available: [], enrolled: [] },
+  );
 }
 
 export function formatProgressCopy(progress: TrainingProgressLike): string {

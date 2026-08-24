@@ -94,8 +94,14 @@ function SelectedGoal({
   subjectId: string;
 }) {
   const router = useRouter();
-  const { loadSelectedChildTrainingSubject } = useAuth();
+  const {
+    loadSelectedChildTrainingSubject,
+    setSelectedChildTrainingGoalSelected,
+  } = useAuth();
   const [revision, setRevision] = useState(0);
+  const [choiceBusy, setChoiceBusy] = useState(false);
+  const [choiceError, setChoiceError] = useState<string | null>(null);
+  const [choiceNotice, setChoiceNotice] = useState<string | null>(null);
   const [state, setState] = useState<GoalState>({
     status: "loading",
     subject: null,
@@ -133,6 +139,56 @@ function SelectedGoal({
     setRevision((current) => current + 1);
   }
 
+  async function changeGoalSelection(
+    subject: ChildTrainingSubject,
+    goal: ChildTrainingGoal,
+    selected: boolean,
+  ) {
+    if (choiceBusy) return;
+    setChoiceBusy(true);
+    setChoiceError(null);
+    setChoiceNotice(null);
+
+    try {
+      const result = await setSelectedChildTrainingGoalSelected({
+        goalId: goal.id,
+        selected,
+        subjectId: subject.id,
+      });
+      setState((current) =>
+        current.status === "ready" &&
+        current.subject.id === subject.id &&
+        current.goal.id === goal.id
+          ? {
+              status: "ready",
+              subject: {
+                ...current.subject,
+                enrolledAt: result.enrolledAt,
+                isEnrolled: result.isEnrolled,
+              },
+              goal: {
+                ...current.goal,
+                isSelected: result.isSelected ?? selected,
+                selectedAt: result.selectedAt,
+              },
+            }
+          : current,
+      );
+      setChoiceNotice(
+        result.isSelected
+          ? `${goal.title} er nu et af dine mål.`
+          : `${goal.title} er fjernet fra dine mål. Din fremgang er stadig gemt.`,
+      );
+      setRevision((current) => current + 1);
+    } catch {
+      setChoiceError(
+        "Dit målvalg kunne ikke gemmes lige nu. Kontrollér forbindelsen, og prøv igen.",
+      );
+    } finally {
+      setChoiceBusy(false);
+    }
+  }
+
   if (state.status === "loading") {
     return (
       <Screen contentStyle={styles.stateScreen}>
@@ -154,7 +210,7 @@ function SelectedGoal({
             : "Målet kunne ikke hentes"}
         </Title>
         <Body style={styles.centerText}>
-          Det kan være ændret af en voksen. Gå tilbage til emnerne, eller prøv
+          Målet kan være blevet opdateret. Gå tilbage til emnerne, eller prøv
           igen.
         </Body>
         {state.status === "error" && (
@@ -209,6 +265,50 @@ function SelectedGoal({
         <Body>{goal.summary || "Tag én øvelse ad gangen."}</Body>
       </View>
 
+      <SurfaceCard
+        style={StyleSheet.flatten([
+          styles.choiceCard,
+          goal.isSelected && styles.choiceCardSelected,
+        ])}
+      >
+        <View style={styles.choiceCopy}>
+          <Kicker>{goal.isSelected ? "Dit mål" : "Vælg selv"}</Kicker>
+          <Text style={styles.summaryTitle}>
+            {goal.isSelected
+              ? "Dette mål er med i din træning"
+              : "Vil du have dette som et af dine mål?"}
+          </Text>
+          <Body>
+            {goal.isSelected
+              ? "Det kan blive vist som din næste træning. Fjerner du målet, gemmer vi alt, du allerede har klaret."
+              : "Vælg målet, så det kan blive vist på forsiden. Du kan altid se og prøve alle øvelserne, også før du vælger."}
+          </Body>
+        </View>
+        {choiceError && (
+          <View accessibilityRole="alert" style={styles.errorBox}>
+            <Text style={styles.errorText}>{choiceError}</Text>
+          </View>
+        )}
+        {choiceNotice && (
+          <View accessibilityLiveRegion="polite" style={styles.successBox}>
+            <Text style={styles.successText}>{choiceNotice}</Text>
+          </View>
+        )}
+        <ActionButton
+          disabled={choiceBusy}
+          variant={goal.isSelected ? "secondary" : "primary"}
+          onPress={() =>
+            void changeGoalSelection(subject, goal, !goal.isSelected)
+          }
+        >
+          {choiceBusy
+            ? "Gemmer dit valg…"
+            : goal.isSelected
+              ? "Fjern fra mine mål"
+              : "Vælg dette mål"}
+        </ActionButton>
+      </SurfaceCard>
+
       <SurfaceCard style={styles.summary}>
         <View style={styles.summaryTop}>
           <View style={styles.summaryCopy}>
@@ -239,7 +339,7 @@ function SelectedGoal({
           <Text style={styles.stateEmoji}>🌱</Text>
           <Text style={styles.stepTitle}>Der kommer snart øvelser</Text>
           <Body style={styles.centerText}>
-            En voksen er stadig ved at gøre målet klar.
+            Der er ingen øvelser i målet endnu. Prøv igen senere.
           </Body>
         </SurfaceCard>
       ) : (
@@ -311,6 +411,17 @@ const styles = StyleSheet.create({
   centerText: { maxWidth: 380, textAlign: "center" },
   stateEmoji: { fontSize: 42 },
   heading: { gap: spacing.sm },
+  choiceCard: {
+    gap: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.softWarm,
+  },
+  choiceCardSelected: {
+    borderColor: colors.primary,
+    backgroundColor: colors.soft,
+  },
+  choiceCopy: { gap: spacing.xs },
   subjectIcon: {
     width: 68,
     height: 68,
@@ -345,6 +456,28 @@ const styles = StyleSheet.create({
     borderRadius: radii.lg,
     backgroundColor: colors.softWarm,
     padding: spacing.md,
+  },
+  errorBox: {
+    borderRadius: radii.md,
+    backgroundColor: colors.dangerSoft,
+    padding: spacing.md,
+  },
+  errorText: {
+    color: colors.coral,
+    fontFamily: typography.families.systemRounded,
+    fontSize: typography.sizes.body,
+    fontWeight: typography.weights.semibold,
+  },
+  successBox: {
+    borderRadius: radii.md,
+    backgroundColor: colors.surface,
+    padding: spacing.md,
+  },
+  successText: {
+    color: colors.success,
+    fontFamily: typography.families.systemRounded,
+    fontSize: typography.sizes.body,
+    fontWeight: typography.weights.bold,
   },
   journeyHeading: { gap: spacing.xs },
   journey: { gap: spacing.sm },

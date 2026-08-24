@@ -35,6 +35,8 @@ A parent enters an email address and receives both a six-digit code and a magic-
 
 After login, the app loads only the authenticated adult's profile, first family membership, and active child profiles under Row-Level Security. A new adult can create the first family through a retry-safe authenticated database operation. The active child is remembered for that adult, family, app variant, and backend. Child switching, child creation, and logout live under `Min profil` instead of staying on the child's home screen.
 
+Once a child context is selected, Kids Mode is self-service. Every published subject remains visible; the child can join or leave it, select or deselect its goals, and train without an interactive adult approval. Subject and goal choices are durable, leaving never deletes exercise progress, and rejoining restores the child's prior choices. The parent-owned Auth session remains the family and Row-Level Security boundary; the child still has no separate login.
+
 The family owner creates a child profile with only a nickname and one of four preset avatars. No photo is collected during child creation, and the child receives no Auth account, email, password, or age. Later, a family member may explicitly promote a reviewed private cartoon result to the child's profile image; the preset remains the fallback. Creation requires acknowledgement of the current versioned guardian notice, records that acknowledgement in a private database table, and stops at 10 active children per family. The client persists a caller- and backend-scoped request identity before submission, so an interrupted or uncertain request can be retried without creating a duplicate child.
 
 This acknowledgement protects child-profile creation, but it is not approval of the final legal basis or wording for a broader release. Legal/privacy review, withdrawal, deletion, and retention remain separate product work before distribution beyond the private family prototype.
@@ -47,13 +49,13 @@ The Auth slice added `expo-crypto`, `expo-secure-store`, and AsyncStorage. The p
 
 ## Private family AI cartoon portrait
 
-An authenticated parent can select an active child, choose one photo from the
-gallery, and create a 3D cartoon portrait with OpenAI `openai/gpt-image-2`
+In the selected child's Kids Mode, the child can choose one photo from the
+gallery and create a 3D cartoon portrait with OpenAI `openai/gpt-image-2`
 through the server-side OpenRouter worker. The app downsizes the long edge to
 1536 pixels, uploads at most 8 MiB to a reserved private object, and displays
 the generated PNG through a short-lived signed URL. Camera and microphone
 permissions stay disabled. Both the input and result are linked to the selected
-child. After reviewing the result, the family member can explicitly save it as
+child. After reviewing the result, the child can explicitly save it as
 the child's profile image; the original source photo is never used as the
 profile image. Short-lived signed URLs are minted when the image is read, and
 the preset avatar remains the safe fallback.
@@ -80,8 +82,8 @@ generation can be resumed and reviewed after the app is opened again.
 
 ## Private topic reference photos
 
-The app lists the real published topics for the selected child. A family member
-may optionally add one private reference photo per child and topic—for example
+The app lists the real published topics for the selected child. The child may
+optionally add one private reference photo per child and topic—for example
 a full football-clothes photo for Football. The flow supports review,
 replacement, removal, and an explicit skip. The profile image and topic photo
 use separate database pointers, and topic photos never enter the public

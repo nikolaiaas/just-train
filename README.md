@@ -4,9 +4,9 @@ Bare Træn is a Danish training app for children and their parents, with a separ
 
 The first connected vertical slice is intentionally small:
 
-`parent signs in → chooses a child → opens a published admin subject → completes an exercise → sees saved progress`
+`parent signs in once → chooses a child context → child joins a published admin subject → chooses goals → completes an exercise → sees saved progress`
 
-The mobile training path now reads published subjects, goals, and exercises from Supabase and stores the selected child's progress there. Development, previews, tests, and repository evidence must still use synthetic people and media only.
+The mobile training path now reads published subjects, goals, and exercises from Supabase and stores the selected child's enrolment, goal choices, and progress there. Kids Mode does not ask an adult to approve child-facing actions: the child can join or leave any published subject, choose goals, train, and use the private profile and subject-photo flows. The authenticated parent session remains the family security boundary. Development, previews, tests, and repository evidence must still use synthetic people and media only.
 
 ## Technology
 

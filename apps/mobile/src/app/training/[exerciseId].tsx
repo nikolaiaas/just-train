@@ -317,7 +317,7 @@ function SelectedExercise({
         </Title>
         <Body style={styles.centerText}>
           {contentNotice ??
-            "Det kan være ændret af en voksen. Gå tilbage til emnerne, eller prøv igen."}
+            "Øvelsen kan være blevet opdateret. Gå tilbage til emnerne, eller prøv igen."}
         </Body>
         {content.status === "error" && (
           <ActionButton onPress={retryLoad}>Prøv igen</ActionButton>

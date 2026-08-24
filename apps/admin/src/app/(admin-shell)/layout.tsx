@@ -24,5 +24,9 @@ export default async function AuthenticatedAdminLayout({
     return <AccessDenied />;
   }
 
-  return <AdminShell profile={session.access.profile}>{children}</AdminShell>;
+  return (
+    <AdminShell backend={session.backend} profile={session.access.profile}>
+      {children}
+    </AdminShell>
+  );
 }

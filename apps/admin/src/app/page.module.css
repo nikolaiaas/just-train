@@ -62,6 +62,48 @@
   font-weight: 500;
 }
 
+.environmentIndicator {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 11px;
+  border: 1px solid;
+  border-radius: 999px;
+  font-size: 11px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.environmentIndicator strong {
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.environmentContext {
+  opacity: 0.72;
+}
+
+.environmentDot {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.environmentLocal {
+  border-color: #e5c875;
+  background: #fff5d8;
+  color: #715719;
+}
+
+.environmentHosted {
+  border-color: #9bcfc9;
+  background: #e8f5f2;
+  color: #08746f;
+}
+
 .appMark {
   display: grid;
   width: 38px;
@@ -245,38 +287,6 @@
   width: 18px;
   height: 18px;
   flex: 0 0 18px;
-}
-
-.previewStatus {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: auto;
-  padding: 13px 12px;
-  border: 1px solid #d8e1e5;
-  border-radius: 13px;
-  color: #5d7080;
-  font-size: 11px;
-  line-height: 1.35;
-}
-
-.previewStatus span:last-child {
-  display: grid;
-}
-
-.previewStatus strong {
-  color: #183249;
-  font-size: 12px;
-  font-weight: 650;
-}
-
-.statusDot {
-  width: 9px;
-  height: 9px;
-  flex: 0 0 9px;
-  border-radius: 50%;
-  background: #2a8d5b;
-  box-shadow: 0 0 0 4px #e8f5ef;
 }
 
 .accessViewport {
@@ -861,7 +871,6 @@
 
   .navLabel,
   .navItem > span,
-  .previewStatus span:last-child,
   .navSoon,
   .navItemDisabled {
     display: none;
@@ -874,10 +883,6 @@
   .navItem {
     justify-content: center;
     padding: 10px;
-  }
-
-  .previewStatus {
-    padding: 16px;
   }
 
   .libraryHeader {
@@ -905,13 +910,17 @@
   }
 
   .appShell {
+    display: flex;
     min-height: 100vh;
+    flex-direction: column;
     border-width: 0;
     border-radius: 0;
   }
 
   .topbar {
     min-height: 66px;
+    flex-wrap: wrap;
+    gap: 9px 12px;
     padding: 11px 16px;
   }
 
@@ -932,9 +941,17 @@
     height: 34px;
   }
 
+  .environmentIndicator {
+    order: 3;
+    width: 100%;
+    justify-content: center;
+    border-radius: 10px;
+  }
+
   .shellBody {
     display: flex;
-    min-height: calc(100vh - 66px);
+    min-height: 0;
+    flex: 1;
     flex-direction: column;
   }
 
@@ -962,10 +979,6 @@
 
   .navItem > span {
     display: inline;
-  }
-
-  .previewStatus {
-    display: none;
   }
 
   .content {

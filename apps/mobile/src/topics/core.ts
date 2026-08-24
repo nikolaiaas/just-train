@@ -79,7 +79,7 @@ export function getTopicPhotoErrorMessage(error: unknown): string {
   }
 
   if (code === "upload_limit_reached") {
-    return "Der er lavet mange emnebilleder. Vent lidt, eller spørg en voksen.";
+    return "Der er lavet mange emnebilleder lige nu. Vent lidt, og prøv igen senere.";
   }
 
   return "Emnebilledet kunne ikke gemmes. Prøv igen.";

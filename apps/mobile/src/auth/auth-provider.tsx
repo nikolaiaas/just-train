@@ -9,6 +9,8 @@ import {
   createChildProfile,
   finalizeChildTopicReferencePhoto,
   getAiMediaJob,
+  joinChildTrainingSubject,
+  leaveChildTrainingSubject,
   listChildPublishedTopicsWithPhoto,
   listChildTrainingSubjects,
   loadChildTrainingSubject,
@@ -24,6 +26,7 @@ import {
   restoreSession,
   removeChildTopicReferencePhoto,
   setChildProfileAvatarFromAiJob,
+  setChildTrainingGoalSelected,
   setChildTopicWardrobeItemEquippedAndPrepareRender,
   setChildWardrobeItemEquipped as saveChildWardrobeEquipment,
   startAiMediaJob,
@@ -43,6 +46,7 @@ import {
   type ChildTopicWardrobeRender,
   type ChildTrainingCatalog,
   type ChildTrainingCompletion,
+  type ChildTrainingEnrollment,
   type CompleteChildTrainingExerciseInput,
   type ChildTrainingSubject,
   type ChildWardrobeEquipmentState,
@@ -137,6 +141,12 @@ type WithoutChildTrainingContext<Input> = Input extends unknown
 type CompleteSelectedChildTrainingExerciseInput =
   WithoutChildTrainingContext<CompleteChildTrainingExerciseInput>;
 
+type SetSelectedChildTrainingGoalSelectedInput = {
+  goalId: string;
+  selected: boolean;
+  subjectId: string;
+};
+
 type PrepareSelectedChildTopicBasePortraitInput = {
   clientRequestId: string;
   topicId: string;
@@ -174,6 +184,12 @@ type AuthContextValue = {
   loadSelectedChildTrainingSubject(
     subjectId: string,
   ): Promise<ChildTrainingSubject | null>;
+  joinSelectedChildTrainingSubject(
+    subjectId: string,
+  ): Promise<ChildTrainingEnrollment>;
+  leaveSelectedChildTrainingSubject(
+    subjectId: string,
+  ): Promise<ChildTrainingEnrollment>;
   loadSelectedChildTopicPortrait(
     topicId: string,
   ): Promise<ChildTopicPortraitState>;
@@ -201,6 +217,9 @@ type AuthContextValue = {
   setSelectedChildWardrobeItemEquipped(
     input: SetSelectedChildWardrobeItemEquippedInput,
   ): Promise<ChildWardrobeEquipmentState>;
+  setSelectedChildTrainingGoalSelected(
+    input: SetSelectedChildTrainingGoalSelectedInput,
+  ): Promise<ChildTrainingEnrollment>;
   setSelectedChildTopicWardrobeItemAndRender(
     input: SetSelectedChildTopicWardrobeItemAndRenderInput,
   ): Promise<ChildTopicWardrobeRenderRequest>;
@@ -809,6 +828,45 @@ export function AuthProvider({ children }: PropsWithChildren) {
     [getSelectedChildMediaContext],
   );
 
+  const joinSelectedChildTrainingSubject = useCallback(
+    (subjectId: string) => {
+      const context = getSelectedChildMediaContext();
+      return joinChildTrainingSubject(context.client, {
+        childProfileId: context.child.id,
+        expectedUserId: context.userId,
+        familyId: context.familyId,
+        subjectId,
+      });
+    },
+    [getSelectedChildMediaContext],
+  );
+
+  const leaveSelectedChildTrainingSubject = useCallback(
+    (subjectId: string) => {
+      const context = getSelectedChildMediaContext();
+      return leaveChildTrainingSubject(context.client, {
+        childProfileId: context.child.id,
+        expectedUserId: context.userId,
+        familyId: context.familyId,
+        subjectId,
+      });
+    },
+    [getSelectedChildMediaContext],
+  );
+
+  const setSelectedChildTrainingGoalSelected = useCallback(
+    (input: SetSelectedChildTrainingGoalSelectedInput) => {
+      const context = getSelectedChildMediaContext();
+      return setChildTrainingGoalSelected(context.client, {
+        childProfileId: context.child.id,
+        expectedUserId: context.userId,
+        familyId: context.familyId,
+        ...input,
+      });
+    },
+    [getSelectedChildMediaContext],
+  );
+
   const completeSelectedChildTrainingExercise = useCallback(
     (input: CompleteSelectedChildTrainingExerciseInput) => {
       const context = getSelectedChildMediaContext();
@@ -1371,6 +1429,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
       emailFlow,
       getAiCartoonJob,
       getAiCartoonOutput,
+      joinSelectedChildTrainingSubject,
+      leaveSelectedChildTrainingSubject,
       loadChildProfileAvatar,
       loadSelectedChildAiCartoonResume,
       loadSelectedChildTrainingCatalog,
@@ -1406,6 +1466,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       selectChild,
       selectedChild,
       setSelectedChildWardrobeItemEquipped,
+      setSelectedChildTrainingGoalSelected,
       setSelectedChildTopicWardrobeItemAndRender,
       session,
       submitAiCartoon,
@@ -1423,6 +1484,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
       emailFlow,
       getAiCartoonJob,
       getAiCartoonOutput,
+      joinSelectedChildTrainingSubject,
+      leaveSelectedChildTrainingSubject,
       loadChildProfileAvatar,
       loadSelectedChildAiCartoonResume,
       loadSelectedChildTrainingCatalog,
@@ -1447,6 +1510,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       selectChild,
       selectedChild,
       setSelectedChildWardrobeItemEquipped,
+      setSelectedChildTrainingGoalSelected,
       setSelectedChildTopicWardrobeItemAndRender,
       session,
       submitAiCartoon,

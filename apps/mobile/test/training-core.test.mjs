@@ -12,6 +12,7 @@ import {
   formatExerciseTarget,
   formatProgressCopy,
   getNextTrainingStep,
+  groupTrainingSubjects,
   initialTrainingRepetitions,
   lockTrainingCompletionPayload,
   parseRouteUuid,
@@ -46,6 +47,7 @@ function goal(overrides = {}) {
   return {
     exercises: [exercise()],
     id: goalId,
+    isSelected: true,
     progress: progress(),
     title: "Et lille mål",
     ...overrides,
@@ -56,6 +58,7 @@ function subject(overrides = {}) {
   return {
     goals: [goal()],
     id: subjectId,
+    isEnrolled: true,
     progress: progress(),
     title: "Balance",
     ...overrides,
@@ -82,7 +85,20 @@ test("finds goals and exercises only by their validated identity", () => {
   assert.equal(findTrainingExercise(selectedGoal.exercises, null), null);
 });
 
-test("chooses the first unfinished exercise without a hardcoded subject", () => {
+test("chooses the first unfinished exercise from the child's own selected path", () => {
+  const availableSubject = subject({
+    id: "10000000-0000-4000-8000-000000000003",
+    isEnrolled: false,
+  });
+  const unselectedGoalSubject = subject({
+    id: "10000000-0000-4000-8000-000000000004",
+    goals: [
+      goal({
+        id: "20000000-0000-4000-8000-000000000004",
+        isSelected: false,
+      }),
+    ],
+  });
   const completedSubject = subject({
     id: "10000000-0000-4000-8000-000000000002",
     goals: [
@@ -99,12 +115,37 @@ test("chooses the first unfinished exercise without a hardcoded subject", () => 
   });
   const openSubject = subject();
 
-  assert.deepEqual(getNextTrainingStep([completedSubject, openSubject]), {
-    exercise: openSubject.goals[0].exercises[0],
-    goal: openSubject.goals[0],
-    subject: openSubject,
-  });
+  assert.deepEqual(
+    getNextTrainingStep([
+      availableSubject,
+      unselectedGoalSubject,
+      completedSubject,
+      openSubject,
+    ]),
+    {
+      exercise: openSubject.goals[0].exercises[0],
+      goal: openSubject.goals[0],
+      subject: openSubject,
+    },
+  );
   assert.equal(getNextTrainingStep([completedSubject]), null);
+  assert.equal(
+    getNextTrainingStep([availableSubject, unselectedGoalSubject]),
+    null,
+  );
+});
+
+test("keeps all published subjects visible while grouping mine and available", () => {
+  const mine = subject();
+  const available = subject({
+    id: "10000000-0000-4000-8000-000000000005",
+    isEnrolled: false,
+  });
+
+  assert.deepEqual(groupTrainingSubjects([available, mine]), {
+    available: [available],
+    enrolled: [mine],
+  });
 });
 
 test("formats child-friendly progress and measurement targets", () => {
@@ -166,7 +207,8 @@ test("reloads changed training with child-safe copy and a new request identity",
     const decision = classifyTrainingSaveFailure(new ChildTrainingError(code));
     assert.equal(decision.action, "reload");
     assert.equal(decision.preserveRequestId, false);
-    assert.match(decision.message, /ændret af en voksen/);
+    assert.match(decision.message, /blevet opdateret/);
+    assert.doesNotMatch(decision.message, /voksen/i);
   }
 });
 
