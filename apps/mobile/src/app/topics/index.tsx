@@ -1,7 +1,7 @@
 import { colors, radii, spacing, typography } from "@bare-traen/design";
-import type { ChildPublishedTopicWithPhoto } from "@bare-traen/api-client";
-import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import type { ChildTrainingCatalog } from "@bare-traen/api-client";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -16,14 +16,15 @@ import {
   BackButton,
   Body,
   Kicker,
+  ProgressBar,
   Screen,
   Title,
 } from "@/components/bare-ui";
 
 type TopicState =
-  | { status: "loading"; topics: null }
-  | { status: "error"; topics: null }
-  | { status: "ready"; topics: ChildPublishedTopicWithPhoto[] };
+  | { status: "loading"; catalog: null }
+  | { status: "error"; catalog: null }
+  | { status: "ready"; catalog: ChildTrainingCatalog };
 
 export default function TopicsScreen() {
   const { selectedChild, session } = useAuth();
@@ -37,39 +38,39 @@ export default function TopicsScreen() {
 
 function TopicsSessionScreen() {
   const router = useRouter();
-  const { loadSelectedChildTopics, selectedChild } = useAuth();
+  const { loadSelectedChildTrainingCatalog, selectedChild } = useAuth();
   const [state, setState] = useState<TopicState>({
     status: "loading",
-    topics: null,
+    catalog: null,
   });
   const [revision, setRevision] = useState(0);
 
-  useEffect(() => {
-    if (!selectedChild) {
-      return;
-    }
+  useFocusEffect(
+    useCallback(() => {
+      void revision;
+      if (!selectedChild) return;
 
-    let active = true;
+      let active = true;
+      void loadSelectedChildTrainingCatalog()
+        .then((catalog) => {
+          if (active) {
+            setState({ status: "ready", catalog });
+          }
+        })
+        .catch(() => {
+          if (active) {
+            setState({ status: "error", catalog: null });
+          }
+        });
 
-    void loadSelectedChildTopics()
-      .then((topics) => {
-        if (active) {
-          setState({ status: "ready", topics });
-        }
-      })
-      .catch(() => {
-        if (active) {
-          setState({ status: "error", topics: null });
-        }
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [loadSelectedChildTopics, revision, selectedChild]);
+      return () => {
+        active = false;
+      };
+    }, [loadSelectedChildTrainingCatalog, revision, selectedChild]),
+  );
 
   function retry() {
-    setState({ status: "loading", topics: null });
+    setState({ status: "loading", catalog: null });
     setRevision((current) => current + 1);
   }
 
@@ -89,7 +90,7 @@ function TopicsSessionScreen() {
 
   return (
     <Screen contentStyle={styles.screen}>
-      <BackButton label="I dag" onPress={() => router.back()} />
+      <BackButton label="I dag" onPress={() => router.replace("/")} />
       <View style={styles.heading}>
         <Kicker>Vælg emne</Kicker>
         <Title>Hvad vil {selectedChild.displayName} øve?</Title>
@@ -114,7 +115,7 @@ function TopicsSessionScreen() {
         </View>
       )}
 
-      {state.status === "ready" && state.topics.length === 0 && (
+      {state.status === "ready" && state.catalog.subjects.length === 0 && (
         <View style={styles.emptyCard}>
           <Text style={styles.emptyIcon}>🌱</Text>
           <Text style={styles.cardTitle}>Der kommer snart emner</Text>
@@ -122,13 +123,13 @@ function TopicsSessionScreen() {
         </View>
       )}
 
-      {state.status === "ready" && state.topics.length > 0 && (
+      {state.status === "ready" && state.catalog.subjects.length > 0 && (
         <View style={styles.topicList}>
-          {state.topics.map((topic) => (
+          {state.catalog.subjects.map((topic) => (
             <Pressable
               key={topic.id}
-              accessibilityHint="Åbner emnet og det private emnebillede"
-              accessibilityLabel={`${topic.title}. ${topic.photo ? "Emnebilledet er klar" : "Intet emnebillede endnu"}`}
+              accessibilityHint="Åbner emnets mål, fremgang, billede og garderobe"
+              accessibilityLabel={`${topic.title}. ${topic.progress.completedExercises} af ${topic.progress.totalExercises} øvelser klaret`}
               accessibilityRole="button"
               onPress={() =>
                 router.push({
@@ -157,10 +158,18 @@ function TopicsSessionScreen() {
                 <Text numberOfLines={2} style={styles.description}>
                   {topic.description || "Et nyt emne er klar til træning."}
                 </Text>
-                <Text style={styles.photoState}>
-                  {topic.photo
-                    ? "✓ Dit emnebillede er klar"
-                    : "Tilføj et emnebillede eller spring over"}
+                <View style={styles.progressRow}>
+                  <View style={styles.progressBar}>
+                    <ProgressBar value={topic.progress.percentage} />
+                  </View>
+                  <Text style={styles.photoState}>
+                    {topic.progress.percentage}%
+                  </Text>
+                </View>
+                <Text style={styles.progressCopy}>
+                  {topic.progress.totalExercises === 0
+                    ? "Målene er på vej"
+                    : `${topic.progress.completedExercises} af ${topic.progress.totalExercises} øvelser klaret`}
                 </Text>
               </View>
               <Text style={styles.chevron}>›</Text>
@@ -221,6 +230,18 @@ const styles = StyleSheet.create({
     fontFamily: typography.families.systemRounded,
     fontSize: typography.sizes.caption,
     fontWeight: typography.weights.bold,
+  },
+  progressRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  progressBar: { flex: 1 },
+  progressCopy: {
+    color: colors.muted,
+    fontFamily: typography.families.systemRounded,
+    fontSize: typography.sizes.caption,
   },
   chevron: {
     color: colors.primaryDeep,

@@ -13,6 +13,13 @@ export function shouldReconcileAiJob(
   },
   now = Date.now(),
 ): boolean {
+  // A reservation can survive an app interruption before the Function is
+  // invoked. Starting the same durable job is idempotent and avoids creating a
+  // second paid request.
+  if (input.status === "awaiting_upload") {
+    return true;
+  }
+
   if (input.status !== "processing" || !input.processingStartedAt) {
     return false;
   }

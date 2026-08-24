@@ -1,6 +1,6 @@
 # Bare Træn mobile
 
-Expo 57 application for the Bare Træn parent/child experience. Parent authentication, profile/family onboarding, owner-only child creation, and selection of active child profiles are backed by Supabase. Today's mission, the goal journey, training progress, and saved results remain clearly labelled fixture content while the next persistence slices are built.
+Expo 57 application for the Bare Træn parent/child experience. Parent authentication, profile/family onboarding, owner-only child creation, selection of active child profiles, published training content, and saved exercise progress are backed by Supabase. The app uses route-backed subject, goal, and exercise ids from the administration and never substitutes demo training when the backend is unavailable.
 
 The app is linked to the Expo/EAS project [`@bare-traen/bare-traen`](https://expo.dev/accounts/bare-traen/projects/bare-traen). `app.config.ts` gives the development, preview, and production variants distinct names, URL schemes, and application identifiers.
 
@@ -87,8 +87,16 @@ replacement, removal, and an explicit skip. The profile image and topic photo
 use separate database pointers, and topic photos never enter the public
 wardrobe catalogue. Optional photo failures do not block the topic list, and
 bounded reservation limits prevent unlimited private uploads while retention
-cleanup remains separate work. This slice stores the private reference safely;
-applying generated wardrobe items to that photo remains later product work.
+cleanup remains separate work.
+
+After the photo is saved, the family can create one private base cartoon for
+that child and subject. The base asset is retained separately and is never
+overwritten by a wardrobe result. Equipping or removing one item updates the
+exclusive head, body, hand, feet, or accessory slot transactionally, snapshots
+all currently equipped catalogue images, and asks the server-side image worker
+to derive a new look from the immutable base. The previous ready look remains
+visible while generation is pending or fails; removing every item returns to
+the original base without a paid generation.
 
 ## EAS builds for an iPhone
 

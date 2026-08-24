@@ -4,11 +4,11 @@ This phase should produce one working vertical slice that can be run locally, re
 
 The pilot slice is:
 
-`parent sign-in → select/create child → choose one football goal → complete one exercise → save result → see progress`
+`parent sign-in → select/create child → choose a published administration subject and goal → complete one exercise → save result → see progress`
 
 The administration slice is:
 
-`sign in → edit the football goal and its exercises → publish a version → see it in the child app`
+`sign in → edit a subject, its goals and exercises → publish the current tree → see it in the child app`
 
 ## Technical direction
 
@@ -203,17 +203,21 @@ Exit condition: access is denied by the database itself when a client attempts t
 - [x] Remember the active child per adult, family, app variant, and backend; remove adult controls from the child's home and put child switching, creation, and logout under `Min profil`.
 - [x] Let a family member review a completed cartoon result and explicitly save it as the child's private profile image, with short-lived signed reads and the preset avatar as fallback.
 - [x] List real published topics and support one optional private reference photo per child and topic, including review, retry-safe replacement, removal, and skip without mixing it with the profile image or public wardrobe assets.
-- [ ] Build the child-specific wardrobe rendering step that uses the private topic reference photo to preview equipped catalogue items while preserving exclusive body slots, review boundaries, and family-only media access.
+- [x] Build an immutable private base portrait per child and subject, then render each wardrobe look from that base plus every currently equipped catalogue image without ever using the previous derived look as input.
 - [x] Show the selected child's acquired wardrobe and equip, replace, or remove exactly one item per head, body, hand, feet, or accessory position; one feet item is a complete pair of shoes.
-- [ ] Finish topic selection with persisted enrolment, goal list, and goal detail for the seeded football content; the real published topic list and optional topic-photo step are complete.
-- [ ] Implement goal enrolment and the child's home screen.
-- [ ] Implement the ordered goal journey with completed, current, and locked exercises.
-- [ ] Implement the training state machine: `ready → training → result → review → completed → pending sync`.
+- [x] Finish subject selection, goal lists, goal detail, and dynamic exercise routes from the real published administration content without a fixture fallback.
+- [x] Implement the child's home screen with real overall progress and the next unfinished exercise.
+- [ ] Persist an explicit goal enrolment before the child's first saved exercise; the current guarded flow creates it transactionally with the first completion.
+- [x] Let the child choose any current exercise, as requested for the simple family app, and derive completed/current progress from saved attempts instead of locking later exercises.
+- [x] Implement the online training state machine: `ready → training → review → saving → completed/error`.
 - [ ] Keep overall session time separate from individual attempts.
-- [ ] Support manual repetition and time results before voice input is introduced.
-- [ ] Save perceived difficulty and calculate progress/points transactionally on the backend.
-- [ ] Show the saved progress and any fixed reward unlock.
-- [ ] Add retryable error and offline states for every remaining mutation.
+- [x] Support manual repetition and time results before voice input is introduced.
+- [x] Save perceived difficulty and calculate exercise, goal, subject, and overall progress transactionally on the backend.
+- [ ] Calculate points and reward acquisition transactionally on the backend.
+- [x] Show saved progress on the child home, subject, goal, and exercise screens.
+- [ ] Show fixed reward unlocks after the point and acquisition rules are defined.
+- [x] Add retryable online error and stale-content states to the training and subject-portrait mutations.
+- [ ] Add offline mutation queuing and reconciliation.
 
 Exit condition: the complete pilot path works against local and hosted development backends.
 
@@ -241,7 +245,7 @@ Exit condition: a child cannot lose or duplicate a completed attempt because of 
 - [x] Implement human review and an explicit publish action.
 - [x] Publish or unpublish the current mutable topic tree atomically, with approved wardrobe items following publication, and permanently delete an unpublished topic only when no child activity or owned reward depends on it.
 - [ ] Record a dedicated audit event for who reviewed, published, unpublished, or deleted a topic.
-- [ ] Verify that newly published content appears in the child app while an unpublish immediately hides the topic without deleting family progress.
+- [x] Verify with database and API contracts that newly published content appears in the child app while an unpublish immediately hides the subject without deleting family progress.
 
 Exit condition: an authorized person can edit and publish content without direct database-dashboard work.
 
@@ -268,7 +272,8 @@ Exit condition: each risky feature has a written go/defer decision and does not 
 ## 11. Add quality and release gates
 
 - [x] Add unit and database tests for timer reconstruction and topic/wardrobe publication rules.
-- [ ] Add unit tests for progression, points, and reward acquisition.
+- [x] Add unit and database tests for dynamic training progression and idempotent completion.
+- [ ] Add unit and database tests for points and reward acquisition.
 - [x] Add database migration and RLS tests.
 - [ ] Add Playwright smoke tests for the administration pilot path.
 - [ ] Add a real-device mobile smoke test, automated with Maestro when the routes stabilize.
@@ -287,7 +292,7 @@ Exit condition: a failed permission test, migration, type check, or core-flow sm
 - [x] The administration app has a shareable preview URL.
 - [x] A private Bare Træn build is installed on the owner's iPhone without public App Store release.
 - [ ] The functional parent-to-completed-exercise pilot works locally and on the iPhone.
-- [ ] The administration pilot can publish mutable content consumed by the mobile app.
+- [x] The administration pilot can publish mutable content consumed by the mobile app through the tested published-tree contract.
 - [ ] Timers and pending results survive interruption and reconnect safely.
 - [x] RLS tests prove family and administrator isolation.
 - [ ] All development and preview data is synthetic.

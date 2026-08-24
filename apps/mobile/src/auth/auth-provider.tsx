@@ -4,20 +4,27 @@ import {
   CHILD_PROFILE_CONSENT_VERSION,
   CreateChildProfileError,
   completeAuthCallback,
+  completeChildTrainingExercise,
   completeParentOnboarding,
   createChildProfile,
   finalizeChildTopicReferencePhoto,
   getAiMediaJob,
   listChildPublishedTopicsWithPhoto,
+  listChildTrainingSubjects,
+  loadChildTrainingSubject,
+  loadChildTopicPortrait,
   loadChildProfileAvatar as loadProfileAvatar,
   loadChildWardrobe,
   logout as logoutSession,
   onAuthSessionChange,
   prepareChildTopicReferencePhoto,
+  prepareChildTopicBasePortrait,
+  prepareChildTopicWardrobeRender,
   requestEmailSignIn,
   restoreSession,
   removeChildTopicReferencePhoto,
   setChildProfileAvatarFromAiJob,
+  setChildTopicWardrobeItemEquippedAndPrepareRender,
   setChildWardrobeItemEquipped as saveChildWardrobeEquipment,
   startAiMediaJob,
   prepareAiMediaJob,
@@ -31,9 +38,17 @@ import {
   type ChildProfileAvatar,
   type ChildPublishedTopicWithPhoto,
   type ChildTopicPhotoMimeType,
+  type ChildTopicPortraitState,
+  type ChildTopicWardrobeRenderRequest,
+  type ChildTopicWardrobeRender,
+  type ChildTrainingCatalog,
+  type ChildTrainingCompletion,
+  type CompleteChildTrainingExerciseInput,
+  type ChildTrainingSubject,
   type ChildWardrobeEquipmentState,
   type ChildWardrobeItem,
   type PreparedAiMediaJob,
+  type PreparedChildTopicBasePortrait,
 } from "@bare-traen/api-client";
 import {
   createContext,
@@ -115,12 +130,39 @@ type SaveSelectedChildTopicPhotoInput = {
   topicId: string;
 };
 
+type WithoutChildTrainingContext<Input> = Input extends unknown
+  ? Omit<Input, "childProfileId" | "expectedUserId" | "familyId">
+  : never;
+
+type CompleteSelectedChildTrainingExerciseInput =
+  WithoutChildTrainingContext<CompleteChildTrainingExerciseInput>;
+
+type PrepareSelectedChildTopicBasePortraitInput = {
+  clientRequestId: string;
+  topicId: string;
+};
+
+type SetSelectedChildTopicWardrobeItemAndRenderInput = {
+  clientRequestId: string;
+  equipped: boolean;
+  topicId: string;
+  wardrobeItemId: string;
+};
+
+type PrepareSelectedChildTopicWardrobeRenderInput = {
+  clientRequestId: string;
+  topicId: string;
+};
+
 type AuthContextValue = {
   authNotice: string | null;
   authStatus: AuthStatus;
   bootstrap: BootstrapState;
   clearSelectedChildAiCartoonResume(): Promise<void>;
   clearAuthNotice(): void;
+  completeSelectedChildTrainingExercise(
+    input: CompleteSelectedChildTrainingExerciseInput,
+  ): Promise<ChildTrainingCompletion>;
   createChild(input: CreateChildInput): Promise<ParentChild>;
   getAiCartoonJob(jobId: string): Promise<AiMediaJob>;
   getAiCartoonOutput(jobId: string): Promise<AiMediaOutput>;
@@ -128,9 +170,22 @@ type AuthContextValue = {
     childProfileId: string,
   ): Promise<ChildProfileAvatar | null>;
   loadSelectedChildAiCartoonResume(): Promise<AiCartoonResume | null>;
+  loadSelectedChildTrainingCatalog(): Promise<ChildTrainingCatalog>;
+  loadSelectedChildTrainingSubject(
+    subjectId: string,
+  ): Promise<ChildTrainingSubject | null>;
+  loadSelectedChildTopicPortrait(
+    topicId: string,
+  ): Promise<ChildTopicPortraitState>;
   loadSelectedChildTopics(): Promise<ChildPublishedTopicWithPhoto[]>;
   loadSelectedChildWardrobe(): Promise<ChildWardrobeItem[]>;
   reconcileAiCartoonJob(jobId: string): Promise<void>;
+  prepareSelectedChildTopicBasePortrait(
+    input: PrepareSelectedChildTopicBasePortraitInput,
+  ): Promise<PreparedChildTopicBasePortrait>;
+  prepareSelectedChildTopicWardrobeRender(
+    input: PrepareSelectedChildTopicWardrobeRenderInput,
+  ): Promise<ChildTopicWardrobeRender>;
   saveAiCartoonAsProfilePicture(jobId: string): Promise<void>;
   saveSelectedChildAiCartoonResume(input: {
     jobId: string;
@@ -146,6 +201,9 @@ type AuthContextValue = {
   setSelectedChildWardrobeItemEquipped(
     input: SetSelectedChildWardrobeItemEquippedInput,
   ): Promise<ChildWardrobeEquipmentState>;
+  setSelectedChildTopicWardrobeItemAndRender(
+    input: SetSelectedChildTopicWardrobeItemAndRenderInput,
+  ): Promise<ChildTopicWardrobeRenderRequest>;
   submitAiCartoon(input: SubmitAiCartoonInput): Promise<PreparedAiMediaJob>;
   completeMagicLink(callbackUrl: string): Promise<void>;
   completeOnboarding(input: {
@@ -729,6 +787,139 @@ export function AuthProvider({ children }: PropsWithChildren) {
     });
   }, [getSelectedChildMediaContext]);
 
+  const loadSelectedChildTrainingCatalog = useCallback(() => {
+    const context = getSelectedChildMediaContext();
+    return listChildTrainingSubjects(context.client, {
+      childProfileId: context.child.id,
+      expectedUserId: context.userId,
+      familyId: context.familyId,
+    });
+  }, [getSelectedChildMediaContext]);
+
+  const loadSelectedChildTrainingSubject = useCallback(
+    (subjectId: string) => {
+      const context = getSelectedChildMediaContext();
+      return loadChildTrainingSubject(context.client, {
+        childProfileId: context.child.id,
+        expectedUserId: context.userId,
+        familyId: context.familyId,
+        subjectId,
+      });
+    },
+    [getSelectedChildMediaContext],
+  );
+
+  const completeSelectedChildTrainingExercise = useCallback(
+    (input: CompleteSelectedChildTrainingExerciseInput) => {
+      const context = getSelectedChildMediaContext();
+      return completeChildTrainingExercise(context.client, {
+        ...input,
+        childProfileId: context.child.id,
+        expectedUserId: context.userId,
+        familyId: context.familyId,
+      });
+    },
+    [getSelectedChildMediaContext],
+  );
+
+  const loadSelectedChildTopicPortrait = useCallback(
+    (topicId: string) => {
+      const context = getSelectedChildMediaContext();
+      return loadChildTopicPortrait(context.client, {
+        childProfileId: context.child.id,
+        expectedUserId: context.userId,
+        familyId: context.familyId,
+        topicId,
+      });
+    },
+    [getSelectedChildMediaContext],
+  );
+
+  const prepareSelectedChildTopicBasePortrait = useCallback(
+    async (input: PrepareSelectedChildTopicBasePortraitInput) => {
+      const context = getSelectedChildMediaContext();
+      const prepared = await prepareChildTopicBasePortrait(context.client, {
+        childProfileId: context.child.id,
+        clientRequestId: input.clientRequestId,
+        expectedUserId: context.userId,
+        familyId: context.familyId,
+        topicId: input.topicId,
+      });
+
+      if (
+        prepared.jobStatus !== "succeeded" &&
+        prepared.jobStatus !== "failed" &&
+        prepared.jobStatus !== "cancelled"
+      ) {
+        await startAiMediaJob(context.client, prepared.jobId).catch(
+          () => undefined,
+        );
+      }
+
+      return prepared;
+    },
+    [getSelectedChildMediaContext],
+  );
+
+  const setSelectedChildTopicWardrobeItemAndRender = useCallback(
+    async (input: SetSelectedChildTopicWardrobeItemAndRenderInput) => {
+      const context = getSelectedChildMediaContext();
+      const result = await setChildTopicWardrobeItemEquippedAndPrepareRender(
+        context.client,
+        {
+          childProfileId: context.child.id,
+          clientRequestId: input.clientRequestId,
+          equipped: input.equipped,
+          expectedUserId: context.userId,
+          familyId: context.familyId,
+          topicId: input.topicId,
+          wardrobeItemId: input.wardrobeItemId,
+        },
+      );
+
+      if (
+        result.render.jobId &&
+        result.render.jobStatus !== "succeeded" &&
+        result.render.jobStatus !== "failed" &&
+        result.render.jobStatus !== "cancelled"
+      ) {
+        await startAiMediaJob(context.client, result.render.jobId).catch(
+          () => undefined,
+        );
+      }
+
+      return result;
+    },
+    [getSelectedChildMediaContext],
+  );
+
+  const prepareSelectedChildTopicWardrobeRender = useCallback(
+    async (input: PrepareSelectedChildTopicWardrobeRenderInput) => {
+      const context = getSelectedChildMediaContext();
+      const render = await prepareChildTopicWardrobeRender(context.client, {
+        childProfileId: context.child.id,
+        clientRequestId: input.clientRequestId,
+        expectedUserId: context.userId,
+        familyId: context.familyId,
+        topicId: input.topicId,
+      });
+
+      if (
+        render.jobId &&
+        render.jobStatus !== "succeeded" &&
+        render.jobStatus !== "failed" &&
+        render.jobStatus !== "cancelled"
+      ) {
+        await startAiMediaJob(context.client, render.jobId).catch(
+          () => undefined,
+        );
+      }
+
+      return render;
+    },
+    [getSelectedChildMediaContext],
+  );
+
   const saveSelectedChildTopicPhoto = useCallback(
     async (input: SaveSelectedChildTopicPhotoInput) => {
       const context = getSelectedChildMediaContext();
@@ -1173,6 +1364,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       bootstrap,
       clearSelectedChildAiCartoonResume,
       clearAuthNotice: () => setAuthNotice(null),
+      completeSelectedChildTrainingExercise,
       createChild,
       completeMagicLink,
       completeOnboarding,
@@ -1181,12 +1373,17 @@ export function AuthProvider({ children }: PropsWithChildren) {
       getAiCartoonOutput,
       loadChildProfileAvatar,
       loadSelectedChildAiCartoonResume,
+      loadSelectedChildTrainingCatalog,
+      loadSelectedChildTrainingSubject,
+      loadSelectedChildTopicPortrait,
       loadSelectedChildTopics,
       loadSelectedChildWardrobe,
       logout,
       logoutError,
       pendingChildCreation,
       pendingChildCreationStatus,
+      prepareSelectedChildTopicBasePortrait,
+      prepareSelectedChildTopicWardrobeRender,
       refreshParent: () => setBootstrapRevision((revision) => revision + 1),
       reconcileAiCartoonJob,
       removeSelectedChildTopicPhoto,
@@ -1209,6 +1406,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       selectChild,
       selectedChild,
       setSelectedChildWardrobeItemEquipped,
+      setSelectedChildTopicWardrobeItemAndRender,
       session,
       submitAiCartoon,
       verifyCode,
@@ -1218,6 +1416,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       authStatus,
       bootstrap,
       clearSelectedChildAiCartoonResume,
+      completeSelectedChildTrainingExercise,
       createChild,
       completeMagicLink,
       completeOnboarding,
@@ -1226,12 +1425,17 @@ export function AuthProvider({ children }: PropsWithChildren) {
       getAiCartoonOutput,
       loadChildProfileAvatar,
       loadSelectedChildAiCartoonResume,
+      loadSelectedChildTrainingCatalog,
+      loadSelectedChildTrainingSubject,
+      loadSelectedChildTopicPortrait,
       loadSelectedChildTopics,
       loadSelectedChildWardrobe,
       logout,
       logoutError,
       pendingChildCreation,
       pendingChildCreationStatus,
+      prepareSelectedChildTopicBasePortrait,
+      prepareSelectedChildTopicWardrobeRender,
       requestEmail,
       reconcileAiCartoonJob,
       removeSelectedChildTopicPhoto,
@@ -1243,6 +1447,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       selectChild,
       selectedChild,
       setSelectedChildWardrobeItemEquipped,
+      setSelectedChildTopicWardrobeItemAndRender,
       session,
       submitAiCartoon,
       verifyCode,

@@ -60,11 +60,13 @@ Update, or a fresh iOS build. Stop the release when a required check fails.
       applied every new migration to Hosted Development and that local and
       hosted migration histories align. Never deploy `seed.sql`, push local
       `config.toml`, or reset a linked project.
-- [ ] If Edge Function code changed, obtain explicit hosted-mutation approval,
-      verify required secret names without revealing values, and deploy it
-      separately; merging migrations does not deploy Functions. Deploy
-      `process-ai-job` and `process-admin-ai-job` with `--no-verify-jwt` as
-      configured when either worker or its gateway setting changed.
+- [ ] If Edge Function code changed, obtain explicit hosted-mutation approval
+      before merge and verify required secret names without revealing values.
+      The current native Supabase `main` integration redeploys both configured
+      Functions as part of delivery, even when only one or neither changed, so
+      verify the deployed versions and reviewed source after merge. Use a
+      separate manual deploy only as an explicitly authorized recovery path.
+      Both Functions must retain `--no-verify-jwt` behavior as configured.
 
 - [ ] Confirm both deployed Functions have legacy gateway JWT verification
       disabled. Each handler must still require a bearer token, resolve the

@@ -1,15 +1,7 @@
 import { colors, radii, spacing, typography } from "@bare-traen/design";
-import {
-  demoChild,
-  demoExercises,
-  demoGoal,
-  demoProgress,
-  demoTopics,
-  getCurrentExercise,
-  getGoalProgress,
-} from "@bare-traen/domain";
-import { type Href, useRouter } from "expo-router";
-import { useState } from "react";
+import type { ChildTrainingCatalog } from "@bare-traen/api-client";
+import { type Href, useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -32,14 +24,17 @@ import {
 } from "@/components/bare-ui";
 import { ChildChooser } from "@/components/child-chooser";
 import { ChildProfileAvatar } from "@/components/child-profile-avatar";
+import {
+  formatExerciseTarget,
+  formatProgressCopy,
+  getNextTrainingStep,
+} from "@/training/core";
 
-const goalProgress = getGoalProgress(demoGoal, demoProgress);
-const currentExercise = getCurrentExercise(demoExercises, demoProgress);
-const football = demoTopics.find((topic) => topic.id === demoGoal.topicId)!;
 const NEW_CHILD_ROUTE = "/child/new" as Href;
 const PROFILE_ROUTE = "/profile" as Href;
 const TOPICS_ROUTE = "/topics" as Href;
-const WARDROBE_ROUTE = "/wardrobe" as Href;
+const GOAL_ROUTE = "/goals/[goalId]" as Href;
+const TRAINING_ROUTE = "/training/[exerciseId]" as Href;
 
 export default function TodayScreen() {
   const {
@@ -116,7 +111,7 @@ export default function TodayScreen() {
     );
   }
 
-  return <FixtureToday selectedChild={selectedChild} />;
+  return <LiveToday key={selectedChild.id} selectedChild={selectedChild} />;
 }
 
 function ParentOnboarding({
@@ -333,8 +328,43 @@ function ChooseChild({
   );
 }
 
-function FixtureToday({ selectedChild }: { selectedChild: ParentChild }) {
+type TodayTrainingState =
+  | { status: "loading"; catalog: null }
+  | { status: "error"; catalog: null }
+  | { status: "ready"; catalog: ChildTrainingCatalog };
+
+function LiveToday({ selectedChild }: { selectedChild: ParentChild }) {
   const router = useRouter();
+  const { loadSelectedChildTrainingCatalog } = useAuth();
+  const [revision, setRevision] = useState(0);
+  const [state, setState] = useState<TodayTrainingState>({
+    status: "loading",
+    catalog: null,
+  });
+
+  useFocusEffect(
+    useCallback(() => {
+      void revision;
+      let active = true;
+
+      void loadSelectedChildTrainingCatalog()
+        .then((catalog) => {
+          if (active) setState({ status: "ready", catalog });
+        })
+        .catch(() => {
+          if (active) setState({ status: "error", catalog: null });
+        });
+
+      return () => {
+        active = false;
+      };
+    }, [loadSelectedChildTrainingCatalog, revision]),
+  );
+
+  function retry() {
+    setState({ status: "loading", catalog: null });
+    setRevision((current) => current + 1);
+  }
 
   return (
     <Screen contentStyle={styles.screen}>
@@ -359,87 +389,143 @@ function FixtureToday({ selectedChild }: { selectedChild: ParentChild }) {
         </Pressable>
       </View>
 
-      <View style={styles.utilityRow}>
-        <View style={styles.pointsPill}>
-          <Text style={styles.pointsText}>
-            Preview · ⭐ {demoChild.points} point
-          </Text>
-        </View>
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => router.push("/goal")}
-          hitSlop={10}
-        >
-          <Text style={styles.utilityLink}>Se hele målet ›</Text>
-        </Pressable>
-      </View>
-
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={`Åbn målet ${demoGoal.title}`}
-        onPress={() => router.push("/goal")}
-        style={({ pressed }) => [pressed && styles.cardPressed]}
-      >
-        <SurfaceCard style={styles.goalCard}>
-          <View style={styles.goalHeading}>
-            <Text style={styles.goalIcon}>{football.icon}</Text>
-            <View style={styles.goalHeadingCopy}>
-              <Text style={styles.goalLabel}>{football.name}</Text>
-              <Text style={styles.goalTitle}>{demoGoal.title}</Text>
-            </View>
-            <Text style={styles.chevron}>›</Text>
-          </View>
-          <ProgressBar value={goalProgress.percentage} />
-          <Kicker style={styles.progressCopy}>
-            {goalProgress.currentExerciseNumber} af{" "}
-            {goalProgress.totalExercises} trin · {goalProgress.percentage}% på
-            vej
-          </Kicker>
+      {state.status === "loading" && (
+        <SurfaceCard style={styles.trainingStateCard}>
+          <ActivityIndicator color={colors.primaryDeep} size="large" />
+          <Body>Finder din næste øvelse…</Body>
         </SurfaceCard>
-      </Pressable>
+      )}
 
-      <View style={styles.sectionHeading}>
-        <Kicker>Dagens mission</Kicker>
-        <Text style={styles.timePill}>
-          ⏱ Cirka {currentExercise?.recommendedMinutes ?? 10} min.
-        </Text>
-      </View>
+      {state.status === "error" && (
+        <SurfaceCard style={styles.trainingStateCard}>
+          <Text style={styles.stateEmoji}>🌧️</Text>
+          <Text style={styles.weekTitle}>Træningen kunne ikke hentes</Text>
+          <Body style={styles.centerText}>
+            Kontrollér forbindelsen, og prøv igen. Vi viser ikke et
+            eksempel-forløb i stedet.
+          </Body>
+          <ActionButton onPress={retry}>Prøv igen</ActionButton>
+        </SurfaceCard>
+      )}
 
-      <View style={styles.missionCard}>
-        <View style={styles.ballHalo}>
-          <Text style={styles.ball}>⚽</Text>
-        </View>
-        <Title style={styles.missionTitle}>{currentExercise?.title}</Title>
-        <Body style={styles.missionCopy}>{currentExercise?.instruction}</Body>
-        <View style={styles.encouragement}>
-          <Text style={styles.encouragementText}>
-            Det behøver ikke være perfekt — bare prøv.
-          </Text>
-        </View>
-        <ActionButton onPress={() => router.push("/training")}>
-          Start dagens træning
-        </ActionButton>
-      </View>
-
-      <View style={styles.weekCard}>
-        <Text style={styles.weekIcon}>🌟</Text>
-        <View style={styles.weekCopy}>
-          <Text style={styles.weekTitle}>Godt i gang</Text>
-          <Body>Du har allerede øvet dig 2 gange i denne uge.</Body>
-        </View>
-      </View>
+      {state.status === "ready" && (
+        <TodayTraining
+          catalog={state.catalog}
+          childName={selectedChild.displayName}
+        />
+      )}
 
       <TopicsCard child={selectedChild} />
-
-      <WardrobeCard child={selectedChild} />
-
-      <View style={styles.previewNote}>
-        <Text style={styles.previewNoteText}>
-          Valgt barn kommer fra Supabase · mål, øvelser og point er stadig
-          preview
-        </Text>
-      </View>
     </Screen>
+  );
+}
+
+function TodayTraining({
+  catalog,
+  childName,
+}: {
+  catalog: ChildTrainingCatalog;
+  childName: string;
+}) {
+  const router = useRouter();
+  const next = getNextTrainingStep(catalog.subjects);
+
+  if (catalog.subjects.length === 0) {
+    return (
+      <SurfaceCard style={styles.trainingStateCard}>
+        <Text style={styles.stateEmoji}>🌱</Text>
+        <Text style={styles.weekTitle}>Der kommer snart noget at øve</Text>
+        <Body style={styles.centerText}>
+          En voksen er stadig ved at gøre de første emner klar.
+        </Body>
+      </SurfaceCard>
+    );
+  }
+
+  return (
+    <>
+      <SurfaceCard style={styles.goalCard}>
+        <View style={styles.goalHeading}>
+          <View style={styles.goalHeadingCopy}>
+            <Kicker>Din fremgang</Kicker>
+            <Text style={styles.goalTitle}>
+              {formatProgressCopy(catalog.overallProgress)}
+            </Text>
+          </View>
+          <Text style={styles.progressPercent}>
+            {catalog.overallProgress.percentage}%
+          </Text>
+        </View>
+        <ProgressBar value={catalog.overallProgress.percentage} />
+      </SurfaceCard>
+
+      {next ? (
+        <View style={styles.missionCard}>
+          <View
+            style={[
+              styles.ballHalo,
+              next.subject.accentColor
+                ? { backgroundColor: `${next.subject.accentColor}18` }
+                : null,
+            ]}
+          >
+            <Text style={styles.ball}>{next.subject.icon ?? "★"}</Text>
+          </View>
+          <Kicker>
+            Næste øvelse · {next.subject.title} · {next.goal.title}
+          </Kicker>
+          <Title style={styles.missionTitle}>{next.exercise.title}</Title>
+          <Body style={styles.missionCopy}>{next.exercise.instructions}</Body>
+          <Text style={styles.timePill}>
+            {formatExerciseTarget(next.exercise)}
+            {next.exercise.estimatedMinutes
+              ? ` · cirka ${next.exercise.estimatedMinutes} min.`
+              : ""}
+          </Text>
+          <View style={styles.encouragement}>
+            <Text style={styles.encouragementText}>
+              Det behøver ikke være perfekt — bare prøv.
+            </Text>
+          </View>
+          <ActionButton
+            onPress={() =>
+              router.push({
+                pathname: TRAINING_ROUTE,
+                params: {
+                  exerciseId: next.exercise.id,
+                  goalId: next.goal.id,
+                  subjectId: next.subject.id,
+                },
+              } as Href)
+            }
+          >
+            Start {next.exercise.title}
+          </ActionButton>
+          <ActionButton
+            variant="secondary"
+            onPress={() =>
+              router.push({
+                pathname: GOAL_ROUTE,
+                params: {
+                  goalId: next.goal.id,
+                  subjectId: next.subject.id,
+                },
+              } as Href)
+            }
+          >
+            Se alle øvelser i målet
+          </ActionButton>
+        </View>
+      ) : (
+        <SurfaceCard style={styles.trainingStateCard}>
+          <Text style={styles.stateEmoji}>🏆</Text>
+          <Text style={styles.weekTitle}>Alle øvelser er klaret!</Text>
+          <Body style={styles.centerText}>
+            Flot trænet, {childName}. Du kan altid øve en favorit igen.
+          </Body>
+        </SurfaceCard>
+      )}
+    </>
   );
 }
 
@@ -458,27 +544,6 @@ function TopicsCard({ child }: { child: ParentChild }) {
       </View>
       <ActionButton onPress={() => router.push(TOPICS_ROUTE)}>
         Se alle emner
-      </ActionButton>
-    </SurfaceCard>
-  );
-}
-
-function WardrobeCard({ child }: { child: ParentChild }) {
-  const router = useRouter();
-
-  return (
-    <SurfaceCard style={styles.aiLabCard}>
-      <View style={styles.aiLabCopy}>
-        <Kicker>🧳 Min garderobe</Kicker>
-        <Text style={styles.weekTitle}>
-          Vælg, hvad {child.displayName} har på
-        </Text>
-        <Body>
-          Se optjente ting, og skift tøj, udstyr og et helt par sko ad gangen.
-        </Body>
-      </View>
-      <ActionButton onPress={() => router.push(WARDROBE_ROUTE)}>
-        Åbn garderoben
       </ActionButton>
     </SurfaceCard>
   );
@@ -642,6 +707,18 @@ const styles = StyleSheet.create({
     fontFamily: typography.families.systemRounded,
     fontSize: typography.sizes.cardTitle,
     fontWeight: typography.weights.bold,
+  },
+  progressPercent: {
+    color: colors.primaryDeep,
+    fontFamily: typography.families.systemRounded,
+    fontSize: typography.sizes.cardTitle,
+    fontWeight: typography.weights.bold,
+  },
+  trainingStateCard: {
+    minHeight: 190,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.md,
   },
   chevron: { color: colors.primaryDeep, fontSize: 28 },
   progressCopy: { marginTop: -spacing.xs },

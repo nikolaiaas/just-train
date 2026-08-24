@@ -1,5 +1,6 @@
 import {
   WardrobeError,
+  type ChildTopicWardrobeRenderErrorCode,
   type ChildWardrobeEquipmentState,
   type ChildWardrobeItem,
 } from "@bare-traen/api-client";
@@ -74,6 +75,15 @@ export function getWardrobeImageAccessibilityLabel(
   const description = item.description.replace(/\s+/gu, " ").trim();
 
   return description ? `${name}. ${description}` : name;
+}
+
+export function isCurrentWardrobePortraitImageFailure(
+  failedSignedUrl: string | null,
+  currentSignedUrl: string | null,
+): boolean {
+  return Boolean(
+    failedSignedUrl && currentSignedUrl && failedSignedUrl === currentSignedUrl,
+  );
 }
 
 export function planWardrobeEquipment(
@@ -165,5 +175,24 @@ export function getWardrobeErrorMessage(error: unknown): string {
       return "Valget kunne ikke gemmes. Garderoben er ikke blevet ændret.";
     default:
       return "Garderoben sendte et svar, som appen ikke kunne bruge. Prøv igen.";
+  }
+}
+
+export function getWardrobeRenderErrorMessage(
+  code: ChildTopicWardrobeRenderErrorCode | null,
+): string {
+  switch (code) {
+    case "base_required":
+      return "Lav først en emnefigur, så garderoben har et sikkert grundbillede.";
+    case "base_stale":
+      return "Kildebilledet er ændret. Lav en ny grundfigur, før garderoben tegner igen.";
+    case "catalogue_image_missing":
+      return "Valget er gemt, men en af tingene mangler sit billede. Det tidligere look bliver stående.";
+    case "daily_limit_reached":
+      return "Valget er gemt. Der er lavet mange billeder i dag, så prøv looket igen i morgen.";
+    case "operation_unavailable":
+      return "Valget er gemt, men AI-tegneren er ikke klar lige nu. Det tidligere look bliver stående.";
+    default:
+      return "Valget er gemt, men det nye look kunne ikke laves. Det tidligere look bliver stående.";
   }
 }

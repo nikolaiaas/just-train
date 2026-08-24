@@ -7,9 +7,16 @@ import {
   shouldReconcileAiJob,
 } from "../src/ai/core.ts";
 
-test("backs polling off and explicitly reconciles a stale worker lease", () => {
+test("backs polling off and invokes recoverable durable jobs", () => {
   assert.equal(getAiPollDelay(0), 2_000);
   assert.equal(getAiPollDelay(3), 5_000);
+  assert.equal(
+    shouldReconcileAiJob({
+      processingStartedAt: null,
+      status: "awaiting_upload",
+    }),
+    true,
+  );
   assert.equal(
     shouldReconcileAiJob(
       {
@@ -28,6 +35,13 @@ test("backs polling off and explicitly reconciles a stale worker lease", () => {
       },
       Date.parse("2026-08-21T09:58:00.000Z"),
     ),
+    false,
+  );
+  assert.equal(
+    shouldReconcileAiJob({
+      processingStartedAt: null,
+      status: "succeeded",
+    }),
     false,
   );
 });

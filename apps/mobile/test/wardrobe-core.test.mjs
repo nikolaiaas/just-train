@@ -8,6 +8,8 @@ import {
   applyWardrobeEquipmentState,
   getWardrobeErrorMessage,
   getWardrobeImageAccessibilityLabel,
+  getWardrobeRenderErrorMessage,
+  isCurrentWardrobePortraitImageFailure,
   planWardrobeEquipment,
   resolveSelectedChildWardrobeId,
 } from "../src/wardrobe/core.ts";
@@ -160,4 +162,31 @@ test("maps stable API errors without leaking database details", () => {
     getWardrobeErrorMessage(new Error("database detail")),
     /database detail/,
   );
+});
+
+test("explains that an AI render failure does not undo equipment", () => {
+  assert.match(
+    getWardrobeRenderErrorMessage("catalogue_image_missing"),
+    /Valget er gemt/,
+  );
+  assert.match(
+    getWardrobeRenderErrorMessage("catalogue_image_missing"),
+    /tidligere look/,
+  );
+  assert.match(getWardrobeRenderErrorMessage("base_stale"), /grundfigur/);
+});
+
+test("keeps a failed signed image scoped to that exact expiring URL", () => {
+  const expiredUrl = "https://example.test/private-look.png?token=old";
+  const renewedUrl = "https://example.test/private-look.png?token=new";
+
+  assert.equal(
+    isCurrentWardrobePortraitImageFailure(expiredUrl, expiredUrl),
+    true,
+  );
+  assert.equal(
+    isCurrentWardrobePortraitImageFailure(expiredUrl, renewedUrl),
+    false,
+  );
+  assert.equal(isCurrentWardrobePortraitImageFailure(null, renewedUrl), false);
 });
