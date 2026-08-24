@@ -47,7 +47,9 @@ export type ChildTrainingGoal = {
   exercises: ChildTrainingExercise[];
   heroMediaUrl: string | null;
   id: string;
+  isSelected: boolean;
   progress: ChildTrainingProgress;
+  selectedAt: string | null;
   slug: string;
   sortOrder: number;
   subjectId: string;
@@ -61,6 +63,8 @@ export type ChildTrainingSubject = {
   goals: ChildTrainingGoal[];
   icon: string | null;
   id: string;
+  isEnrolled: boolean;
+  enrolledAt: string | null;
   progress: ChildTrainingProgress;
   slug: string;
   sortOrder: number;
@@ -79,6 +83,25 @@ export type ChildTrainingContextInput = {
 };
 
 export type LoadChildTrainingSubjectInput = ChildTrainingContextInput & {
+  subjectId: string;
+};
+
+export type ChildTrainingSubjectChoiceInput = ChildTrainingContextInput & {
+  subjectId: string;
+};
+
+export type ChildTrainingGoalChoiceInput = ChildTrainingSubjectChoiceInput & {
+  goalId: string;
+  selected: boolean;
+};
+
+export type ChildTrainingEnrollment = {
+  changed: boolean;
+  enrolledAt: string | null;
+  goalId: string | null;
+  isEnrolled: boolean;
+  isSelected: boolean | null;
+  selectedAt: string | null;
   subjectId: string;
 };
 
@@ -130,12 +153,16 @@ export type ChildTrainingErrorCode =
   | "child_training_access_denied"
   | "child_training_completion_failed"
   | "child_training_content_failed"
+  | "child_training_enrollment_failed"
+  | "child_training_enrollment_unavailable"
   | "child_training_session_changed"
   | "child_training_unavailable"
   | "invalid_child_profile_id"
   | "invalid_client_request_id"
   | "invalid_completion_result"
   | "invalid_duration_ms"
+  | "invalid_enrollment_result"
+  | "invalid_enrollment_state"
   | "invalid_exercise_id"
   | "invalid_expected_user_id"
   | "invalid_family_id"
@@ -152,6 +179,9 @@ const ERROR_MESSAGES: Record<ChildTrainingErrorCode, string> = {
   child_training_completion_failed:
     "The exercise completion could not be saved.",
   child_training_content_failed: "Training content could not be loaded.",
+  child_training_enrollment_failed: "The child choice could not be saved.",
+  child_training_enrollment_unavailable:
+    "Choosing subjects and goals is not available yet.",
   child_training_session_changed:
     "The signed-in account changed before training finished.",
   child_training_unavailable: "The published training is no longer available.",
@@ -159,6 +189,8 @@ const ERROR_MESSAGES: Record<ChildTrainingErrorCode, string> = {
   invalid_client_request_id: "The training request id is invalid.",
   invalid_completion_result: "Saving training returned invalid data.",
   invalid_duration_ms: "The training duration is invalid.",
+  invalid_enrollment_result: "Saving the child choice returned invalid data.",
+  invalid_enrollment_state: "The child choice is invalid.",
   invalid_exercise_id: "The exercise id is invalid.",
   invalid_expected_user_id: "The expected adult account id is invalid.",
   invalid_family_id: "The family id is invalid.",
@@ -405,12 +437,24 @@ function parseTrainingRow(value: unknown): ParsedTrainingRow | null {
   const subject: ParsedTrainingRow["subject"] = {
     accentColor: value.topic_accent_color as string | null,
     description: value.topic_description,
+    enrolledAt: value.topic_enrolled_at as string | null,
     icon: value.topic_icon as string | null,
     id: value.topic_id.toLowerCase(),
+    isEnrolled: value.topic_is_enrolled as boolean,
     slug: value.topic_slug,
     sortOrder: Number(value.topic_sort_order),
     title: value.topic_title,
   };
+
+  if (
+    typeof value.topic_is_enrolled !== "boolean" ||
+    !(
+      (value.topic_is_enrolled && isTimestamp(value.topic_enrolled_at)) ||
+      (!value.topic_is_enrolled && value.topic_enrolled_at === null)
+    )
+  ) {
+    return null;
+  }
 
   if (value.goal_id === null) {
     const childColumns = [
@@ -423,6 +467,8 @@ function parseTrainingRow(value: unknown): ParsedTrainingRow | null {
       value.goal_equipment,
       value.goal_hero_media_url,
       value.goal_sort_order,
+      value.goal_is_enrolled,
+      value.goal_enrolled_at,
       value.exercise_id,
       value.exercise_slug,
       value.exercise_title,
@@ -459,7 +505,12 @@ function parseTrainingRow(value: unknown): ParsedTrainingRow | null {
     !goalEquipment ||
     !isNullableBoundedUrl(value.goal_hero_media_url) ||
     !Number.isSafeInteger(value.goal_sort_order) ||
-    Number(value.goal_sort_order) < 0
+    Number(value.goal_sort_order) < 0 ||
+    typeof value.goal_is_enrolled !== "boolean" ||
+    !(
+      (value.goal_is_enrolled && isTimestamp(value.goal_enrolled_at)) ||
+      (!value.goal_is_enrolled && value.goal_enrolled_at === null)
+    )
   ) {
     return null;
   }
@@ -470,6 +521,8 @@ function parseTrainingRow(value: unknown): ParsedTrainingRow | null {
     estimatedMinutes: value.goal_estimated_minutes as number | null,
     heroMediaUrl: value.goal_hero_media_url as string | null,
     id: value.goal_id.toLowerCase(),
+    isSelected: value.goal_is_enrolled,
+    selectedAt: value.goal_enrolled_at as string | null,
     slug: value.goal_slug,
     sortOrder: Number(value.goal_sort_order),
     subjectId: subject.id,
@@ -705,9 +758,13 @@ function parseTrainingCatalog(value: unknown): ChildTrainingCatalog | null {
 
   return {
     overallProgress: summarizeExercises(
-      subjects.flatMap((subject) =>
-        subject.goals.flatMap((goal) => goal.exercises),
-      ),
+      subjects
+        .filter((subject) => subject.isEnrolled)
+        .flatMap((subject) =>
+          subject.goals
+            .filter((goal) => goal.isSelected)
+            .flatMap((goal) => goal.exercises),
+        ),
     ),
     subjects,
   };
@@ -733,12 +790,25 @@ function databaseErrorCode(error: unknown): string | null {
   return isRecord(error) && typeof error.code === "string" ? error.code : null;
 }
 
+function isMissingRpcError(error: unknown): boolean {
+  const code = databaseErrorCode(error);
+  return code === "42883" || code === "PGRST202";
+}
+
 function mapDatabaseError(
   error: unknown,
   fallback:
-    "child_training_completion_failed" | "child_training_content_failed",
+    | "child_training_completion_failed"
+    | "child_training_content_failed"
+    | "child_training_enrollment_failed",
 ): ChildTrainingError {
   const code = databaseErrorCode(error);
+  if (
+    fallback === "child_training_enrollment_failed" &&
+    isMissingRpcError(error)
+  ) {
+    return new ChildTrainingError("child_training_enrollment_unavailable");
+  }
   if (code === "28000") {
     return new ChildTrainingError("child_training_session_changed");
   }
@@ -758,15 +828,31 @@ function queryTrainingContent(
   client: BareTraenClient,
   input: ChildTrainingContextInput,
   topicId: string | null,
+  version: "legacy" | "v2",
 ) {
   const context = {
     p_child_profile_id: input.childProfileId,
     p_expected_user_id: input.expectedUserId,
     p_family_id: input.familyId,
   };
-  return client.rpc(
-    "list_child_training_content",
-    topicId === null ? context : { ...context, p_topic_id: topicId },
+  const args = topicId === null ? context : { ...context, p_topic_id: topicId };
+  return version === "v2"
+    ? client.rpc("list_child_training_content_v2", args)
+    : client.rpc("list_child_training_content", args);
+}
+
+function addLegacyEnrollmentDefaults(value: unknown): unknown {
+  if (!Array.isArray(value)) return value;
+  return value.map((row) =>
+    isRecord(row)
+      ? {
+          ...row,
+          goal_enrolled_at: null,
+          goal_is_enrolled: row.goal_id === null ? null : false,
+          topic_enrolled_at: null,
+          topic_is_enrolled: false,
+        }
+      : row,
   );
 }
 
@@ -777,14 +863,23 @@ async function loadTrainingCatalog(
 ): Promise<ChildTrainingCatalog> {
   let response: Awaited<ReturnType<typeof queryTrainingContent>>;
   try {
-    response = await queryTrainingContent(client, input, topicId);
+    response = await queryTrainingContent(client, input, topicId, "v2");
   } catch {
     throw new ChildTrainingError("child_training_content_failed");
+  }
+  let responseData: unknown = response.data;
+  if (response.error && isMissingRpcError(response.error)) {
+    try {
+      response = await queryTrainingContent(client, input, topicId, "legacy");
+    } catch {
+      throw new ChildTrainingError("child_training_content_failed");
+    }
+    responseData = addLegacyEnrollmentDefaults(response.data);
   }
   if (response.error) {
     throw mapDatabaseError(response.error, "child_training_content_failed");
   }
-  const catalog = parseTrainingCatalog(response.data);
+  const catalog = parseTrainingCatalog(responseData);
   if (!catalog) {
     throw new ChildTrainingError("invalid_training_content_result");
   }
@@ -815,6 +910,106 @@ export async function loadChildTrainingSubject(
     throw new ChildTrainingError("invalid_training_content_result");
   }
   return subject;
+}
+
+async function setChildTrainingEnrollment(
+  client: BareTraenClient,
+  input: ChildTrainingSubjectChoiceInput,
+  goalId: string | null,
+  enrolled: boolean,
+): Promise<ChildTrainingEnrollment> {
+  const context = normalizeContext(input);
+  const subjectId = normalizeUuid(input.subjectId, "invalid_subject_id");
+  if (typeof enrolled !== "boolean") {
+    throw new ChildTrainingError("invalid_enrollment_state");
+  }
+
+  let response: Awaited<
+    ReturnType<typeof client.rpc<"set_child_training_enrollment">>
+  >;
+  try {
+    response = await client.rpc("set_child_training_enrollment", {
+      p_child_profile_id: context.childProfileId,
+      p_enrolled: enrolled,
+      p_expected_user_id: context.expectedUserId,
+      p_family_id: context.familyId,
+      p_topic_id: subjectId,
+      ...(goalId === null ? {} : { p_goal_id: goalId }),
+    });
+  } catch {
+    throw new ChildTrainingError("child_training_enrollment_failed");
+  }
+  if (response.error) {
+    throw mapDatabaseError(response.error, "child_training_enrollment_failed");
+  }
+  if (!Array.isArray(response.data) || response.data.length !== 1) {
+    throw new ChildTrainingError("invalid_enrollment_result");
+  }
+  const row = response.data[0];
+  const expectsGoal = goalId !== null;
+  if (
+    !row ||
+    !isUuid(row.topic_id) ||
+    row.topic_id.toLowerCase() !== subjectId ||
+    typeof row.topic_is_enrolled !== "boolean" ||
+    !(
+      (row.topic_is_enrolled && isTimestamp(row.topic_enrolled_at)) ||
+      (!row.topic_is_enrolled && row.topic_enrolled_at === null)
+    ) ||
+    typeof row.changed !== "boolean" ||
+    (expectsGoal &&
+      (!isUuid(row.goal_id) ||
+        row.goal_id.toLowerCase() !== goalId ||
+        typeof row.goal_is_enrolled !== "boolean" ||
+        !(
+          (row.goal_is_enrolled && isTimestamp(row.goal_enrolled_at)) ||
+          (!row.goal_is_enrolled && row.goal_enrolled_at === null)
+        ))) ||
+    (!expectsGoal &&
+      (row.goal_id !== null ||
+        row.goal_is_enrolled !== null ||
+        row.goal_enrolled_at !== null))
+  ) {
+    throw new ChildTrainingError("invalid_enrollment_result");
+  }
+
+  return {
+    changed: row.changed,
+    enrolledAt: row.topic_enrolled_at,
+    goalId,
+    isEnrolled: row.topic_is_enrolled,
+    isSelected: row.goal_is_enrolled,
+    selectedAt: row.goal_enrolled_at,
+    subjectId,
+  };
+}
+
+/** Joins any currently published subject for the selected child. */
+export async function joinChildTrainingSubject(
+  client: BareTraenClient,
+  input: ChildTrainingSubjectChoiceInput,
+): Promise<ChildTrainingEnrollment> {
+  return setChildTrainingEnrollment(client, input, null, true);
+}
+
+/** Leaves a subject while retaining its prior goal choices and progress. */
+export async function leaveChildTrainingSubject(
+  client: BareTraenClient,
+  input: ChildTrainingSubjectChoiceInput,
+): Promise<ChildTrainingEnrollment> {
+  return setChildTrainingEnrollment(client, input, null, false);
+}
+
+/** Selects or removes one current published goal for the selected child. */
+export async function setChildTrainingGoalSelected(
+  client: BareTraenClient,
+  input: ChildTrainingGoalChoiceInput,
+): Promise<ChildTrainingEnrollment> {
+  const goalId = normalizeUuid(input.goalId, "invalid_goal_id");
+  if (typeof input.selected !== "boolean") {
+    throw new ChildTrainingError("invalid_enrollment_state");
+  }
+  return setChildTrainingEnrollment(client, input, goalId, input.selected);
 }
 
 function normalizeRequiredMetric(
