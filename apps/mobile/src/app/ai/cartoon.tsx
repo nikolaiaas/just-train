@@ -597,8 +597,8 @@ function AiCartoonSessionScreen() {
           <Kicker>Profilbillede</Kicker>
           <Title>Lav et profilbillede til {selectedChild.displayName}</Title>
           <Body>
-            Vælg et tydeligt billede af ansigtet. Få en voksen til at hjælpe.
-            Kun din familie kan se billederne.
+            Vælg selv et tydeligt billede af ansigtet. Du kan altid vælge et
+            andet. Kun din familie kan se billederne.
           </Body>
         </View>
 

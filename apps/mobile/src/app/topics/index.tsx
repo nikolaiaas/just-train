@@ -1,5 +1,8 @@
 import { colors, radii, spacing, typography } from "@bare-traen/design";
-import type { ChildTrainingCatalog } from "@bare-traen/api-client";
+import type {
+  ChildTrainingCatalog,
+  ChildTrainingSubject,
+} from "@bare-traen/api-client";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import {
@@ -20,6 +23,7 @@ import {
   Screen,
   Title,
 } from "@/components/bare-ui";
+import { groupTrainingSubjects } from "@/training/core";
 
 type TopicState =
   | { status: "loading"; catalog: null }
@@ -88,6 +92,11 @@ function TopicsSessionScreen() {
     );
   }
 
+  const subjectGroups =
+    state.status === "ready"
+      ? groupTrainingSubjects(state.catalog.subjects)
+      : { available: [], enrolled: [] };
+
   return (
     <Screen contentStyle={styles.screen}>
       <BackButton label="I dag" onPress={() => router.replace("/")} />
@@ -95,7 +104,7 @@ function TopicsSessionScreen() {
         <Kicker>Vælg emne</Kicker>
         <Title>Hvad vil {selectedChild.displayName} øve?</Title>
         <Body>
-          Vælg et emne. Bagefter kan en voksen hjælpe med et særligt billede,
+          Vælg et emne, og gå i gang. Du kan også selv lave et særligt billede,
           der passer til emnet.
         </Body>
       </View>
@@ -118,66 +127,121 @@ function TopicsSessionScreen() {
       {state.status === "ready" && state.catalog.subjects.length === 0 && (
         <View style={styles.emptyCard}>
           <Text style={styles.emptyIcon}>🌱</Text>
-          <Text style={styles.cardTitle}>Der kommer snart emner</Text>
-          <Body>En voksen er stadig ved at gøre de første emner klar.</Body>
+          <Text style={styles.cardTitle}>Ingen emner lige nu</Text>
+          <Body>Der er ingen udgivne emner endnu. Prøv igen senere.</Body>
         </View>
       )}
 
       {state.status === "ready" && state.catalog.subjects.length > 0 && (
-        <View style={styles.topicList}>
-          {state.catalog.subjects.map((topic) => (
-            <Pressable
-              key={topic.id}
-              accessibilityHint="Åbner emnets mål, fremgang, billede og garderobe"
-              accessibilityLabel={`${topic.title}. ${topic.progress.completedExercises} af ${topic.progress.totalExercises} øvelser klaret`}
-              accessibilityRole="button"
-              onPress={() =>
-                router.push({
-                  pathname: "/topics/[topicId]",
-                  params: { topicId: topic.id },
-                })
-              }
-              style={({ pressed }) => [
-                styles.topicCard,
-                pressed && styles.pressed,
-              ]}
-            >
-              <View
-                accessible={false}
-                style={[
-                  styles.topicIcon,
-                  topic.accentColor
-                    ? { backgroundColor: `${topic.accentColor}18` }
-                    : null,
-                ]}
-              >
-                <Text style={styles.topicIconText}>{topic.icon ?? "★"}</Text>
+        <View style={styles.topicSections}>
+          {subjectGroups.enrolled.length > 0 && (
+            <View style={styles.topicSection}>
+              <View style={styles.sectionHeading}>
+                <Kicker>Mine emner</Kicker>
+                <Body>Her er de emner, du har valgt.</Body>
               </View>
-              <View style={styles.topicCopy}>
-                <Text style={styles.cardTitle}>{topic.title}</Text>
-                <Text numberOfLines={2} style={styles.description}>
-                  {topic.description || "Et nyt emne er klar til træning."}
-                </Text>
-                <View style={styles.progressRow}>
-                  <View style={styles.progressBar}>
-                    <ProgressBar value={topic.progress.percentage} />
-                  </View>
-                  <Text style={styles.photoState}>
-                    {topic.progress.percentage}%
-                  </Text>
-                </View>
-                <Text style={styles.progressCopy}>
-                  {topic.progress.totalExercises === 0
-                    ? "Målene er på vej"
-                    : `${topic.progress.completedExercises} af ${topic.progress.totalExercises} øvelser klaret`}
-                </Text>
+              <View style={styles.topicList}>
+                {subjectGroups.enrolled.map((topic) => (
+                  <TopicCard key={topic.id} router={router} topic={topic} />
+                ))}
               </View>
-              <Text style={styles.chevron}>›</Text>
-            </Pressable>
-          ))}
+            </View>
+          )}
+
+          {subjectGroups.available.length > 0 && (
+            <View style={styles.topicSection}>
+              <View style={styles.sectionHeading}>
+                <Kicker>
+                  {subjectGroups.enrolled.length > 0
+                    ? "Flere emner"
+                    : "Emner du kan vælge"}
+                </Kicker>
+                <Body>
+                  Åbn et emne for at se det hele og vælge det til dig selv.
+                </Body>
+              </View>
+              <View style={styles.topicList}>
+                {subjectGroups.available.map((topic) => (
+                  <TopicCard key={topic.id} router={router} topic={topic} />
+                ))}
+              </View>
+            </View>
+          )}
         </View>
       )}
     </Screen>
+  );
+}
+
+function TopicCard({
+  router,
+  topic,
+}: {
+  router: ReturnType<typeof useRouter>;
+  topic: ChildTrainingSubject;
+}) {
+  return (
+    <Pressable
+      accessibilityHint="Åbner emnets mål, fremgang, billede og garderobe"
+      accessibilityLabel={`${topic.title}. ${topic.isEnrolled ? "Mit emne" : "Kan vælges"}. ${topic.progress.completedExercises} af ${topic.progress.totalExercises} øvelser klaret`}
+      accessibilityRole="button"
+      onPress={() =>
+        router.push({
+          pathname: "/topics/[topicId]",
+          params: { topicId: topic.id },
+        })
+      }
+      style={({ pressed }) => [styles.topicCard, pressed && styles.pressed]}
+    >
+      <View
+        accessible={false}
+        style={[
+          styles.topicIcon,
+          topic.accentColor
+            ? { backgroundColor: `${topic.accentColor}18` }
+            : null,
+        ]}
+      >
+        <Text style={styles.topicIconText}>{topic.icon ?? "★"}</Text>
+      </View>
+      <View style={styles.topicCopy}>
+        <View style={styles.cardHeading}>
+          <Text style={styles.cardTitle}>{topic.title}</Text>
+          <View
+            style={[
+              styles.statusPill,
+              topic.isEnrolled ? styles.minePill : styles.availablePill,
+            ]}
+          >
+            <Text
+              style={[
+                styles.statusText,
+                topic.isEnrolled
+                  ? styles.mineStatusText
+                  : styles.availableStatusText,
+              ]}
+            >
+              {topic.isEnrolled ? "Mit emne" : "Kan vælges"}
+            </Text>
+          </View>
+        </View>
+        <Text numberOfLines={2} style={styles.description}>
+          {topic.description || "Et nyt emne er klar til træning."}
+        </Text>
+        <View style={styles.progressRow}>
+          <View style={styles.progressBar}>
+            <ProgressBar value={topic.progress.percentage} />
+          </View>
+          <Text style={styles.photoState}>{topic.progress.percentage}%</Text>
+        </View>
+        <Text style={styles.progressCopy}>
+          {topic.progress.totalExercises === 0
+            ? "Målene er på vej"
+            : `${topic.progress.completedExercises} af ${topic.progress.totalExercises} øvelser klaret`}
+        </Text>
+      </View>
+      <Text style={styles.chevron}>›</Text>
+    </Pressable>
   );
 }
 
@@ -191,6 +255,9 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   centerText: { textAlign: "center" },
+  topicSections: { gap: spacing.xl },
+  topicSection: { gap: spacing.md },
+  sectionHeading: { gap: spacing.xs },
   topicList: { gap: spacing.sm },
   topicCard: {
     minHeight: 108,
@@ -213,6 +280,12 @@ const styles = StyleSheet.create({
   },
   topicIconText: { fontSize: 32 },
   topicCopy: { flex: 1, gap: spacing.xxs },
+  cardHeading: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: spacing.xs,
+  },
   cardTitle: {
     color: colors.ink,
     fontFamily: typography.families.systemRounded,
@@ -225,6 +298,20 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.caption,
     lineHeight: 19,
   },
+  statusPill: {
+    borderRadius: radii.full,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xxs,
+  },
+  minePill: { backgroundColor: colors.soft },
+  availablePill: { backgroundColor: colors.softWarm },
+  statusText: {
+    fontFamily: typography.families.systemRounded,
+    fontSize: typography.sizes.micro,
+    fontWeight: typography.weights.bold,
+  },
+  mineStatusText: { color: colors.primaryDeep },
+  availableStatusText: { color: colors.ink },
   photoState: {
     color: colors.primaryDeep,
     fontFamily: typography.families.systemRounded,

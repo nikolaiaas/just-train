@@ -490,6 +490,64 @@ export type Database = {
           },
         ];
       };
+      child_topic_enrollments: {
+        Row: {
+          child_profile_id: string;
+          created_at: string;
+          id: string;
+          joined_at: string;
+          last_changed_by: string;
+          left_at: string | null;
+          status: Database["public"]["Enums"]["child_topic_enrollment_status"];
+          topic_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          child_profile_id: string;
+          created_at?: string;
+          id?: string;
+          joined_at?: string;
+          last_changed_by: string;
+          left_at?: string | null;
+          status?: Database["public"]["Enums"]["child_topic_enrollment_status"];
+          topic_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          child_profile_id?: string;
+          created_at?: string;
+          id?: string;
+          joined_at?: string;
+          last_changed_by?: string;
+          left_at?: string | null;
+          status?: Database["public"]["Enums"]["child_topic_enrollment_status"];
+          topic_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "child_topic_enrollments_child_profile_id_fkey";
+            columns: ["child_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "child_profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "child_topic_enrollments_last_changed_by_fkey";
+            columns: ["last_changed_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "child_topic_enrollments_topic_id_fkey";
+            columns: ["topic_id"];
+            isOneToOne: false;
+            referencedRelation: "topics";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       child_topic_portrait_renders: {
         Row: {
           base_media_asset_id: string | null;
@@ -1838,6 +1896,53 @@ export type Database = {
           topic_title: string;
         }[];
       };
+      list_child_training_content_v2: {
+        Args: {
+          p_child_profile_id: string;
+          p_expected_user_id: string;
+          p_family_id: string;
+          p_topic_id?: string;
+        };
+        Returns: {
+          attempts_count: number;
+          best_duration_ms: number;
+          best_repetitions: number;
+          completed_count: number;
+          exercise_equipment: string[];
+          exercise_estimated_minutes: number;
+          exercise_id: string;
+          exercise_instructions: string;
+          exercise_measurement: Database["public"]["Enums"]["exercise_measurement"];
+          exercise_safety_notes: string;
+          exercise_slug: string;
+          exercise_sort_order: number;
+          exercise_target_value: number;
+          exercise_title: string;
+          exercise_video_url: string;
+          goal_difficulty: Database["public"]["Enums"]["exercise_difficulty"];
+          goal_enrolled_at: string;
+          goal_equipment: string[];
+          goal_estimated_minutes: number;
+          goal_hero_media_url: string;
+          goal_id: string;
+          goal_is_enrolled: boolean;
+          goal_slug: string;
+          goal_sort_order: number;
+          goal_summary: string;
+          goal_title: string;
+          last_attempted_at: string;
+          progress_state: Database["public"]["Enums"]["progress_state"];
+          topic_accent_color: string;
+          topic_description: string;
+          topic_enrolled_at: string;
+          topic_icon: string;
+          topic_id: string;
+          topic_is_enrolled: boolean;
+          topic_slug: string;
+          topic_sort_order: number;
+          topic_title: string;
+        }[];
+      };
       list_child_wardrobe: {
         Args: { p_child_profile_id: string };
         Returns: {
@@ -2072,6 +2177,25 @@ export type Database = {
           wardrobe_item_id: string;
         }[];
       };
+      set_child_training_enrollment: {
+        Args: {
+          p_child_profile_id: string;
+          p_enrolled?: boolean;
+          p_expected_user_id?: string;
+          p_family_id: string;
+          p_goal_id?: string;
+          p_topic_id: string;
+        };
+        Returns: {
+          changed: boolean;
+          goal_enrolled_at: string;
+          goal_id: string;
+          goal_is_enrolled: boolean;
+          topic_enrolled_at: string;
+          topic_id: string;
+          topic_is_enrolled: boolean;
+        }[];
+      };
       set_child_wardrobe_item_equipped: {
         Args: {
           p_child_profile_id: string;
@@ -2104,6 +2228,7 @@ export type Database = {
         "awaiting_upload" | "processing" | "succeeded" | "failed" | "cancelled";
       attempt_outcome: "completed" | "partial" | "skipped";
       child_goal_status: "active" | "completed" | "archived";
+      child_topic_enrollment_status: "active" | "left";
       child_topic_portrait_display_kind: "base" | "wardrobe";
       child_topic_portrait_render_kind: "base" | "wardrobe";
       exercise_difficulty: "beginner" | "intermediate" | "advanced";
@@ -2258,6 +2383,7 @@ export const Constants = {
       ],
       attempt_outcome: ["completed", "partial", "skipped"],
       child_goal_status: ["active", "completed", "archived"],
+      child_topic_enrollment_status: ["active", "left"],
       child_topic_portrait_display_kind: ["base", "wardrobe"],
       child_topic_portrait_render_kind: ["base", "wardrobe"],
       exercise_difficulty: ["beginner", "intermediate", "advanced"],

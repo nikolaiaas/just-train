@@ -28,11 +28,13 @@ import {
   formatExerciseTarget,
   formatProgressCopy,
   getNextTrainingStep,
+  groupTrainingSubjects,
 } from "@/training/core";
 
 const NEW_CHILD_ROUTE = "/child/new" as Href;
 const PROFILE_ROUTE = "/profile" as Href;
 const TOPICS_ROUTE = "/topics" as Href;
+const TOPIC_ROUTE = "/topics/[topicId]" as Href;
 const GOAL_ROUTE = "/goals/[goalId]" as Href;
 const TRAINING_ROUTE = "/training/[exerciseId]" as Href;
 
@@ -300,8 +302,8 @@ function ChooseChild({
         <Kicker>{bootstrap.family?.name}</Kicker>
         <Title style={styles.centerText}>Hvem skal træne?</Title>
         <Body style={styles.centerText}>
-          Vælg én profil. Derefter åbner appen direkte for barnet, indtil en
-          voksen vælger en anden i Min profil.
+          Vælg én profil. Derefter åbner appen direkte for barnet. Du kan altid
+          vælge en anden under Min profil.
         </Body>
       </View>
 
@@ -436,8 +438,73 @@ function TodayTraining({
         <Text style={styles.stateEmoji}>🌱</Text>
         <Text style={styles.weekTitle}>Der kommer snart noget at øve</Text>
         <Body style={styles.centerText}>
-          En voksen er stadig ved at gøre de første emner klar.
+          Der er ingen udgivne emner endnu. Prøv igen senere.
         </Body>
+      </SurfaceCard>
+    );
+  }
+
+  const { enrolled } = groupTrainingSubjects(catalog.subjects);
+  if (enrolled.length === 0) {
+    return (
+      <SurfaceCard style={styles.trainingStateCard}>
+        <Text style={styles.stateEmoji}>🌟</Text>
+        <Text style={styles.weekTitle}>Vælg dit første emne</Text>
+        <Body style={styles.centerText}>
+          Du bestemmer selv, hvad du vil øve. Åbn et udgivet emne, og vælg det
+          til dig selv.
+        </Body>
+        <ActionButton onPress={() => router.push(TOPICS_ROUTE)}>
+          Vælg et emne
+        </ActionButton>
+      </SurfaceCard>
+    );
+  }
+
+  const selectedGoals = enrolled.flatMap((subject) =>
+    subject.goals
+      .filter((goal) => goal.isSelected)
+      .map((goal) => ({ goal, subject })),
+  );
+  if (selectedGoals.length === 0) {
+    const firstSubject = enrolled[0];
+    return (
+      <SurfaceCard style={styles.trainingStateCard}>
+        <Text style={styles.stateEmoji}>🎯</Text>
+        <Text style={styles.weekTitle}>Vælg et mål</Text>
+        <Body style={styles.centerText}>
+          Du har valgt {firstSubject.title}. Vælg nu et mål, så vi kan finde din
+          næste øvelse.
+        </Body>
+        <ActionButton
+          onPress={() =>
+            router.push({
+              pathname: TOPIC_ROUTE,
+              params: { topicId: firstSubject.id },
+            } as Href)
+          }
+        >
+          Se mål i {firstSubject.title}
+        </ActionButton>
+      </SurfaceCard>
+    );
+  }
+
+  const selectedExercises = selectedGoals.flatMap(({ goal }) =>
+    goal.exercises.map((exercise) => exercise),
+  );
+  if (selectedExercises.length === 0) {
+    return (
+      <SurfaceCard style={styles.trainingStateCard}>
+        <Text style={styles.stateEmoji}>🌱</Text>
+        <Text style={styles.weekTitle}>Øvelserne er på vej</Text>
+        <Body style={styles.centerText}>
+          Dit valgte mål har ingen øvelser endnu. Du kan vælge et andet mål,
+          mens du venter.
+        </Body>
+        <ActionButton onPress={() => router.push(TOPICS_ROUTE)}>
+          Se mine emner
+        </ActionButton>
       </SurfaceCard>
     );
   }
@@ -538,8 +605,8 @@ function TopicsCard({ child }: { child: ParentChild }) {
         <Kicker>Vælg emne</Kicker>
         <Text style={styles.weekTitle}>Hvad vil {child.displayName} øve?</Text>
         <Body>
-          Se familiens emner. Til hvert emne kan en voksen hjælpe med et privat
-          billede, der passer til tøjet og udstyret.
+          Vælg mellem de udgivne emner. Til hvert emne kan du selv lave et
+          privat billede, der passer til tøjet og udstyret.
         </Body>
       </View>
       <ActionButton onPress={() => router.push(TOPICS_ROUTE)}>

@@ -4,7 +4,7 @@ This phase should produce one working vertical slice that can be run locally, re
 
 The pilot slice is:
 
-`parent sign-in → select/create child → choose a published administration subject and goal → complete one exercise → save result → see progress`
+`parent sign-in → select/create child → child joins a published administration subject and selects goals → complete one exercise → save result → see progress`
 
 The administration slice is:
 
@@ -105,7 +105,7 @@ Exit condition: local development does not depend on hand-created dashboard stat
 - [x] Enable the native Supabase GitHub integration, restrict it to `nikolaiaas/just-train`, use working directory `.`, select `main` as its production branch, and keep automatic preview branches off until their branch-safe Auth, seed, Vercel, and cost setup is reviewed.
 - [x] Protect `main` with pull requests, strict required quality, database, and Vercel preview checks, resolved conversations, squash-only linear history, and no force pushes or deletion.
 - [x] Verify end to end that a green protected merge automatically updates Hosted Development; the first protected merge completed the native Supabase deployment, retained aligned migrations, and passed hosted Auth/RLS health checks as well as the stable Vercel update.
-- [x] Limit automatic hosted database delivery to immutable files in `supabase/migrations`; never deploy the local seed or push local `config.toml`.
+- [x] Limit automatic hosted data delivery to immutable files in `supabase/migrations`; the native integration also redeploys configured Edge Functions, but never deploys the local seed or pushes local `config.toml`, Auth settings, or secrets.
 - [x] Require expand/contract database changes so shared pull-request previews, the stable web preview, and installed mobile builds remain compatible while releases overlap.
 - [x] Upgrade the `Nikolai Aas` organization to Supabase Pro, keep Spend Cap enabled, and verify that `bare-traen-development` remains healthy on Nano compute without PITR or automatic preview branches. The dashboard exposes three pre-upgrade physical daily backups with Restore controls, most recently 2026-08-20 at 23:07 UTC.
 - [ ] Confirm that the first scheduled physical daily database backup dated after the 2026-08-21 Pro upgrade appears, then document the recovery procedure without performing a destructive restore on Hosted Development.
@@ -201,13 +201,14 @@ Exit condition: access is denied by the database itself when a client attempts t
 - [x] Add a gallery-only private family cartoon prototype using database-versioned prompts and `openai/gpt-image-2` through an OpenAI-only, no-fallback OpenRouter route; keep development and evidence synthetic.
 - [x] Persist a caller-scoped child-creation request identity and safely retry it after refresh or interruption without creating a duplicate child.
 - [x] Remember the active child per adult, family, app variant, and backend; remove adult controls from the child's home and put child switching, creation, and logout under `Min profil`.
-- [x] Let a family member review a completed cartoon result and explicitly save it as the child's private profile image, with short-lived signed reads and the preset avatar as fallback.
-- [x] List real published topics and support one optional private reference photo per child and topic, including review, retry-safe replacement, removal, and skip without mixing it with the profile image or public wardrobe assets.
+- [x] Keep Kids Mode self-service inside the authenticated family session: the selected child can use profile photos, subject photos, training, and wardrobe without another adult approval.
+- [x] Let the selected child review a completed cartoon result and explicitly save it as the private profile image, with short-lived signed reads and the preset avatar as fallback.
+- [x] List real published topics and let the selected child manage one optional private reference photo per child and topic, including review, retry-safe replacement, removal, and skip without mixing it with the profile image or public wardrobe assets.
 - [x] Build an immutable private base portrait per child and subject, then render each wardrobe look from that base plus every currently equipped catalogue image without ever using the previous derived look as input.
 - [x] Show the selected child's acquired wardrobe and equip, replace, or remove exactly one item per head, body, hand, feet, or accessory position; one feet item is a complete pair of shoes.
 - [x] Finish subject selection, goal lists, goal detail, and dynamic exercise routes from the real published administration content without a fixture fallback.
 - [x] Implement the child's home screen with real overall progress and the next unfinished exercise.
-- [ ] Persist an explicit goal enrolment before the child's first saved exercise; the current guarded flow creates it transactionally with the first completion.
+- [x] Persist child-controlled subject enrolment and goal selection before training; allow leave, rejoin, select, and deselect without deleting prior exercise progress.
 - [x] Let the child choose any current exercise, as requested for the simple family app, and derive completed/current progress from saved attempts instead of locking later exercises.
 - [x] Implement the online training state machine: `ready → training → review → saving → completed/error`.
 - [ ] Keep overall session time separate from individual attempts.

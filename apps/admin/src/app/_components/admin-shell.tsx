@@ -1,9 +1,11 @@
 import type { ReactNode } from "react";
 
 import type { AdminProfile } from "@/lib/auth/access";
+import type { AdminBackend } from "@/lib/auth/backend";
 
 import { logoutAdmin } from "../login/actions";
 import styles from "../page.module.css";
+import { getAdminBackendPresentation } from "./admin-backend-presentation";
 import { AdminNavigation } from "./admin-navigation";
 
 function AppMark() {
@@ -38,12 +40,15 @@ export function AccessDenied() {
 }
 
 export function AdminShell({
+  backend,
   children,
   profile,
 }: {
+  backend: AdminBackend;
   children: ReactNode;
   profile: AdminProfile;
 }) {
+  const backendPresentation = getAdminBackendPresentation(backend);
   const initial =
     profile.displayName.trim().charAt(0).toLocaleUpperCase("da-DK") || "A";
 
@@ -59,6 +64,28 @@ export function AdminShell({
             <span>Bare Træn</span>
             <span className={styles.brandDivider} aria-hidden="true" />
             <span className={styles.brandSection}>Administration</span>
+          </div>
+
+          <div
+            className={`${styles.environmentIndicator} ${
+              backendPresentation.tone === "local"
+                ? styles.environmentLocal
+                : styles.environmentHosted
+            }`}
+            role="group"
+            aria-label="Aktivt datamiljø"
+            aria-describedby="admin-backend-description"
+            title={backendPresentation.description}
+          >
+            <span className={styles.environmentDot} aria-hidden="true" />
+            <span className={styles.environmentContext}>Datamiljø</span>
+            <strong>{backendPresentation.label}</strong>
+            <span
+              className={styles.visuallyHidden}
+              id="admin-backend-description"
+            >
+              {backendPresentation.description}
+            </span>
           </div>
 
           <details className={styles.profileMenu}>
@@ -87,14 +114,6 @@ export function AdminShell({
           <aside className={styles.sidebar}>
             <p className={styles.navLabel}>Indhold</p>
             <AdminNavigation />
-
-            <div className={styles.previewStatus}>
-              <span className={styles.statusDot} aria-hidden="true" />
-              <span>
-                <strong>Administration forbundet</strong>
-                Supabase
-              </span>
-            </div>
           </aside>
 
           <div className={styles.dashboardContent}>{children}</div>

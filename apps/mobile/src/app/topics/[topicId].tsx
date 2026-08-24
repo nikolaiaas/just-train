@@ -121,6 +121,8 @@ function SelectedTopic({
   const router = useRouter();
   const {
     getAiCartoonJob,
+    joinSelectedChildTrainingSubject,
+    leaveSelectedChildTrainingSubject,
     loadSelectedChildTopicPortrait,
     loadSelectedChildTopics,
     loadSelectedChildTrainingSubject,
@@ -131,6 +133,9 @@ function SelectedTopic({
     saveSelectedChildTopicPhoto,
   } = useAuth();
   const [state, setState] = useState<DetailState>({ status: "loading" });
+  const [enrollmentBusy, setEnrollmentBusy] = useState(false);
+  const [enrollmentError, setEnrollmentError] = useState<string | null>(null);
+  const [enrollmentNotice, setEnrollmentNotice] = useState<string | null>(null);
   const [portraitState, setPortraitState] = useState<PortraitState>({
     status: "loading",
     portrait: null,
@@ -566,6 +571,50 @@ function SelectedTopic({
     }
   }
 
+  async function changeSubjectEnrollment(
+    subject: ChildTrainingSubject,
+    enroll: boolean,
+  ) {
+    if (enrollmentBusy) return;
+    setEnrollmentBusy(true);
+    setEnrollmentError(null);
+    setEnrollmentNotice(null);
+
+    try {
+      const result = enroll
+        ? await joinSelectedChildTrainingSubject(subject.id)
+        : await leaveSelectedChildTrainingSubject(subject.id);
+      if (!mounted.current) return;
+
+      setState((current) =>
+        current.status === "ready" && current.subject.id === subject.id
+          ? {
+              ...current,
+              subject: {
+                ...current.subject,
+                enrolledAt: result.enrolledAt,
+                isEnrolled: result.isEnrolled,
+              },
+            }
+          : current,
+      );
+      setEnrollmentNotice(
+        result.isEnrolled
+          ? `${subject.title} er nu et af dine emner. Vælg de mål, du har lyst til.`
+          : `${subject.title} er fjernet fra dine emner. Din fremgang er stadig gemt.`,
+      );
+      setRevision((current) => current + 1);
+    } catch {
+      if (mounted.current) {
+        setEnrollmentError(
+          "Dit valg kunne ikke gemmes lige nu. Kontrollér forbindelsen, og prøv igen.",
+        );
+      }
+    } finally {
+      if (mounted.current) setEnrollmentBusy(false);
+    }
+  }
+
   const busy = picking || saving || removing;
 
   if (state.status === "loading") {
@@ -653,10 +702,54 @@ function SelectedTopic({
         >
           <Text style={styles.topicIconText}>{subject.icon ?? "★"}</Text>
         </View>
-        <Kicker>Dit emne</Kicker>
+        <Kicker>{subject.isEnrolled ? "Dit emne" : "Udgivet emne"}</Kicker>
         <Title>{subject.title}</Title>
         <Body>{subject.description || "Et nyt emne er klar til træning."}</Body>
       </View>
+
+      <SurfaceCard
+        style={StyleSheet.flatten([
+          styles.enrollmentCard,
+          subject.isEnrolled && styles.enrollmentCardSelected,
+        ])}
+      >
+        <View style={styles.cardCopy}>
+          <Kicker>{subject.isEnrolled ? "Mit emne" : "Vælg selv"}</Kicker>
+          <Text style={styles.cardTitle}>
+            {subject.isEnrolled
+              ? `Du har valgt ${subject.title}`
+              : `Vil du øve ${subject.title}?`}
+          </Text>
+          <Body>
+            {subject.isEnrolled
+              ? "Emnet kan nu bruges til dine valgte mål og din næste øvelse. Fjerner du det, gemmer vi alt, du allerede har klaret."
+              : "Vælg emnet til dig selv uden at vente på nogen. Du kan også se mål, prøve øvelser og lave dit emnebillede med det samme."}
+          </Body>
+        </View>
+        {enrollmentError && (
+          <View accessibilityRole="alert" style={styles.errorBox}>
+            <Text style={styles.errorText}>{enrollmentError}</Text>
+          </View>
+        )}
+        {enrollmentNotice && (
+          <View accessibilityLiveRegion="polite" style={styles.successBox}>
+            <Text style={styles.successText}>{enrollmentNotice}</Text>
+          </View>
+        )}
+        <ActionButton
+          disabled={enrollmentBusy}
+          variant={subject.isEnrolled ? "secondary" : "primary"}
+          onPress={() =>
+            void changeSubjectEnrollment(subject, !subject.isEnrolled)
+          }
+        >
+          {enrollmentBusy
+            ? "Gemmer dit valg…"
+            : subject.isEnrolled
+              ? "Fjern fra mine emner"
+              : `Vælg ${subject.title}`}
+        </ActionButton>
+      </SurfaceCard>
 
       <SurfaceCard style={styles.progressCard}>
         <View style={styles.progressHeading}>
@@ -680,9 +773,9 @@ function SelectedTopic({
             Et særligt billede kun til dette emne
           </Text>
           <Body>
-            Få en voksen til at vælge et tydeligt helkropsbillede. Vi laver en
-            tegneseriefigur, som garderoben altid bygger videre fra uden at
-            overskrive grundfiguren.
+            Vælg selv et tydeligt helkropsbillede. Vi laver en tegneseriefigur,
+            som garderoben altid bygger videre fra uden at overskrive
+            grundfiguren.
           </Body>
         </View>
 
@@ -979,13 +1072,14 @@ function SelectedTopic({
       <View style={styles.goalsHeading}>
         <Kicker>Mål i {subject.title}</Kicker>
         <Text style={styles.sectionTitle}>Hvad vil du øve?</Text>
+        <Body>Åbn et mål for at vælge det til eller fra.</Body>
       </View>
       {subject.goals.length === 0 ? (
         <SurfaceCard style={styles.emptyCard}>
           <Text style={styles.stateEmoji}>🌱</Text>
           <Text style={styles.cardTitle}>Der kommer snart mål</Text>
           <Body style={styles.centerText}>
-            En voksen er stadig ved at gøre emnet klar.
+            Der er ingen mål i emnet endnu. Prøv igen senere.
           </Body>
         </SurfaceCard>
       ) : (
@@ -994,7 +1088,7 @@ function SelectedTopic({
             <Pressable
               key={goal.id}
               accessibilityHint="Åbner alle øvelser i målet"
-              accessibilityLabel={`${goal.title}. ${goal.progress.completedExercises} af ${goal.progress.totalExercises} øvelser klaret`}
+              accessibilityLabel={`${goal.title}. ${goal.isSelected ? "Mit mål" : "Kan vælges"}. ${goal.progress.completedExercises} af ${goal.progress.totalExercises} øvelser klaret`}
               accessibilityRole="button"
               onPress={() =>
                 router.push({
@@ -1008,6 +1102,7 @@ function SelectedTopic({
               ]}
             >
               <View style={styles.goalCopy}>
+                <Kicker>{goal.isSelected ? "Mit mål" : "Kan vælges"}</Kicker>
                 <Text style={styles.cardTitle}>{goal.title}</Text>
                 <Body style={styles.goalSummary}>
                   {goal.summary || "Tag én øvelse ad gangen."}
@@ -1112,6 +1207,16 @@ const styles = StyleSheet.create({
   },
   topicIconText: { fontSize: 38 },
   progressCard: { gap: spacing.md },
+  enrollmentCard: {
+    gap: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.softWarm,
+  },
+  enrollmentCardSelected: {
+    borderColor: colors.primary,
+    backgroundColor: colors.soft,
+  },
   progressHeading: {
     flexDirection: "row",
     alignItems: "center",

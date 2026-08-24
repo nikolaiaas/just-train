@@ -4,8 +4,11 @@ import test from "node:test";
 import {
   ChildTrainingError,
   completeChildTrainingExercise,
+  joinChildTrainingSubject,
+  leaveChildTrainingSubject,
   listChildTrainingSubjects,
   loadChildTrainingSubject,
+  setChildTrainingGoalSelected,
 } from "../src/training.ts";
 
 const expectedUserId = "10000000-0000-4000-8000-000000000001";
@@ -22,6 +25,7 @@ const requestId = "a1000000-0000-4000-8000-000000000001";
 const attemptId = "a2000000-0000-4000-8000-000000000001";
 const sessionId = "a3000000-0000-4000-8000-000000000001";
 const completedAt = "2026-08-24T12:00:00.000Z";
+const enrolledAt = "2026-08-24T11:00:00.000Z";
 
 const emptyProgress = Object.freeze({
   attempts_count: null,
@@ -37,6 +41,8 @@ const topic = Object.freeze({
   topic_description: "Leg med bolden og lær nye færdigheder.",
   topic_icon: "⚽",
   topic_id: subjectId,
+  topic_enrolled_at: enrolledAt,
+  topic_is_enrolled: true,
   topic_slug: "fodbold",
   topic_sort_order: 10,
   topic_title: "Fodbold",
@@ -48,6 +54,8 @@ const goal = Object.freeze({
   goal_estimated_minutes: 10,
   goal_hero_media_url: null,
   goal_id: goalId,
+  goal_enrolled_at: enrolledAt,
+  goal_is_enrolled: true,
   goal_slug: "laer-at-jonglere",
   goal_sort_order: 10,
   goal_summary: "Byg boldkontrol op med små, sjove trin.",
@@ -92,6 +100,8 @@ function noGoalRow() {
     goal_estimated_minutes: null,
     goal_hero_media_url: null,
     goal_id: null,
+    goal_enrolled_at: null,
+    goal_is_enrolled: null,
     goal_slug: null,
     goal_sort_order: null,
     goal_summary: null,
@@ -100,6 +110,8 @@ function noGoalRow() {
     topic_description: "Et syntetisk publiceret emne uden mål.",
     topic_icon: null,
     topic_id: emptySubjectId,
+    topic_enrolled_at: null,
+    topic_is_enrolled: false,
     topic_slug: "tomt-emne",
     topic_sort_order: 20,
     topic_title: "Tomt emne",
@@ -114,6 +126,8 @@ function noExerciseRow() {
     goal_estimated_minutes: null,
     goal_hero_media_url: null,
     goal_id: emptyGoalId,
+    goal_enrolled_at: null,
+    goal_is_enrolled: false,
     goal_slug: "tomt-maal",
     goal_sort_order: 10,
     goal_summary: "Et syntetisk publiceret mål uden deløvelser.",
@@ -131,6 +145,18 @@ function rpcClient(response, calls = []) {
     calls,
     async rpc(name, args) {
       calls.push({ args, name });
+      return response;
+    },
+  };
+}
+
+function rpcSequence(responses, calls = []) {
+  return {
+    calls,
+    async rpc(name, args) {
+      calls.push({ args, name });
+      const response = responses.shift();
+      assert.ok(response, `Unexpected RPC call: ${name}`);
       return response;
     },
   };
@@ -178,6 +204,11 @@ test("builds ordered subject trees and progress from the published flat rows", a
     catalog.subjects.map((subject) => subject.id),
     [subjectId, emptySubjectId, emptyGoalSubjectId],
   );
+  assert.equal(catalog.subjects[0].isEnrolled, true);
+  assert.equal(catalog.subjects[0].enrolledAt, enrolledAt);
+  assert.equal(catalog.subjects[0].goals[0].isSelected, true);
+  assert.equal(catalog.subjects[0].goals[0].selectedAt, enrolledAt);
+  assert.equal(catalog.subjects[1].isEnrolled, false);
   assert.deepEqual(
     catalog.subjects[0].goals[0].exercises.map((exercise) => exercise.id),
     [firstExerciseId, secondExerciseId],
@@ -218,7 +249,7 @@ test("builds ordered subject trees and progress from the published flat rows", a
         p_expected_user_id: expectedUserId,
         p_family_id: familyId,
       },
-      name: "list_child_training_content",
+      name: "list_child_training_content_v2",
     },
   ]);
 });
@@ -249,7 +280,7 @@ test("loads one dynamic subject and returns null after it is unpublished", async
       p_family_id: familyId,
       p_topic_id: subjectId,
     },
-    name: "list_child_training_content",
+    name: "list_child_training_content_v2",
   });
 
   const unpublished = await loadChildTrainingSubject(
@@ -266,6 +297,245 @@ test("loads one dynamic subject and returns null after it is unpublished", async
       subjectId,
     }),
     (error) => assertTrainingError(error, "invalid_training_content_result"),
+  );
+});
+
+test("falls back narrowly to the legacy catalogue before the migration is available", async () => {
+  const legacyRow = exerciseRow({
+    id: firstExerciseId,
+    progress: {
+      attempts_count: 1,
+      best_duration_ms: null,
+      best_repetitions: 5,
+      completed_count: 1,
+      last_attempted_at: completedAt,
+      progress_state: "completed",
+    },
+    sortOrder: 10,
+    title: "Første trin",
+  });
+  delete legacyRow.topic_enrolled_at;
+  delete legacyRow.topic_is_enrolled;
+  delete legacyRow.goal_enrolled_at;
+  delete legacyRow.goal_is_enrolled;
+  const calls = [];
+  const catalog = await listChildTrainingSubjects(
+    rpcSequence(
+      [
+        { data: null, error: { code: "PGRST202" } },
+        { data: [legacyRow], error: null },
+      ],
+      calls,
+    ),
+    { childProfileId, expectedUserId, familyId },
+  );
+
+  assert.equal(catalog.subjects[0].isEnrolled, false);
+  assert.equal(catalog.subjects[0].goals[0].isSelected, false);
+  assert.equal(catalog.subjects[0].progress.percentage, 100);
+  assert.deepEqual(catalog.overallProgress, {
+    completedExercises: 0,
+    lastTrainedAt: null,
+    percentage: 0,
+    state: "not_started",
+    totalExercises: 0,
+  });
+  assert.deepEqual(
+    calls.map((call) => call.name),
+    ["list_child_training_content_v2", "list_child_training_content"],
+  );
+});
+
+test("does not hide a real v2 catalogue failure behind the legacy reader", async () => {
+  const calls = [];
+  await assert.rejects(
+    listChildTrainingSubjects(
+      rpcClient({ data: null, error: { code: "42501" } }, calls),
+      { childProfileId, expectedUserId, familyId },
+    ),
+    (error) => assertTrainingError(error, "child_training_access_denied"),
+  );
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].name, "list_child_training_content_v2");
+});
+
+test("joins and leaves a subject without a goal or approval input", async () => {
+  const joinCalls = [];
+  const joined = await joinChildTrainingSubject(
+    rpcClient(
+      {
+        data: [
+          {
+            changed: true,
+            goal_enrolled_at: null,
+            goal_id: null,
+            goal_is_enrolled: null,
+            topic_enrolled_at: enrolledAt,
+            topic_id: subjectId,
+            topic_is_enrolled: true,
+          },
+        ],
+        error: null,
+      },
+      joinCalls,
+    ),
+    { childProfileId, expectedUserId, familyId, subjectId },
+  );
+  assert.deepEqual(joined, {
+    changed: true,
+    enrolledAt,
+    goalId: null,
+    isEnrolled: true,
+    isSelected: null,
+    selectedAt: null,
+    subjectId,
+  });
+  assert.deepEqual(joinCalls, [
+    {
+      args: {
+        p_child_profile_id: childProfileId,
+        p_enrolled: true,
+        p_expected_user_id: expectedUserId,
+        p_family_id: familyId,
+        p_topic_id: subjectId,
+      },
+      name: "set_child_training_enrollment",
+    },
+  ]);
+
+  const leaveCalls = [];
+  const left = await leaveChildTrainingSubject(
+    rpcClient(
+      {
+        data: [
+          {
+            changed: true,
+            goal_enrolled_at: null,
+            goal_id: null,
+            goal_is_enrolled: null,
+            topic_enrolled_at: null,
+            topic_id: subjectId,
+            topic_is_enrolled: false,
+          },
+        ],
+        error: null,
+      },
+      leaveCalls,
+    ),
+    { childProfileId, expectedUserId, familyId, subjectId },
+  );
+  assert.equal(left.isEnrolled, false);
+  assert.equal(leaveCalls[0].args.p_enrolled, false);
+});
+
+test("selects and removes a goal with exact subject lineage", async () => {
+  for (const selected of [true, false]) {
+    const calls = [];
+    const choice = await setChildTrainingGoalSelected(
+      rpcClient(
+        {
+          data: [
+            {
+              changed: true,
+              goal_enrolled_at: selected ? enrolledAt : null,
+              goal_id: goalId,
+              goal_is_enrolled: selected,
+              topic_enrolled_at: enrolledAt,
+              topic_id: subjectId,
+              topic_is_enrolled: true,
+            },
+          ],
+          error: null,
+        },
+        calls,
+      ),
+      {
+        childProfileId,
+        expectedUserId,
+        familyId,
+        goalId,
+        selected,
+        subjectId,
+      },
+    );
+    assert.equal(choice.goalId, goalId);
+    assert.equal(choice.isSelected, selected);
+    assert.equal(calls[0].args.p_goal_id, goalId);
+    assert.equal(calls[0].args.p_enrolled, selected);
+  }
+});
+
+test("maps a pre-migration enrollment mutation to a clear unavailable error", async () => {
+  await assert.rejects(
+    joinChildTrainingSubject(
+      rpcClient({ data: null, error: { code: "PGRST202" } }),
+      { childProfileId, expectedUserId, familyId, subjectId },
+    ),
+    (error) =>
+      assertTrainingError(error, "child_training_enrollment_unavailable"),
+  );
+});
+
+test("rejects malformed enrollment inputs and results", async () => {
+  const calls = [];
+  for (const [input, code] of [
+    [
+      { childProfileId, expectedUserId, familyId, subjectId: "invalid" },
+      "invalid_subject_id",
+    ],
+    [
+      {
+        childProfileId,
+        expectedUserId,
+        familyId,
+        goalId: "invalid",
+        selected: true,
+        subjectId,
+      },
+      "invalid_goal_id",
+    ],
+    [
+      {
+        childProfileId,
+        expectedUserId,
+        familyId,
+        goalId,
+        selected: "yes",
+        subjectId,
+      },
+      "invalid_enrollment_state",
+    ],
+  ]) {
+    const operation =
+      "goalId" in input
+        ? setChildTrainingGoalSelected
+        : joinChildTrainingSubject;
+    await assert.rejects(
+      operation(rpcClient({ data: [], error: null }, calls), input),
+      (error) => assertTrainingError(error, code),
+    );
+  }
+  assert.deepEqual(calls, []);
+
+  await assert.rejects(
+    joinChildTrainingSubject(
+      rpcClient({
+        data: [
+          {
+            changed: true,
+            goal_enrolled_at: null,
+            goal_id: null,
+            goal_is_enrolled: null,
+            topic_enrolled_at: null,
+            topic_id: subjectId,
+            topic_is_enrolled: true,
+          },
+        ],
+        error: null,
+      }),
+      { childProfileId, expectedUserId, familyId, subjectId },
+    ),
+    (error) => assertTrainingError(error, "invalid_enrollment_result"),
   );
 });
 

@@ -1,6 +1,6 @@
 {
   "version": 3,
-  "updatedAt": "2026-08-24T13:20:13.000Z",
+  "updatedAt": "2026-08-24T14:41:16.000Z",
   "items": [
     {
       "id": "hosted-preview-safety",
@@ -36,13 +36,24 @@
       "updatedAt": "2026-08-21T12:42:52.000Z"
     },
     {
+      "id": "hosted-development-content-bootstrap",
+      "title": "Gør Fodbold synlig i Hosted Development",
+      "details": "Giv den tilsigtede voksne konto administratorrollen gennem en betroet engangshandling, og opret eller importér et lille syntetisk Fodbold-emne med mindst ét mål og én deløvelse i Hosted Development uden at deploye den lokale seed.",
+      "implementationNotes": "Den fysiske iPhone og delte previews bruger Hosted Development. En read-only kontrol den 24. august 2026 viste præcis 0 emner, mål, deløvelser og garderobeting samt 0 administratorprofiler dér, mens den publicerede Fodbold-fixture kun findes i Local Supabase. Kids Mode blokerer ikke indholdet; hostet indhold og en betroet administrator mangler. Kræver en separat godkendt hosted mutation.",
+      "evidence": [],
+      "status": "todo",
+      "priority": 0,
+      "createdAt": "2026-08-24T14:41:16.000Z",
+      "updatedAt": "2026-08-24T14:41:16.000Z"
+    },
+    {
       "id": "25d3bfc2-3592-4e67-ab7c-9de6e02ee7bc",
       "title": "Konfigurér mailafsender til Hosted Development",
       "details": "Vælg og tilslut en brugerdefineret SMTP-udbyder i Supabase, indsæt den danske kode- og magic-link-template, slå link-tracking fra, og test kun med en syntetisk eller voksen adresse.",
       "implementationNotes": "Hosted Development har nu samme danske kode- og scanner-sikre magic-link-indhold som Local for både login og oprettelse; dashboardet er genindlæst og verificeret med Token-feltet bevaret. Den indbyggede Supabase-mailtjeneste er fortsat begrænset, så valg af ekstern SMTP, deaktivering af link-tracking og en afsluttende voksen/syntetisk leveringstest mangler.",
       "evidence": [],
       "status": "todo",
-      "priority": 0,
+      "priority": 1,
       "createdAt": "2026-08-20T20:34:52.396Z",
       "updatedAt": "2026-08-20T20:35:20.548Z"
     },
@@ -53,7 +64,7 @@
       "implementationNotes": "AI-prototypen har allerede sin egen private ai-media-private-bucket; dette kort dækker fortsat almindelige voksne profilbilleder.",
       "evidence": [],
       "status": "todo",
-      "priority": 1,
+      "priority": 2,
       "createdAt": "2026-08-20T19:52:36.397Z",
       "updatedAt": "2026-08-21T12:42:52.000Z"
     },
@@ -64,7 +75,7 @@
       "implementationNotes": "Afventer de private Storage-buckets og den godkendte retention- og slettepolitik. Pro-databasebackups genskaber ikke slettede Storage-objekter.",
       "evidence": [],
       "status": "todo",
-      "priority": 2,
+      "priority": 3,
       "createdAt": "2026-08-21T09:02:49.313Z",
       "updatedAt": "2026-08-21T09:03:03.406Z"
     },
@@ -75,7 +86,7 @@
       "implementationNotes": "",
       "evidence": [],
       "status": "todo",
-      "priority": 3,
+      "priority": 4,
       "createdAt": "2026-08-20T19:56:04.024Z",
       "updatedAt": "2026-08-20T19:56:04.066Z"
     },
@@ -86,7 +97,7 @@
       "implementationNotes": "",
       "evidence": [],
       "status": "todo",
-      "priority": 4,
+      "priority": 5,
       "createdAt": "2026-08-20T21:43:38.513Z",
       "updatedAt": "2026-08-20T21:43:38.513Z"
     },
@@ -97,7 +108,7 @@
       "implementationNotes": "Den begrænsede provider-nøgle, budget-guardrail, de to AI-migrationer og process-ai-job er på plads i Hosted Development. Et autentificeret hosted end-to-end-forløb er gennemført med syntetisk upload, valgt-barn-link, ét provider-job, privat output og renderet GPT Image 2-resultat. Prototypen udfører højst ét provider-POST; delete_after er kun metadata, og mobil polling er ikke en autonom kø. De resterende stale-job-, checkpoint-, reconciliation- og fysiske slettehuller er fortsat åbne.",
       "evidence": [],
       "status": "todo",
-      "priority": 5,
+      "priority": 6,
       "createdAt": "2026-08-21T10:30:00.000Z",
       "updatedAt": "2026-08-21T15:48:27.000Z"
     },
@@ -495,8 +506,8 @@
     {
       "id": "child-profile-cartoon-avatar",
       "title": "Gem barnets tegneserieprofilbillede",
-      "details": "Lad en voksen vælge et ansigtsfoto, gennemse den genererede tegneserieversion og gemme den som barnets private profilbillede med preset-avatar som fallback.",
-      "implementationNotes": "Et færdigt GPT Image 2-portræt kan nu vælges eksplicit som profilbillede. Databasehandlingen validerer familie, barn, job, output og privat Storage, mens appen henter korte signerede links og viser billedet på forsiden, profilen og i børnevælgeren. Et aktivt eller færdigt job genoptages efter luk og genåbn uden at gemme billedbytes eller links lokalt. Originalfotoets korte retention bevares, og et erstattet profilbillede får en slettefrist. Fysisk Storage-oprydning forbliver den separate retention-worker-opgave.",
+      "details": "Lad barnet i Kids Mode vælge et ansigtsfoto, gennemse den genererede tegneserieversion og gemme den som sit private profilbillede med preset-avatar som fallback.",
+      "implementationNotes": "Et færdigt GPT Image 2-portræt kan nu vælges eksplicit som profilbillede uden en ekstra voksen-godkendelse. Den eksisterende voksen-auth-session er fortsat familiegrænsen. Databasehandlingen validerer familie, barn, job, output og privat Storage, mens appen henter korte signerede links og viser billedet på forsiden, profilen og i børnevælgeren. Et aktivt eller færdigt job genoptages efter luk og genåbn uden at gemme billedbytes eller links lokalt. Originalfotoets korte retention bevares, og et erstattet profilbillede får en slettefrist. Fysisk Storage-oprydning forbliver den separate retention-worker-opgave.",
       "evidence": [],
       "status": "done",
       "priority": 20,
@@ -506,8 +517,8 @@
     {
       "id": "child-topic-reference-photo",
       "title": "Tilføj privat emnebillede",
-      "details": "Vis rigtige publicerede emner og lad familien gemme ét frivilligt privat billede pr. barn og emne, så senere garderobepersonalisering kan bruge det uden at blande det sammen med profilbilledet.",
-      "implementationNotes": "Mobilen viser nu den publicerede emneliste og et børnevenligt emneflow med vælg, gennemse, gem, skift, fjern og spring over. Billedet gemmes i den private familie-bucket med én aktuel pointer pr. barn og emne; udskiftning er atomisk, tidligere billeder mister læseadgang og får slettefrist, og profilbilledet ændres aldrig. Et defekt valgfrit foto blokerer ikke emnelisten, og reservationer er begrænset pr. voksen og familie, indtil den separate retention-worker rydder bytes fysisk. Dette er referencefundamentet; den senere AI-garderobe-overlay er fortsat en separat opgave.",
+      "details": "Vis rigtige publicerede emner og lad barnet i Kids Mode gemme ét frivilligt privat billede pr. barn og emne, så garderobepersonalisering kan bruge det uden at blande det sammen med profilbilledet.",
+      "implementationNotes": "Mobilen viser nu den publicerede emneliste og et selvbetjent børneflow med vælg, gennemse, gem, skift, fjern og spring over uden en ekstra voksen-godkendelse. Den eksisterende voksen-auth-session er fortsat familiegrænsen. Billedet gemmes i den private familie-bucket med én aktuel pointer pr. barn og emne; udskiftning er atomisk, tidligere billeder mister læseadgang og får slettefrist, og profilbilledet ændres aldrig. Et defekt valgfrit foto blokerer ikke emnelisten, og reservationer er begrænset pr. bruger og familie, indtil den separate retention-worker rydder bytes fysisk.",
       "evidence": [],
       "status": "done",
       "priority": 21,
@@ -529,12 +540,23 @@
       "id": "mobile-published-training",
       "title": "Brug admin-emner og gem træningsfremskridt",
       "details": "Fjern de hardkodede mobilforløb. Vis publicerede emner, mål og deløvelser fra administrationen, gem barnets gennemførelser idempotent, og vis fremdrift på emne-, mål- og startside.",
-      "implementationNotes": "Forsiden, emnelisten, emnedetaljen, mål og træning læser nu det publicerede admin-træ med rigtige dynamiske id'er og uden fixture-fallback. Gennemførelser gemmes transaktionelt med den præcise emne-mål-deløvelse-linje, målespecifikt resultat, oplevet sværhedsgrad og en låst idempotent request-identitet; tvetydige retries kan ikke dobbeltregistrere eller ændre resultatet. Fremdrift vises samlet og pr. emne, mål og deløvelse, opdateres ved tilbage-navigation og bevares privat, selv når et emne skjules igen. Ren lokal reset, 924 databaseassertions, 4 concurrency-tests, 148 API-tests, 72 mobiltests samt fuld typecheck, lint, test, build og formatering består. Point, belønningsoptjening, eksplicit enrolment før første forsøg og offline session-resume er fortsat særskilte roadmap-opgaver.",
+      "implementationNotes": "Forsiden, emnelisten, emnedetaljen, mål og træning læser nu det publicerede admin-træ med rigtige dynamiske id'er og uden fixture-fallback. Barnet kan selv tilmelde og forlade alle udgivne emner samt vælge og fravælge mål; fotos, øvelser og træning blokeres aldrig af valget, og tidligere fremdrift bevares ved genvalg. Gennemførelser gemmes transaktionelt med den præcise emne-mål-deløvelse-linje, målespecifikt resultat, oplevet sværhedsgrad og en låst idempotent request-identitet; tvetydige retries kan ikke dobbeltregistrere eller ændre resultatet. Fremdrift vises samlet og pr. emne, mål og deløvelse og opdateres ved tilbage-navigation. Ren lokal reset, 967 databaseassertions, 4 concurrency-tests, 154 API-tests og 76 mobiltests består. Point, belønningsoptjening og offline session-resume er fortsat særskilte roadmap-opgaver.",
       "evidence": [],
       "status": "done",
       "priority": 23,
       "createdAt": "2026-08-24T11:47:29.000Z",
       "updatedAt": "2026-08-24T13:20:13.000Z"
+    },
+    {
+      "id": "kids-mode-self-service",
+      "title": "Gør Kids Mode selvbetjent",
+      "details": "Fjern voksen-gates fra barnets oplevelse, lad barnet selv vælge udgivne emner og mål, og bevar den eksisterende voksen-auth-session som den usynlige familie- og RLS-grænse.",
+      "implementationNotes": "Voksen-blokerende tekst er fjernet fra emner, træning og foto-flow. Alle udgivne emner vises i Mine emner eller Flere emner; barnet kan tilmelde, forlade, vælge og fravælge mål uden at miste fremskridt, mens fotos og træning altid forbliver åbne. Databasen håndhæver familie, aktivt barn og publicering, gamle klienter fortsætter sikkert, og administrationens topbar viser nu tydeligt Lokal Supabase eller Hosted Development. Den oprindelige tomme Fodbold-visning skyldtes 0 hostede indholdsrækker, ikke en voksen-gate; oprettelse af syntetisk hostet indhold er derfor et særskilt Todo-kort.",
+      "evidence": [],
+      "status": "done",
+      "priority": 24,
+      "createdAt": "2026-08-24T14:41:16.000Z",
+      "updatedAt": "2026-08-24T14:41:16.000Z"
     }
   ]
 }
