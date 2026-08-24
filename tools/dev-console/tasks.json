@@ -1,6 +1,6 @@
 {
   "version": 3,
-  "updatedAt": "2026-08-24T06:59:36.000Z",
+  "updatedAt": "2026-08-24T13:20:13.000Z",
   "items": [
     {
       "id": "hosted-preview-safety",
@@ -100,17 +100,6 @@
       "priority": 5,
       "createdAt": "2026-08-21T10:30:00.000Z",
       "updatedAt": "2026-08-21T15:48:27.000Z"
-    },
-    {
-      "id": "child-topic-wardrobe-rendering",
-      "title": "Vis garderoben på barnets emnebillede",
-      "details": "Brug barnets private emnebillede som reference til en familieprivat visning af de valgte garderobeting, så hoved, krop, hånd, fødder og tilbehør følger de samme eksklusive slots som spilgarderoben.",
-      "implementationNotes": "Det private child+topic-referencefundament er færdigt. Denne opgave dækker den senere billedgenerering eller komposition, sikker promptversionering, review, fejltilstande og sammenhæng med den atomiske equip-state; den må ikke genbruge det offentlige 4×4-katalogjob eller profilbilledets pointer.",
-      "evidence": [],
-      "status": "todo",
-      "priority": 6,
-      "createdAt": "2026-08-24T06:59:36.000Z",
-      "updatedAt": "2026-08-24T06:59:36.000Z"
     },
     {
       "id": "admin-wardrobe-authoring",
@@ -524,6 +513,28 @@
       "priority": 21,
       "createdAt": "2026-08-24T06:59:36.000Z",
       "updatedAt": "2026-08-24T06:59:36.000Z"
+    },
+    {
+      "id": "child-topic-wardrobe-rendering",
+      "title": "Vis garderoben på barnets emnebillede",
+      "details": "Bevar et privat grundportræt pr. barn og emne, og lav hver garderobevisning på ny fra grundportrættet plus alle aktuelt valgte ting. Hoved, krop, hånd, fødder og tilbehør skal følge spilgarderobens eksklusive slots.",
+      "implementationNotes": "Det private emnefoto bliver nu til ét uforanderligt grundportræt. Hvert garderobeskift gemmer de eksklusive slots atomisk og laver et nyt look fra præcis grundportrættet plus billederne af alle aktive ting; en tidligere afledt render bruges aldrig som input eller overskriver grundfiguren. Sidste succesfulde look bevares under fejl og behandling, samme grundfigur og garderobefingerprint auto-forsøges kun én gang, og et eksplicit retry er stadig muligt. Familie-RLS, genoptagelse på tværs af familiens voksne, forældede jobs, manglende katalogbilleder og out-of-order-resultater er dækket. Ren lokal reset, 924 databaseassertions, 4 concurrency-tests, 55 worker-tests, 148 API-tests, 72 mobiltests og hele workspace-gaten består. Ingen rigtig børnemedie- eller betalt provider-test blev kørt.",
+      "evidence": [],
+      "status": "done",
+      "priority": 22,
+      "createdAt": "2026-08-24T06:59:36.000Z",
+      "updatedAt": "2026-08-24T13:20:13.000Z"
+    },
+    {
+      "id": "mobile-published-training",
+      "title": "Brug admin-emner og gem træningsfremskridt",
+      "details": "Fjern de hardkodede mobilforløb. Vis publicerede emner, mål og deløvelser fra administrationen, gem barnets gennemførelser idempotent, og vis fremdrift på emne-, mål- og startside.",
+      "implementationNotes": "Forsiden, emnelisten, emnedetaljen, mål og træning læser nu det publicerede admin-træ med rigtige dynamiske id'er og uden fixture-fallback. Gennemførelser gemmes transaktionelt med den præcise emne-mål-deløvelse-linje, målespecifikt resultat, oplevet sværhedsgrad og en låst idempotent request-identitet; tvetydige retries kan ikke dobbeltregistrere eller ændre resultatet. Fremdrift vises samlet og pr. emne, mål og deløvelse, opdateres ved tilbage-navigation og bevares privat, selv når et emne skjules igen. Ren lokal reset, 924 databaseassertions, 4 concurrency-tests, 148 API-tests, 72 mobiltests samt fuld typecheck, lint, test, build og formatering består. Point, belønningsoptjening, eksplicit enrolment før første forsøg og offline session-resume er fortsat særskilte roadmap-opgaver.",
+      "evidence": [],
+      "status": "done",
+      "priority": 23,
+      "createdAt": "2026-08-24T11:47:29.000Z",
+      "updatedAt": "2026-08-24T13:20:13.000Z"
     }
   ]
 }

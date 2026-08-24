@@ -45,6 +45,7 @@ The Dev Console at `127.0.0.1:11009` is a development tool only. Its React 19 in
 - Before child creation, the owner accepts a versioned guardian notice. The immutable acknowledgement is stored outside the exposed API schema with a default-deny boundary. The owner has accepted the remaining legal/privacy, withdrawal, deletion, and retention risk for the private family cartoon prototype; that work remains required before a broader pilot.
 - A caller- and backend-scoped child-creation request identity is persisted before submission and reused after interruption, while the database makes repeated submissions idempotent.
 - A reviewed generated portrait may be promoted through a guarded RPC to a private child-profile asset; the app stores only the asset pointer and mints short-lived signed URLs at read time. A separate private pointer holds at most one current reference photo per child and published topic. Neither pointer accepts a client-provided Storage path, and topic references never become public wardrobe assets.
+- Each child/topic pair may retain one immutable base cartoon and append-only render history. The visible wardrobe look is a separate pointer derived from the base plus a server-snapshotted complete equipped set; it can never replace the base or become another render's input. Family clients receive only guarded RPC results and short-lived signed URLs, never private paths or prompts.
 - Content administration is restricted by an explicit profile role and is separated from family data.
 - Browser and mobile clients receive only a Supabase URL and publishable key. Elevated database keys remain in trusted server or worker environments.
 - Native Auth sessions are encrypted with AES-256-GCM before their ciphertext reaches AsyncStorage, with the encryption key stored separately in the platform key store through SecureStore. Web PKCE state uses separate origin-scoped browser storage.
@@ -139,6 +140,18 @@ PNG, crops it mechanically into cells 01 through 16, and stores the sheet and
 crops under the image job id. No image prompt, provider choice, crop path, or
 raw image byte is accepted from the public client.
 
+The family wardrobe renderer uses two further immutable operations.
+`portrait.child_topic_base` turns the current private child/topic reference
+into a full-body subject figure and includes the published topic title and
+description in trusted prompt expansion. `portrait.child_topic_wardrobe`
+always receives that ready base as reference 1 and every currently equipped
+catalogue image in deterministic slot order after it. Equipment selection and
+render reservation are one transaction. The database records the exact base,
+source, item ids, image paths, equipment fingerprint, and render sequence
+before the worker can call OpenRouter; the fingerprint also incorporates each
+catalogue item's content version. Stale or out-of-order jobs remain history and
+cannot advance the visible pointer.
+
 Topic-specific reward authoring is persisted separately in `wardrobe_items`.
 Each row belongs to one topic and carries a nullable synthetic image path and
 child-facing description, either a bounded point price or bounded unlock rule,
@@ -153,17 +166,18 @@ child-visible only after another approval and topic publication. Legacy rows
 may have no image, but new interfaces show an explicit missing-image state
 rather than presenting the old emoji as catalogue artwork.
 
-## First vertical slice
+## Connected training slice
 
-The first backend-connected implementation should prove:
+The backend-connected implementation proves:
 
 1. An administrator publishes one topic, goal, and ordered exercise set.
 2. A parent authenticates and can see only their own family and child profiles.
-3. The child chooses the football goal and records a manual result.
-4. A timestamp-based session survives backgrounding and a result can be submitted idempotently.
-5. Progress remains after the app restarts.
+3. The child chooses any published subject and goal and records a manual result against exact route ids.
+4. The result is submitted with a client request id and the database returns the original completion on retry.
+5. Exercise, goal, subject, and overall progress are rebuilt from durable child exercise progress after the app restarts.
 6. Automated RLS tests prove that another family cannot read or modify the records.
 
-The private selected-child cartoon prototype is separate from this training
-slice. Production camera/avatar integration, personalized video, speech
-recognition, rewards, notifications, and full offline support remain outside it.
+The private selected-child and subject cartoons share the trusted media worker
+but stay separate from training completion data. Production camera capture,
+personalized video, speech recognition, rewards, notifications, and full
+offline support remain outside this slice.

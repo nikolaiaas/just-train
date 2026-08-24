@@ -128,17 +128,19 @@ inaccessible but are not physically deleted by that database transition.
 deletion. The physical retention worker and a Storage-byte recovery test remain
 required before a broader rollout.
 
-Merging a migration through the existing integration does not deploy Edge
-Functions or their secrets. Protected PR #4 deployed the GPT Image 2
-migrations to Hosted Development on 2026-08-21, and `process-ai-job` was then
-deployed separately after explicit authorization. The current Auth signing key
-is ECC, so both workers are configured with legacy gateway JWT verification
-disabled; each handler still validates the bearer session with Supabase Auth,
-enforces job ownership and RLS, and the administration handler additionally
-requires an admin-scoped job. The hosted gateway update and authenticated smoke
-tests remain pending a separately authorized Function deployment. Future
-Function deployments or changes to `OPENROUTER_API_KEY` remain separate hosted
-mutations requiring explicit authorization.
+The current native Supabase `main` integration applies new migrations and also
+redeploys both configured Edge Functions, even when a Function did not change.
+This was observed after protected merges on 2026-08-24 and differs from the
+earlier migration-only assumption. A merge that contains database or Function
+work therefore needs explicit hosted-mutation authorization and post-merge
+verification of both migration history and Function versions. The integration
+does not create or rotate secrets; secret changes remain separate explicit
+mutations. The current Auth signing key is ECC, so both workers are configured
+with legacy gateway JWT verification disabled; each handler still validates
+the bearer session with Supabase Auth, enforces job ownership and RLS, and the
+administration handler additionally requires an admin-scoped job. A manual
+Function deploy is a recovery path only when the integration does not deliver
+the reviewed bundle and still requires explicit authorization.
 
 Request a sign-in email from the application, then open local Mailpit at
 <http://127.0.0.1:54324>. Each Danish email contains both a six-digit one-time

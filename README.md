@@ -2,11 +2,11 @@
 
 Bare Træn is a Danish training app for children and their parents, with a separate content administration interface. This repository is the first working foundation built from the included HTML concept boards.
 
-The initial vertical slice is intentionally small:
+The first connected vertical slice is intentionally small:
 
-`parent signs in → chooses a child → opens a goal → completes an exercise → sees saved progress`
+`parent signs in → chooses a child → opens a published admin subject → completes an exercise → sees saved progress`
 
-The app currently uses synthetic fixture data while the Supabase schema and privacy rules are established. Do not add real child data, photos, audio, or video to development environments.
+The mobile training path now reads published subjects, goals, and exercises from Supabase and stores the selected child's progress there. Development, previews, tests, and repository evidence must still use synthetic people and media only.
 
 ## Technology
 
@@ -27,6 +27,11 @@ After review, the generated result can be saved as that child's private profile
 image. A separate family-private child-and-topic photo can capture, for example,
 football clothing for later wardrobe personalization without reusing the
 profile image or entering the public wardrobe catalogue.
+That topic photo can produce a private, immutable base cartoon for the child
+and subject. Every wardrobe change creates a separate derived look from that
+same base plus the complete set of currently equipped catalogue images. A
+derived look never becomes the next generation's input, so taking an item off
+does not progressively alter the child's original subject figure.
 The administration uses the same server boundary for synthetic wardrobe art:
 topic text is turned into exactly 16 descriptions, GPT Image 2 draws one 4×4
 sheet, and trusted code crops it into 16 catalogue images. Those prompts also

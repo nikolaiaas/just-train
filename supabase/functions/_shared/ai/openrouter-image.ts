@@ -41,6 +41,11 @@ export type OpenRouterImageResult = {
   usage: Record<string, number>;
 };
 
+export type OpenRouterImageReference = {
+  bytes: Uint8Array;
+  mimeType: "image/jpeg" | "image/png" | "image/webp";
+};
+
 export class OpenRouterImageError extends Error {
   readonly attemptCode: string;
   readonly providerRequestId: string | null;
@@ -153,27 +158,53 @@ export function createOpenRouterImageRequest(input: {
   options: unknown;
   prompt: string;
 }): Record<string, unknown> {
+  return createOpenRouterMultiImageRequest({
+    inputReferences: [
+      { bytes: input.inputBytes, mimeType: input.inputMimeType },
+    ],
+    model: input.model,
+    options: input.options,
+    prompt: input.prompt,
+  });
+}
+
+export function createOpenRouterMultiImageRequest(input: {
+  inputReferences: readonly OpenRouterImageReference[];
+  model: string;
+  options: unknown;
+  prompt: string;
+}): Record<string, unknown> {
   validateImageRequest(input);
 
-  // This operation has been live-verified with PNG and the native client emits
-  // JPEG. Keep the shared detector broader for future operations, but accept
-  // only the formats declared by this operation version.
-  if (input.inputMimeType === "image/webp") {
+  if (input.inputReferences.length < 1 || input.inputReferences.length > 6) {
     throw new OpenRouterImageError({
-      attemptCode: "unsupported_input_mime_type",
+      attemptCode: "invalid_input_reference_count",
       publicCode: "invalid_input_image",
       retryable: false,
     });
   }
 
-  const detectedMimeType = detectSupportedImageMimeType(input.inputBytes);
+  // This operation has been live-verified with PNG and the native client emits
+  // JPEG. Keep the shared detector broader for future operations, but accept
+  // only the formats declared by this operation version.
+  for (const reference of input.inputReferences) {
+    if (reference.mimeType === "image/webp") {
+      throw new OpenRouterImageError({
+        attemptCode: "unsupported_input_mime_type",
+        publicCode: "invalid_input_image",
+        retryable: false,
+      });
+    }
 
-  if (detectedMimeType !== input.inputMimeType) {
-    throw new OpenRouterImageError({
-      attemptCode: "input_signature_mismatch",
-      publicCode: "invalid_input_image",
-      retryable: false,
-    });
+    const detectedMimeType = detectSupportedImageMimeType(reference.bytes);
+
+    if (detectedMimeType !== reference.mimeType) {
+      throw new OpenRouterImageError({
+        attemptCode: "input_signature_mismatch",
+        publicCode: "invalid_input_image",
+        retryable: false,
+      });
+    }
   }
 
   const options = parseOpenRouterImageOptions(input.options);
@@ -182,14 +213,12 @@ export function createOpenRouterImageRequest(input: {
     model: input.model,
     prompt: input.prompt,
     ...options,
-    input_references: [
-      {
-        type: "image_url",
-        image_url: {
-          url: `data:${input.inputMimeType};base64,${bytesToBase64(input.inputBytes)}`,
-        },
+    input_references: input.inputReferences.map((reference) => ({
+      type: "image_url",
+      image_url: {
+        url: `data:${reference.mimeType};base64,${bytesToBase64(reference.bytes)}`,
       },
-    ],
+    })),
   };
 }
 
@@ -708,10 +737,32 @@ export async function generateOpenRouterImage(input: {
   prompt: string;
   timeoutMs: number;
 }): Promise<OpenRouterImageResult> {
+  return generateOpenRouterMultiImage({
+    apiKey: input.apiKey,
+    fetchImpl: input.fetchImpl,
+    inputReferences: [
+      { bytes: input.inputBytes, mimeType: input.inputMimeType },
+    ],
+    model: input.model,
+    options: input.options,
+    prompt: input.prompt,
+    timeoutMs: input.timeoutMs,
+  });
+}
+
+export async function generateOpenRouterMultiImage(input: {
+  apiKey: string;
+  fetchImpl?: FetchLike;
+  inputReferences: readonly OpenRouterImageReference[];
+  model: string;
+  options: unknown;
+  prompt: string;
+  timeoutMs: number;
+}): Promise<OpenRouterImageResult> {
   return sendOpenRouterImageRequest({
     apiKey: input.apiKey,
     fetchImpl: input.fetchImpl,
-    requestBody: createOpenRouterImageRequest(input),
+    requestBody: createOpenRouterMultiImageRequest(input),
     timeoutMs: input.timeoutMs,
   });
 }

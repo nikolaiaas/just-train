@@ -31,7 +31,6 @@ test("user Edge Functions bypass only the legacy gateway verifier", async () => 
 
     assert.match(source, /authorization\?\.startsWith\("Bearer "\)/);
     assert.match(source, /userClient\.auth\.getUser\(\)/);
-    assert.match(source, /job\.requested_by !== identity\.user\.id/);
     assert.match(
       source,
       /return jsonResponse\(\{ error: "authentication_required" \}, 401\)/,
@@ -40,6 +39,14 @@ test("user Edge Functions bypass only the legacy gateway verifier", async () => 
       source,
       /return jsonResponse\(\{ error: "job_not_found" \}, 404\)/,
     );
+
+    if (slug === "process-ai-job") {
+      assert.match(source, /job\.requested_by === identity\.user\.id/);
+      assert.match(source, /reconcile_child_topic_portrait_job_start/);
+      assert.match(source, /reconciliation\.mayProcess/);
+    } else {
+      assert.match(source, /job\.requested_by !== identity\.user\.id/);
+    }
   }
 });
 

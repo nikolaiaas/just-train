@@ -17,7 +17,7 @@ import { ChildProfileAvatar } from "@/components/child-profile-avatar";
 
 const AI_CARTOON_ROUTE = "/ai/cartoon" as Href;
 const NEW_CHILD_ROUTE = "/child/new" as Href;
-const WARDROBE_ROUTE = "/wardrobe" as Href;
+const TOPICS_ROUTE = "/topics" as Href;
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -85,7 +85,7 @@ export default function ProfileScreen() {
 
   return (
     <Screen contentStyle={styles.screen}>
-      <BackButton label="I dag" onPress={() => router.back()} />
+      <BackButton label="I dag" onPress={() => router.replace("/")} />
 
       <SurfaceCard style={styles.profileCard}>
         <ChildProfileAvatar child={selectedChild} />
@@ -106,11 +106,14 @@ export default function ProfileScreen() {
       <SurfaceCard style={styles.childMenuCard}>
         <View style={styles.menuCopy}>
           <Kicker>Mit sted</Kicker>
-          <Text style={styles.menuTitle}>Min garderobe</Text>
-          <Body>Se dit tøj og udstyr, og vælg hvad din figur har på.</Body>
+          <Text style={styles.menuTitle}>Mine emnegarderober</Text>
+          <Body>
+            Vælg først et emne. Så ved garderoben, hvilken emnefigur dit tøj og
+            udstyr skal tegnes på.
+          </Body>
         </View>
-        <ActionButton onPress={() => router.push(WARDROBE_ROUTE)}>
-          Åbn garderoben
+        <ActionButton onPress={() => router.push(TOPICS_ROUTE)}>
+          Vælg emne og garderobe
         </ActionButton>
       </SurfaceCard>
 

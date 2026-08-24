@@ -490,6 +490,277 @@ export type Database = {
           },
         ];
       };
+      child_topic_portrait_renders: {
+        Row: {
+          base_media_asset_id: string | null;
+          child_profile_id: string;
+          completed_at: string | null;
+          created_at: string;
+          equipment_fingerprint: string;
+          family_id: string;
+          job_id: string;
+          output_media_asset_id: string;
+          promoted_as_current: boolean;
+          render_kind: Database["public"]["Enums"]["child_topic_portrait_render_kind"];
+          render_sequence: number;
+          source_reference_media_asset_id: string;
+          topic_id: string;
+          wardrobe_item_ids: string[];
+        };
+        Insert: {
+          base_media_asset_id?: string | null;
+          child_profile_id: string;
+          completed_at?: string | null;
+          created_at?: string;
+          equipment_fingerprint: string;
+          family_id: string;
+          job_id: string;
+          output_media_asset_id: string;
+          promoted_as_current?: boolean;
+          render_kind: Database["public"]["Enums"]["child_topic_portrait_render_kind"];
+          render_sequence: number;
+          source_reference_media_asset_id: string;
+          topic_id: string;
+          wardrobe_item_ids?: string[];
+        };
+        Update: {
+          base_media_asset_id?: string | null;
+          child_profile_id?: string;
+          completed_at?: string | null;
+          created_at?: string;
+          equipment_fingerprint?: string;
+          family_id?: string;
+          job_id?: string;
+          output_media_asset_id?: string;
+          promoted_as_current?: boolean;
+          render_kind?: Database["public"]["Enums"]["child_topic_portrait_render_kind"];
+          render_sequence?: number;
+          source_reference_media_asset_id?: string;
+          topic_id?: string;
+          wardrobe_item_ids?: string[];
+        };
+        Relationships: [
+          {
+            foreignKeyName: "child_topic_portrait_renders_base_fkey";
+            columns: [
+              "base_media_asset_id",
+              "family_id",
+              "child_profile_id",
+              "topic_id",
+            ];
+            isOneToOne: false;
+            referencedRelation: "media_assets";
+            referencedColumns: [
+              "id",
+              "family_id",
+              "child_profile_id",
+              "topic_id",
+            ];
+          },
+          {
+            foreignKeyName: "child_topic_portrait_renders_child_family_fkey";
+            columns: ["child_profile_id", "family_id"];
+            isOneToOne: false;
+            referencedRelation: "child_profiles";
+            referencedColumns: ["id", "family_id"];
+          },
+          {
+            foreignKeyName: "child_topic_portrait_renders_job_id_fkey";
+            columns: ["job_id"];
+            isOneToOne: true;
+            referencedRelation: "ai_jobs";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "child_topic_portrait_renders_output_fkey";
+            columns: [
+              "output_media_asset_id",
+              "family_id",
+              "child_profile_id",
+              "topic_id",
+            ];
+            isOneToOne: false;
+            referencedRelation: "media_assets";
+            referencedColumns: [
+              "id",
+              "family_id",
+              "child_profile_id",
+              "topic_id",
+            ];
+          },
+          {
+            foreignKeyName: "child_topic_portrait_renders_source_fkey";
+            columns: [
+              "source_reference_media_asset_id",
+              "family_id",
+              "child_profile_id",
+              "topic_id",
+            ];
+            isOneToOne: false;
+            referencedRelation: "media_assets";
+            referencedColumns: [
+              "id",
+              "family_id",
+              "child_profile_id",
+              "topic_id",
+            ];
+          },
+          {
+            foreignKeyName: "child_topic_portrait_renders_topic_id_fkey";
+            columns: ["topic_id"];
+            isOneToOne: false;
+            referencedRelation: "topics";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      child_topic_portraits: {
+        Row: {
+          base_job_id: string | null;
+          base_media_asset_id: string | null;
+          base_source_media_asset_id: string | null;
+          child_profile_id: string;
+          created_at: string;
+          desired_render_sequence: number;
+          display_equipment_fingerprint: string | null;
+          display_job_id: string | null;
+          display_kind:
+            | Database["public"]["Enums"]["child_topic_portrait_display_kind"]
+            | null;
+          display_media_asset_id: string | null;
+          display_wardrobe_item_ids: string[];
+          family_id: string;
+          pending_job_id: string | null;
+          topic_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          base_job_id?: string | null;
+          base_media_asset_id?: string | null;
+          base_source_media_asset_id?: string | null;
+          child_profile_id: string;
+          created_at?: string;
+          desired_render_sequence?: number;
+          display_equipment_fingerprint?: string | null;
+          display_job_id?: string | null;
+          display_kind?:
+            | Database["public"]["Enums"]["child_topic_portrait_display_kind"]
+            | null;
+          display_media_asset_id?: string | null;
+          display_wardrobe_item_ids?: string[];
+          family_id: string;
+          pending_job_id?: string | null;
+          topic_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          base_job_id?: string | null;
+          base_media_asset_id?: string | null;
+          base_source_media_asset_id?: string | null;
+          child_profile_id?: string;
+          created_at?: string;
+          desired_render_sequence?: number;
+          display_equipment_fingerprint?: string | null;
+          display_job_id?: string | null;
+          display_kind?:
+            | Database["public"]["Enums"]["child_topic_portrait_display_kind"]
+            | null;
+          display_media_asset_id?: string | null;
+          display_wardrobe_item_ids?: string[];
+          family_id?: string;
+          pending_job_id?: string | null;
+          topic_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "child_topic_portraits_base_asset_fkey";
+            columns: [
+              "base_media_asset_id",
+              "family_id",
+              "child_profile_id",
+              "topic_id",
+            ];
+            isOneToOne: false;
+            referencedRelation: "media_assets";
+            referencedColumns: [
+              "id",
+              "family_id",
+              "child_profile_id",
+              "topic_id",
+            ];
+          },
+          {
+            foreignKeyName: "child_topic_portraits_base_job_id_fkey";
+            columns: ["base_job_id"];
+            isOneToOne: false;
+            referencedRelation: "ai_jobs";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "child_topic_portraits_base_source_fkey";
+            columns: [
+              "base_source_media_asset_id",
+              "family_id",
+              "child_profile_id",
+              "topic_id",
+            ];
+            isOneToOne: false;
+            referencedRelation: "media_assets";
+            referencedColumns: [
+              "id",
+              "family_id",
+              "child_profile_id",
+              "topic_id",
+            ];
+          },
+          {
+            foreignKeyName: "child_topic_portraits_child_family_fkey";
+            columns: ["child_profile_id", "family_id"];
+            isOneToOne: false;
+            referencedRelation: "child_profiles";
+            referencedColumns: ["id", "family_id"];
+          },
+          {
+            foreignKeyName: "child_topic_portraits_display_asset_fkey";
+            columns: [
+              "display_media_asset_id",
+              "family_id",
+              "child_profile_id",
+              "topic_id",
+            ];
+            isOneToOne: false;
+            referencedRelation: "media_assets";
+            referencedColumns: [
+              "id",
+              "family_id",
+              "child_profile_id",
+              "topic_id",
+            ];
+          },
+          {
+            foreignKeyName: "child_topic_portraits_display_job_id_fkey";
+            columns: ["display_job_id"];
+            isOneToOne: false;
+            referencedRelation: "ai_jobs";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "child_topic_portraits_pending_job_id_fkey";
+            columns: ["pending_job_id"];
+            isOneToOne: false;
+            referencedRelation: "ai_jobs";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "child_topic_portraits_topic_id_fkey";
+            columns: ["topic_id"];
+            isOneToOne: false;
+            referencedRelation: "topics";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       child_topic_reference_photos: {
         Row: {
           child_profile_id: string;
@@ -605,6 +876,7 @@ export type Database = {
         Row: {
           attempt_number: number;
           child_profile_id: string;
+          client_request_id: string | null;
           created_at: string;
           duration_ms: number | null;
           exercise_id: string;
@@ -621,6 +893,7 @@ export type Database = {
         Insert: {
           attempt_number: number;
           child_profile_id?: string;
+          client_request_id?: string | null;
           created_at?: string;
           duration_ms?: number | null;
           exercise_id: string;
@@ -637,6 +910,7 @@ export type Database = {
         Update: {
           attempt_number?: number;
           child_profile_id?: string;
+          client_request_id?: string | null;
           created_at?: string;
           duration_ms?: number | null;
           exercise_id?: string;
@@ -1267,6 +1541,28 @@ export type Database = {
           timeout_ms: number;
         }[];
       };
+      claim_child_topic_portrait_job_for_worker: {
+        Args: { p_job_id: string };
+        Returns: {
+          attempt_number: number;
+          gateway: string;
+          input_contract: Json;
+          input_images: Json;
+          input_mime_type: string;
+          input_object_path: string;
+          job_id: string;
+          max_cost_microusd: number;
+          model: string;
+          output_asset_id: string;
+          output_contract: Json;
+          output_object_path: string;
+          prompt_template: string;
+          provider: string;
+          request_options: Json;
+          storage_bucket: string;
+          timeout_ms: number;
+        }[];
+      };
       complete_admin_ai_job_for_worker: {
         Args: {
           p_attempt_number: number;
@@ -1290,6 +1586,39 @@ export type Database = {
           p_usage: Json;
         };
         Returns: undefined;
+      };
+      complete_child_training_exercise: {
+        Args: {
+          p_child_profile_id: string;
+          p_client_request_id: string;
+          p_duration_ms?: number;
+          p_exercise_id: string;
+          p_expected_user_id: string;
+          p_family_id: string;
+          p_goal_id: string;
+          p_perceived_difficulty?: number;
+          p_repetitions?: number;
+          p_topic_id: string;
+        };
+        Returns: {
+          attempt_id: string;
+          attempts_count: number;
+          best_duration_ms: number;
+          best_repetitions: number;
+          child_profile_id: string;
+          completed_at: string;
+          completed_count: number;
+          created: boolean;
+          duration_ms: number;
+          exercise_id: string;
+          goal_id: string;
+          last_attempted_at: string;
+          perceived_difficulty: number;
+          progress_state: Database["public"]["Enums"]["progress_state"];
+          repetitions: number;
+          session_id: string;
+          topic_id: string;
+        }[];
       };
       complete_parent_onboarding: {
         Args: { p_display_name: string; p_family_name: string };
@@ -1384,6 +1713,41 @@ export type Database = {
           request_status: string;
         }[];
       };
+      get_child_topic_portrait: {
+        Args: {
+          p_child_profile_id: string;
+          p_expected_user_id: string;
+          p_family_id: string;
+          p_topic_id: string;
+        };
+        Returns: {
+          base_job_id: string;
+          base_media_asset_id: string;
+          base_source_media_asset_id: string;
+          base_storage_bucket: string;
+          base_storage_object_path: string;
+          child_profile_id: string;
+          current_reference_media_asset_id: string;
+          display_equipment_fingerprint: string;
+          display_job_id: string;
+          display_kind: Database["public"]["Enums"]["child_topic_portrait_display_kind"];
+          display_media_asset_id: string;
+          display_storage_bucket: string;
+          display_storage_object_path: string;
+          display_wardrobe_item_ids: string[];
+          family_id: string;
+          has_live_equipment_render_attempt: boolean;
+          is_base_stale: boolean;
+          is_look_stale: boolean;
+          live_equipment_fingerprint: string;
+          live_wardrobe_item_ids: string[];
+          pending_job_id: string;
+          pending_job_status: Database["public"]["Enums"]["ai_job_status"];
+          pending_public_error_code: string;
+          topic_id: string;
+          updated_at: string;
+        }[];
+      };
       list_admin_wardrobe_item_drafts: {
         Args: { p_topic_id: string; p_wardrobe_item_id?: string };
         Returns: {
@@ -1429,6 +1793,49 @@ export type Database = {
           sort_order: number;
           title: string;
           topic_id: string;
+        }[];
+      };
+      list_child_training_content: {
+        Args: {
+          p_child_profile_id: string;
+          p_expected_user_id: string;
+          p_family_id: string;
+          p_topic_id?: string;
+        };
+        Returns: {
+          attempts_count: number;
+          best_duration_ms: number;
+          best_repetitions: number;
+          completed_count: number;
+          exercise_equipment: string[];
+          exercise_estimated_minutes: number;
+          exercise_id: string;
+          exercise_instructions: string;
+          exercise_measurement: Database["public"]["Enums"]["exercise_measurement"];
+          exercise_safety_notes: string;
+          exercise_slug: string;
+          exercise_sort_order: number;
+          exercise_target_value: number;
+          exercise_title: string;
+          exercise_video_url: string;
+          goal_difficulty: Database["public"]["Enums"]["exercise_difficulty"];
+          goal_equipment: string[];
+          goal_estimated_minutes: number;
+          goal_hero_media_url: string;
+          goal_id: string;
+          goal_slug: string;
+          goal_sort_order: number;
+          goal_summary: string;
+          goal_title: string;
+          last_attempted_at: string;
+          progress_state: Database["public"]["Enums"]["progress_state"];
+          topic_accent_color: string;
+          topic_description: string;
+          topic_icon: string;
+          topic_id: string;
+          topic_slug: string;
+          topic_sort_order: number;
+          topic_title: string;
         }[];
       };
       list_child_wardrobe: {
@@ -1482,6 +1889,22 @@ export type Database = {
           storage_bucket: string;
         }[];
       };
+      prepare_child_topic_base_portrait: {
+        Args: {
+          p_child_profile_id: string;
+          p_client_request_id: string;
+          p_expected_user_id: string;
+          p_family_id: string;
+          p_topic_id: string;
+        };
+        Returns: {
+          created: boolean;
+          job_id: string;
+          job_status: Database["public"]["Enums"]["ai_job_status"];
+          output_media_asset_id: string;
+          source_reference_media_asset_id: string;
+        }[];
+      };
       prepare_child_topic_reference_photo: {
         Args: {
           p_child_profile_id: string;
@@ -1499,6 +1922,26 @@ export type Database = {
           request_status: string;
           storage_bucket: string;
           storage_object_path: string;
+        }[];
+      };
+      prepare_child_topic_wardrobe_render: {
+        Args: {
+          p_child_profile_id: string;
+          p_client_request_id: string;
+          p_expected_user_id: string;
+          p_family_id: string;
+          p_topic_id: string;
+        };
+        Returns: {
+          base_media_asset_id: string;
+          created: boolean;
+          equipment_fingerprint: string;
+          equipped_wardrobe_item_ids: string[];
+          job_id: string;
+          job_status: Database["public"]["Enums"]["ai_job_status"];
+          output_media_asset_id: string;
+          render_error_code: string;
+          render_mode: string;
         }[];
       };
       publish_admin_topic: {
@@ -1524,6 +1967,14 @@ export type Database = {
           operation_id: string;
           operation_version_id: string;
           version: number;
+        }[];
+      };
+      reconcile_child_topic_portrait_job_start: {
+        Args: { p_expected_user_id: string; p_job_id: string };
+        Returns: {
+          job_id: string;
+          job_status: Database["public"]["Enums"]["ai_job_status"];
+          may_process: boolean;
         }[];
       };
       remove_child_topic_reference_photo: {
@@ -1593,6 +2044,34 @@ export type Database = {
           previous_avatar_media_asset_id: string;
         }[];
       };
+      set_child_topic_wardrobe_item_equipped_and_prepare_render: {
+        Args: {
+          p_child_profile_id: string;
+          p_client_request_id: string;
+          p_equipped: boolean;
+          p_expected_user_id: string;
+          p_family_id: string;
+          p_topic_id: string;
+          p_wardrobe_item_id: string;
+        };
+        Returns: {
+          acquired_at: string;
+          base_media_asset_id: string;
+          child_profile_id: string;
+          created: boolean;
+          equip_slot: Database["public"]["Enums"]["wardrobe_equip_slot"];
+          equipment_fingerprint: string;
+          equipped_at: string;
+          equipped_wardrobe_item_ids: string[];
+          is_equipped: boolean;
+          job_id: string;
+          job_status: Database["public"]["Enums"]["ai_job_status"];
+          output_media_asset_id: string;
+          render_error_code: string;
+          render_mode: string;
+          wardrobe_item_id: string;
+        }[];
+      };
       set_child_wardrobe_item_equipped: {
         Args: {
           p_child_profile_id: string;
@@ -1625,6 +2104,8 @@ export type Database = {
         "awaiting_upload" | "processing" | "succeeded" | "failed" | "cancelled";
       attempt_outcome: "completed" | "partial" | "skipped";
       child_goal_status: "active" | "completed" | "archived";
+      child_topic_portrait_display_kind: "base" | "wardrobe";
+      child_topic_portrait_render_kind: "base" | "wardrobe";
       exercise_difficulty: "beginner" | "intermediate" | "advanced";
       exercise_measurement: "completion" | "repetitions" | "duration";
       family_member_role: "owner" | "caregiver";
@@ -1777,6 +2258,8 @@ export const Constants = {
       ],
       attempt_outcome: ["completed", "partial", "skipped"],
       child_goal_status: ["active", "completed", "archived"],
+      child_topic_portrait_display_kind: ["base", "wardrobe"],
+      child_topic_portrait_render_kind: ["base", "wardrobe"],
       exercise_difficulty: ["beginner", "intermediate", "advanced"],
       exercise_measurement: ["completion", "repetitions", "duration"],
       family_member_role: ["owner", "caregiver"],
