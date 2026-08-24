@@ -43,7 +43,35 @@ export type AiMediaOutput = {
   signedUrl: string;
 };
 
+export type SetChildProfileAvatarFromAiJobInput = {
+  childProfileId: string;
+  expectedUserId: string;
+  jobId: string;
+};
+
+export type SetChildProfileAvatarFromAiJobResult = {
+  avatarMediaAssetId: string;
+  changed: boolean;
+  childProfileId: string;
+  previousAvatarMediaAssetId: string | null;
+};
+
+export type LoadChildProfileAvatarInput = {
+  childProfileId: string;
+  expiresInSeconds?: number;
+};
+
+export type ChildProfileAvatar = {
+  childProfileId: string;
+  expiresInSeconds: number;
+  mediaAssetId: string;
+  mimeType: "image/png";
+  signedUrl: string;
+};
+
 export type AiMediaErrorCode =
+  | "avatar_unavailable"
+  | "avatar_update_failed"
   | "family_access_denied"
   | "input_too_large"
   | "invalid_child_profile_id"
@@ -65,6 +93,8 @@ export type AiMediaErrorCode =
   | "upload_failed";
 
 const ERROR_MESSAGES: Record<AiMediaErrorCode, string> = {
+  avatar_unavailable: "The child profile image is not available.",
+  avatar_update_failed: "The child profile image could not be updated.",
   family_access_denied: "The family cannot create this AI media job.",
   input_too_large: "The input image is too large.",
   invalid_child_profile_id: "The child profile for this image is invalid.",
@@ -140,6 +170,26 @@ function validateUuid(
 
 function isUuid(value: unknown): value is string {
   return typeof value === "string" && UUID_PATTERN.test(value);
+}
+
+function validateJobId(value: unknown): string {
+  if (
+    typeof value !== "string" ||
+    !UUID_PATTERN.test(value) ||
+    value.toLowerCase() === NIL_UUID
+  ) {
+    throw new AiMediaError("job_not_found");
+  }
+
+  return value.toLowerCase();
+}
+
+function validateSignedUrlExpiry(value: unknown): number {
+  if (!Number.isInteger(value) || Number(value) < 60 || Number(value) > 300) {
+    throw new AiMediaError("avatar_unavailable");
+  }
+
+  return Number(value);
 }
 
 function validateOperationKey(value: unknown): string {
@@ -486,6 +536,170 @@ export async function createAiMediaOutputUrl(
 
   return {
     expiresInSeconds,
+    mimeType: "image/png",
+    signedUrl: signed.signedUrl,
+  };
+}
+
+function mapAvatarUpdateError(error: { code?: string } | null): AiMediaError {
+  if (error?.code === "28000") {
+    return new AiMediaError("session_changed");
+  }
+
+  if (error?.code === "42501") {
+    return new AiMediaError("family_access_denied");
+  }
+
+  if (error?.code === "P0002") {
+    return new AiMediaError("avatar_unavailable");
+  }
+
+  return new AiMediaError("avatar_update_failed");
+}
+
+/**
+ * Promotes the ready private output of one completed portrait job to the
+ * child's durable profile image. The server validates all media lineage and
+ * retention changes; clients never submit a Storage path or signed URL.
+ */
+export async function setChildProfileAvatarFromAiJob(
+  client: BareTraenClient,
+  input: SetChildProfileAvatarFromAiJobInput,
+): Promise<SetChildProfileAvatarFromAiJobResult> {
+  const childProfileId = validateUuid(
+    input.childProfileId,
+    "invalid_child_profile_id",
+  );
+  const expectedUserId = validateUuid(
+    input.expectedUserId,
+    "invalid_expected_user_id",
+  );
+  const jobId = validateJobId(input.jobId);
+  let response: Awaited<
+    ReturnType<typeof client.rpc<"set_child_profile_avatar_from_ai_job">>
+  >;
+
+  try {
+    response = await client.rpc("set_child_profile_avatar_from_ai_job", {
+      p_child_profile_id: childProfileId,
+      p_expected_user_id: expectedUserId,
+      p_job_id: jobId,
+    });
+  } catch {
+    throw new AiMediaError("avatar_update_failed");
+  }
+
+  if (response.error) {
+    throw mapAvatarUpdateError(response.error);
+  }
+
+  if (!Array.isArray(response.data) || response.data.length !== 1) {
+    throw new AiMediaError("avatar_update_failed");
+  }
+
+  const row = response.data[0];
+  const avatarMediaAssetId = row?.avatar_media_asset_id;
+  const previousAvatarMediaAssetId = row?.previous_avatar_media_asset_id;
+
+  if (
+    !row ||
+    row.child_profile_id !== childProfileId ||
+    !isUuid(avatarMediaAssetId) ||
+    avatarMediaAssetId.toLowerCase() === NIL_UUID ||
+    typeof row.changed !== "boolean" ||
+    (previousAvatarMediaAssetId !== null &&
+      (!isUuid(previousAvatarMediaAssetId) ||
+        previousAvatarMediaAssetId.toLowerCase() === NIL_UUID)) ||
+    (!row.changed && previousAvatarMediaAssetId !== null) ||
+    (row.changed && previousAvatarMediaAssetId === avatarMediaAssetId)
+  ) {
+    throw new AiMediaError("avatar_update_failed");
+  }
+
+  return {
+    avatarMediaAssetId: avatarMediaAssetId.toLowerCase(),
+    changed: row.changed,
+    childProfileId,
+    previousAvatarMediaAssetId:
+      previousAvatarMediaAssetId?.toLowerCase() ?? null,
+  };
+}
+
+/**
+ * Loads the child's current profile-asset pointer under family RLS and mints a
+ * short-lived URL for the ready private PNG. A null result means the child is
+ * still using its preset avatar.
+ */
+export async function loadChildProfileAvatar(
+  client: BareTraenClient,
+  input: LoadChildProfileAvatarInput,
+): Promise<ChildProfileAvatar | null> {
+  const childProfileId = validateUuid(
+    input.childProfileId,
+    "invalid_child_profile_id",
+  );
+  const expiresInSeconds = validateSignedUrlExpiry(
+    input.expiresInSeconds ?? 300,
+  );
+  const { data: child, error: childError } = await client
+    .from("child_profiles")
+    .select("id, family_id, avatar_media_asset_id")
+    .eq("id", childProfileId)
+    .maybeSingle();
+
+  if (childError || !child || child.id !== childProfileId) {
+    throw new AiMediaError("invalid_child_profile_id");
+  }
+
+  const mediaAssetId = child.avatar_media_asset_id;
+
+  if (mediaAssetId === null) {
+    return null;
+  }
+
+  if (!isUuid(mediaAssetId) || mediaAssetId.toLowerCase() === NIL_UUID) {
+    throw new AiMediaError("avatar_unavailable");
+  }
+
+  const { data: asset, error: assetError } = await client
+    .from("media_assets")
+    .select(
+      "id, family_id, child_profile_id, subject_kind, asset_role, status, mime_type, storage_bucket, storage_object_path, deleted_at",
+    )
+    .eq("id", mediaAssetId)
+    .eq("family_id", child.family_id)
+    .eq("child_profile_id", childProfileId)
+    .maybeSingle();
+
+  if (
+    assetError ||
+    !asset ||
+    asset.id !== mediaAssetId ||
+    asset.family_id !== child.family_id ||
+    asset.child_profile_id !== childProfileId ||
+    asset.subject_kind !== "child" ||
+    asset.asset_role !== "generated_output" ||
+    asset.status !== "ready" ||
+    asset.mime_type !== "image/png" ||
+    asset.storage_bucket !== "ai-media-private" ||
+    asset.deleted_at !== null ||
+    typeof asset.storage_object_path !== "string"
+  ) {
+    throw new AiMediaError("avatar_unavailable");
+  }
+
+  const { data: signed, error: signedError } = await client.storage
+    .from(asset.storage_bucket)
+    .createSignedUrl(asset.storage_object_path, expiresInSeconds);
+
+  if (signedError || typeof signed?.signedUrl !== "string") {
+    throw new AiMediaError("avatar_unavailable");
+  }
+
+  return {
+    childProfileId,
+    expiresInSeconds,
+    mediaAssetId: mediaAssetId.toLowerCase(),
     mimeType: "image/png",
     signedUrl: signed.signedUrl,
   };

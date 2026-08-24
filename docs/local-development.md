@@ -111,7 +111,7 @@ The local CLI may show a warning that `[inbucket]` is deprecated when it starts 
 
 Starting local Supabase does **not** automatically switch either app away from its configured backend. The administration login has a localhost-only **Udviklingsmiljø** choice between Local Supabase and Hosted Development. The mobile app has no runtime selector: its backend normally comes from the two public values in its ignored `.env.local`. For a synthetic mobile Safari test against Local Supabase, an agent may start Metro with the temporary public `EXPO_PUBLIC_SUPABASE_URL_OVERRIDE` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY_OVERRIDE` variables. They take precedence only for that Metro process, so the ignored hosted values and the iPhone setup remain unchanged. Never use a secret or service-role key in either override.
 
-With Local Supabase selected, a synthetic adult can complete first-family onboarding and then create a child profile with only a nickname and one of four non-photo preset avatars. Only the family owner may create one, the flow records a versioned guardian acknowledgement privately, and each family is limited to 10 active children. The app saves a request identity before submission so an interrupted or uncertain request can be retried without creating a duplicate child. Keep local development, automated tests, previews, and task evidence synthetic. The product's private family cartoon contract can accept a selected-child photo, but that does not turn real family data into acceptable development fixtures.
+With Local Supabase selected, a synthetic adult can complete first-family onboarding and then create a child profile with only a nickname and one of four non-photo preset avatars. Only the family owner may create one, the flow records a versioned guardian acknowledgement privately, and each family is limited to 10 active children. The app saves a request identity before submission so an interrupted or uncertain request can be retried without creating a duplicate child. The chosen child is remembered and changed later under `Min profil`. Keep local development, automated tests, previews, and task evidence synthetic. The product flow can later save a reviewed generated portrait as the private profile image and store a separate optional child-and-topic reference photo, but that does not turn real family data into acceptable development fixtures.
 
 ### When local AI is needed
 
@@ -140,6 +140,10 @@ credentials, idempotency, one provider attempt, a timeout, and request/cost
 ceilings remain. Development and verification in this repository must still
 use synthetic people and media only, even though the private family product
 flow permits a family member to choose a real photo of the selected child.
+After review, the generated PNG can be promoted to that child's profile image
+without making the original input durable. Published topics also support one
+separate private reference photo per child and topic; it does not start AI work
+or enter the public wardrobe catalogue.
 
 A limited 90-day OpenRouter development key is installed in the ignored local
 Function environment and Hosted Development's Edge secrets. The key has a USD 5

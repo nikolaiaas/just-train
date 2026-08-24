@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  loadPrivateWebImage,
   loadPrivateWebPng,
   revokePrivateWebImage,
 } from "../src/ai/private-output.ts";
@@ -34,6 +35,39 @@ test("loads a private PNG with no-store and returns an owned blob URL", async ()
       "Cache-Control": "no-store",
     });
     assert.equal(calls[0].options.signal, controller.signal);
+  } finally {
+    globalThis.fetch = originalFetch;
+    URL.createObjectURL = originalCreateObjectUrl;
+  }
+});
+
+test("loads a private JPEG only when the caller explicitly allows it", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalCreateObjectUrl = URL.createObjectURL;
+
+  globalThis.fetch = async () =>
+    new Response(new Blob([new Uint8Array([1, 2, 3])]), {
+      headers: { "Content-Type": "image/jpeg" },
+      status: 200,
+    });
+  URL.createObjectURL = () => "blob:private-topic-photo";
+
+  try {
+    await assert.rejects(
+      loadPrivateWebPng(
+        "https://example.test/private-topic-photo",
+        new AbortController().signal,
+      ),
+      /invalid_private_output/,
+    );
+    assert.equal(
+      await loadPrivateWebImage(
+        "https://example.test/private-topic-photo",
+        new AbortController().signal,
+        ["image/jpeg", "image/png"],
+      ),
+      "blob:private-topic-photo",
+    );
   } finally {
     globalThis.fetch = originalFetch;
     URL.createObjectURL = originalCreateObjectUrl;

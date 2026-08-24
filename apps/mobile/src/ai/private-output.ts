@@ -1,8 +1,9 @@
 import { AI_MEDIA_MAX_INPUT_BYTES } from "@bare-traen/api-client";
 
-export async function loadPrivateWebPng(
+export async function loadPrivateWebImage(
   signedUrl: string,
   signal: AbortSignal,
+  allowedMimeTypes: readonly string[],
 ): Promise<string> {
   const response = await fetch(signedUrl, {
     cache: "no-store",
@@ -19,12 +20,19 @@ export async function loadPrivateWebPng(
   if (
     blob.size <= 0 ||
     blob.size > AI_MEDIA_MAX_INPUT_BYTES ||
-    blob.type !== "image/png"
+    !allowedMimeTypes.includes(blob.type)
   ) {
     throw new Error("invalid_private_output");
   }
 
   return URL.createObjectURL(blob);
+}
+
+export function loadPrivateWebPng(
+  signedUrl: string,
+  signal: AbortSignal,
+): Promise<string> {
+  return loadPrivateWebImage(signedUrl, signal, ["image/png"]);
 }
 
 export function revokePrivateWebImage(uri: string | null): void {

@@ -23,6 +23,10 @@ to OpenAI with provider fallback disabled. An authenticated family member can su
 photo for the currently selected child; the prompt and provider configuration
 are versioned in the database. The OpenRouter secret remains server-only and
 must never be included in the mobile bundle or a `NEXT_PUBLIC_*` variable.
+After review, the generated result can be saved as that child's private profile
+image. A separate family-private child-and-topic photo can capture, for example,
+football clothing for later wardrobe personalization without reusing the
+profile image or entering the public wardrobe catalogue.
 The administration uses the same server boundary for synthetic wardrobe art:
 topic text is turned into exactly 16 descriptions, GPT Image 2 draws one 4×4
 sheet, and trusted code crops it into 16 catalogue images. Those prompts also

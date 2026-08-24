@@ -40,10 +40,11 @@ The Dev Console at `127.0.0.1:11009` is a development tool only. Its React 19 in
 ## Security boundaries
 
 - Row-Level Security is default-deny. A parent may access only families where their authenticated profile has an active membership.
-- Child profiles do not log in directly in the initial slice. A parent owns the authenticated session and chooses a child context; the slice collects no child Auth account, email, password, age, or photo.
+- Child profiles do not log in directly. A parent owns the authenticated session and chooses a remembered child context; child switching and account actions are separated under `Min profil`. Child creation collects no Auth account, email, password, age, or photo.
 - First-family onboarding is bound to the authenticated parent's identity in a retry-safe database operation. Child creation is a separate owner-only operation bound to the expected authenticated adult, permits only four preset avatars, and enforces at most 10 active children per family.
 - Before child creation, the owner accepts a versioned guardian notice. The immutable acknowledgement is stored outside the exposed API schema with a default-deny boundary. The owner has accepted the remaining legal/privacy, withdrawal, deletion, and retention risk for the private family cartoon prototype; that work remains required before a broader pilot.
 - A caller- and backend-scoped child-creation request identity is persisted before submission and reused after interruption, while the database makes repeated submissions idempotent.
+- A reviewed generated portrait may be promoted through a guarded RPC to a private child-profile asset; the app stores only the asset pointer and mints short-lived signed URLs at read time. A separate private pointer holds at most one current reference photo per child and published topic. Neither pointer accepts a client-provided Storage path, and topic references never become public wardrobe assets.
 - Content administration is restricted by an explicit profile role and is separated from family data.
 - Browser and mobile clients receive only a Supabase URL and publishable key. Elevated database keys remain in trusted server or worker environments.
 - Native Auth sessions are encrypted with AES-256-GCM before their ciphertext reaches AsyncStorage, with the encryption key stored separately in the platform key store through SecureStore. Web PKCE state uses separate origin-scoped browser storage.

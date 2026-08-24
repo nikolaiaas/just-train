@@ -8,7 +8,9 @@ import {
   createAiMediaOutputUrl,
   detectAiMediaMimeType,
   getAiMediaJob,
+  loadChildProfileAvatar,
   prepareAiMediaJob,
+  setChildProfileAvatarFromAiJob,
   startAiMediaJob,
   uploadAiMediaInput,
 } from "../src/index.ts";
@@ -20,6 +22,7 @@ const clientRequestId = "d1000000-0000-4000-8000-000000000001";
 const jobId = "a3000000-0000-4000-8000-000000000001";
 const inputAssetId = "a4000000-0000-4000-8000-000000000001";
 const outputAssetId = "a4000000-0000-4000-8000-000000000002";
+const previousOutputAssetId = "a4000000-0000-4000-8000-000000000003";
 const inputObjectPath = `${familyId}/${expectedUserId}/${jobId}/input.png`;
 const PNG_BYTES = new Uint8Array([
   0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00,
@@ -366,4 +369,337 @@ test("creates a short-lived URL for a ready private PNG without using a public U
       path: `${familyId}/output/${outputAssetId}.png`,
     },
   ]);
+});
+
+test("promotes only stable identities and validates the server-owned avatar result", async () => {
+  const calls = [];
+  const client = {
+    async rpc(name, input) {
+      calls.push({ name, input });
+      return {
+        data: [
+          {
+            avatar_media_asset_id: outputAssetId,
+            changed: true,
+            child_profile_id: childProfileId,
+            previous_avatar_media_asset_id: previousOutputAssetId,
+          },
+        ],
+        error: null,
+      };
+    },
+  };
+
+  assert.deepEqual(
+    await setChildProfileAvatarFromAiJob(client, {
+      childProfileId: childProfileId.toUpperCase(),
+      expectedUserId: expectedUserId.toUpperCase(),
+      jobId: jobId.toUpperCase(),
+    }),
+    {
+      avatarMediaAssetId: outputAssetId,
+      changed: true,
+      childProfileId,
+      previousAvatarMediaAssetId: previousOutputAssetId,
+    },
+  );
+  assert.deepEqual(calls, [
+    {
+      name: "set_child_profile_avatar_from_ai_job",
+      input: {
+        p_child_profile_id: childProfileId,
+        p_expected_user_id: expectedUserId,
+        p_job_id: jobId,
+      },
+    },
+  ]);
+  assert.equal("storagePath" in calls[0].input, false);
+  assert.equal("signedUrl" in calls[0].input, false);
+  assert.equal("operationKey" in calls[0].input, false);
+});
+
+test("accepts an idempotent avatar promotion and rejects malformed identities before the RPC", async () => {
+  let calls = 0;
+  const client = {
+    async rpc() {
+      calls += 1;
+      return {
+        data: [
+          {
+            avatar_media_asset_id: outputAssetId,
+            changed: false,
+            child_profile_id: childProfileId,
+            previous_avatar_media_asset_id: null,
+          },
+        ],
+        error: null,
+      };
+    },
+  };
+
+  assert.deepEqual(
+    await setChildProfileAvatarFromAiJob(client, {
+      childProfileId,
+      expectedUserId,
+      jobId,
+    }),
+    {
+      avatarMediaAssetId: outputAssetId,
+      changed: false,
+      childProfileId,
+      previousAvatarMediaAssetId: null,
+    },
+  );
+
+  for (const [patch, code] of [
+    [{ childProfileId: "not-a-uuid" }, "invalid_child_profile_id"],
+    [{ expectedUserId: "not-a-uuid" }, "invalid_expected_user_id"],
+    [{ jobId: "not-a-uuid" }, "job_not_found"],
+    [{ jobId: "00000000-0000-0000-0000-000000000000" }, "job_not_found"],
+  ]) {
+    await assert.rejects(
+      setChildProfileAvatarFromAiJob(client, {
+        childProfileId,
+        expectedUserId,
+        jobId,
+        ...patch,
+      }),
+      (error) => assertAiError(error, code),
+    );
+  }
+
+  assert.equal(calls, 1);
+});
+
+test("maps avatar promotion errors without exposing database details", async () => {
+  for (const [databaseCode, expectedCode] of [
+    ["28000", "session_changed"],
+    ["42501", "family_access_denied"],
+    ["P0002", "avatar_unavailable"],
+    ["XX000", "avatar_update_failed"],
+  ]) {
+    await assert.rejects(
+      setChildProfileAvatarFromAiJob(
+        {
+          async rpc() {
+            return {
+              data: null,
+              error: {
+                code: databaseCode,
+                message: "Synthetic private database detail",
+              },
+            };
+          },
+        },
+        { childProfileId, expectedUserId, jobId },
+      ),
+      (error) => {
+        assertAiError(error, expectedCode);
+        assert.doesNotMatch(error.message, /database detail/i);
+        return true;
+      },
+    );
+  }
+});
+
+test("fails closed on a thrown RPC or malformed avatar promotion result", async () => {
+  for (const rpc of [
+    async () => {
+      throw new Error("Synthetic transport detail");
+    },
+    async () => ({ data: [], error: null }),
+    async () => ({
+      data: [
+        {
+          avatar_media_asset_id: outputAssetId,
+          changed: true,
+          child_profile_id: childProfileId,
+          previous_avatar_media_asset_id: outputAssetId,
+        },
+      ],
+      error: null,
+    }),
+  ]) {
+    await assert.rejects(
+      setChildProfileAvatarFromAiJob(
+        { rpc },
+        { childProfileId, expectedUserId, jobId },
+      ),
+      (error) => assertAiError(error, "avatar_update_failed"),
+    );
+  }
+});
+
+test("returns null for a child that still uses its preset avatar", async () => {
+  let storageCalls = 0;
+  const client = {
+    from(table) {
+      assert.equal(table, "child_profiles");
+      return queryReturning({
+        data: {
+          avatar_media_asset_id: null,
+          family_id: familyId,
+          id: childProfileId,
+        },
+        error: null,
+      });
+    },
+    storage: {
+      from() {
+        storageCalls += 1;
+        throw new Error("a preset avatar must not mint a Storage URL");
+      },
+    },
+  };
+
+  assert.equal(await loadChildProfileAvatar(client, { childProfileId }), null);
+  assert.equal(storageCalls, 0);
+});
+
+test("rejects an unsafe avatar URL lifetime before reading private metadata", async () => {
+  let tableCalls = 0;
+  const client = {
+    from() {
+      tableCalls += 1;
+      throw new Error("invalid expiry must not query private rows");
+    },
+  };
+
+  for (const expiresInSeconds of [59, 301, 120.5, Number.NaN]) {
+    await assert.rejects(
+      loadChildProfileAvatar(client, { childProfileId, expiresInSeconds }),
+      (error) => assertAiError(error, "avatar_unavailable"),
+    );
+  }
+
+  assert.equal(tableCalls, 0);
+});
+
+test("loads the exact current avatar asset and mints only a private signed URL", async () => {
+  const tableCalls = [];
+  const signCalls = [];
+  const objectPath = `${familyId}/${expectedUserId}/${jobId}/output.png`;
+  const client = {
+    from(table) {
+      tableCalls.push(table);
+
+      if (table === "child_profiles") {
+        return queryReturning({
+          data: {
+            avatar_media_asset_id: outputAssetId,
+            family_id: familyId,
+            id: childProfileId,
+          },
+          error: null,
+        });
+      }
+
+      assert.equal(table, "media_assets");
+      return queryReturning({
+        data: {
+          asset_role: "generated_output",
+          child_profile_id: childProfileId,
+          deleted_at: null,
+          family_id: familyId,
+          id: outputAssetId,
+          mime_type: "image/png",
+          status: "ready",
+          storage_bucket: "ai-media-private",
+          storage_object_path: objectPath,
+          subject_kind: "child",
+        },
+        error: null,
+      });
+    },
+    storage: {
+      from(bucket) {
+        assert.equal(bucket, "ai-media-private");
+        return {
+          async createSignedUrl(path, expiresInSeconds) {
+            signCalls.push({ expiresInSeconds, path });
+            return {
+              data: { signedUrl: "https://example.invalid/signed-avatar" },
+              error: null,
+            };
+          },
+          getPublicUrl() {
+            throw new Error("a child avatar must never use a public URL");
+          },
+        };
+      },
+    },
+  };
+
+  assert.deepEqual(
+    await loadChildProfileAvatar(client, {
+      childProfileId,
+      expiresInSeconds: 180,
+    }),
+    {
+      childProfileId,
+      expiresInSeconds: 180,
+      mediaAssetId: outputAssetId,
+      mimeType: "image/png",
+      signedUrl: "https://example.invalid/signed-avatar",
+    },
+  );
+  assert.deepEqual(tableCalls, ["child_profiles", "media_assets"]);
+  assert.deepEqual(signCalls, [{ expiresInSeconds: 180, path: objectPath }]);
+});
+
+test("fails closed when current avatar metadata is not the exact ready child PNG", async () => {
+  for (const assetPatch of [
+    { child_profile_id: "30000000-0000-4000-8000-000000000002" },
+    { family_id: "20000000-0000-4000-8000-000000000002" },
+    { subject_kind: "adult_test" },
+    { asset_role: "reference_input" },
+    { status: "deleted", deleted_at: "2026-08-24T08:00:00.000Z" },
+    { mime_type: "image/jpeg" },
+    { storage_bucket: "wardrobe-images" },
+  ]) {
+    let signCalls = 0;
+    const client = {
+      from(table) {
+        if (table === "child_profiles") {
+          return queryReturning({
+            data: {
+              avatar_media_asset_id: outputAssetId,
+              family_id: familyId,
+              id: childProfileId,
+            },
+            error: null,
+          });
+        }
+
+        return queryReturning({
+          data: {
+            asset_role: "generated_output",
+            child_profile_id: childProfileId,
+            deleted_at: null,
+            family_id: familyId,
+            id: outputAssetId,
+            mime_type: "image/png",
+            status: "ready",
+            storage_bucket: "ai-media-private",
+            storage_object_path: `${familyId}/output.png`,
+            subject_kind: "child",
+            ...assetPatch,
+          },
+          error: null,
+        });
+      },
+      storage: {
+        from() {
+          signCalls += 1;
+          throw new Error("invalid metadata must not reach Storage");
+        },
+      },
+    };
+
+    await assert.rejects(
+      loadChildProfileAvatar(client, { childProfileId }),
+      (error) => assertAiError(error, "avatar_unavailable"),
+    );
+    assert.equal(signCalls, 0);
+  }
 });

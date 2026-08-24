@@ -63,7 +63,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         "expo-image-picker",
         {
           photosPermission:
-            "Vælg et billede af dit barn for at lave et privat tegneserieportræt i Bare Træn.",
+            "Vælg private profil- og emnebilleder til dit barn i Bare Træn.",
           cameraPermission: false,
           microphonePermission: false,
         },

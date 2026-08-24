@@ -1,11 +1,14 @@
 import { colors, radii, spacing, typography } from "@bare-traen/design";
 import { Image } from "expo-image";
 import { randomUUID } from "expo-crypto";
-import { useRouter } from "expo-router";
+import { Stack, useRouter } from "expo-router";
+import { usePreventRemove } from "expo-router/react-navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  AccessibilityInfo,
   AppState,
+  Linking,
   Platform,
   StyleSheet,
   Text,
@@ -18,6 +21,7 @@ import {
   getAiPollDelay,
   shouldReconcileAiJob,
 } from "@/ai/core";
+import { shouldProtectAiCartoonNavigation } from "@/ai/cartoon-resume";
 import {
   AiImageInputError,
   disposePreparedAiImage,
@@ -53,9 +57,13 @@ export default function AiCartoonScreen() {
 function AiCartoonSessionScreen() {
   const router = useRouter();
   const {
+    clearSelectedChildAiCartoonResume,
     getAiCartoonJob,
     getAiCartoonOutput,
+    loadSelectedChildAiCartoonResume,
     reconcileAiCartoonJob,
+    saveAiCartoonAsProfilePicture,
+    saveSelectedChildAiCartoonResume,
     selectedChild,
     submitAiCartoon,
   } = useAuth();
@@ -68,6 +76,13 @@ function AiCartoonSessionScreen() {
   const [webOutput, setWebOutput] = useState<PrivateWebOutput | null>(null);
   const [outputLoadFailed, setOutputLoadFailed] = useState(false);
   const [refreshingOutput, setRefreshingOutput] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [profileSaved, setProfileSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [permissionDenied, setPermissionDenied] = useState(false);
+  const [restoringResume, setRestoringResume] = useState(
+    () => selectedChild !== null,
+  );
   const requestId = useRef<string | null>(null);
   const pollCount = useRef(0);
   const pollInFlight = useRef(false);
@@ -77,6 +92,7 @@ function AiCartoonSessionScreen() {
   const currentJobId = useRef<string | null>(null);
   const outputRefreshInFlight = useRef<string | null>(null);
   const outputLinkRevision = useRef(0);
+  const resumeRestoreAttempted = useRef(false);
 
   useEffect(() => {
     mounted.current = true;
@@ -93,6 +109,48 @@ function AiCartoonSessionScreen() {
     currentJobId.current = nextJobId;
     setJobId(nextJobId);
   }, []);
+
+  useEffect(() => {
+    if (resumeRestoreAttempted.current) {
+      return;
+    }
+
+    if (!selectedChild) {
+      return;
+    }
+
+    resumeRestoreAttempted.current = true;
+    let active = true;
+
+    void loadSelectedChildAiCartoonResume()
+      .then((resume) => {
+        if (!active || !mounted.current || !resume) {
+          return;
+        }
+
+        requestId.current = resume.requestId;
+        pollCount.current = 0;
+        setError(null);
+        updateJobId(resume.jobId);
+        setPhase("processing");
+      })
+      .catch(() => {
+        if (active && mounted.current) {
+          setError(
+            "Et tidligere profilbillede kunne ikke hentes. Du kan vælge et nyt billede.",
+          );
+        }
+      })
+      .finally(() => {
+        if (active && mounted.current) {
+          setRestoringResume(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [loadSelectedChildAiCartoonResume, selectedChild, updateJobId]);
 
   const clearOutputLink = useCallback(() => {
     setOutputLink(null);
@@ -226,6 +284,7 @@ function AiCartoonSessionScreen() {
       }
 
       if (job.status === "succeeded") {
+        setError(null);
         setPhase("succeeded");
 
         try {
@@ -245,6 +304,7 @@ function AiCartoonSessionScreen() {
       }
 
       if (job.status === "failed" || job.status === "cancelled") {
+        void clearSelectedChildAiCartoonResume().catch(() => undefined);
         setError(getAiJobErrorMessage(job.publicErrorCode));
         updateJobId(null);
         requestId.current = randomUUID();
@@ -265,6 +325,7 @@ function AiCartoonSessionScreen() {
       pollInFlight.current = false;
     }
   }, [
+    clearSelectedChildAiCartoonResume,
     getAiCartoonJob,
     getAiCartoonOutput,
     jobId,
@@ -304,8 +365,31 @@ function AiCartoonSessionScreen() {
     };
   }, [jobId, phase, refreshJob]);
 
-  const busy = picking || phase === "submitting" || phase === "processing";
+  useEffect(() => {
+    if (Platform.OS === "ios" && phase === "succeeded") {
+      AccessibilityInfo.announceForAccessibility(
+        "Dit nye profilbillede er klar.",
+      );
+    }
+  }, [phase]);
+
+  useEffect(() => {
+    if (Platform.OS === "ios" && profileSaved) {
+      AccessibilityInfo.announceForAccessibility(
+        "Profilbilledet er gemt på din profil.",
+      );
+    }
+  }, [profileSaved]);
+
+  const busy = shouldProtectAiCartoonNavigation({
+    phase,
+    picking,
+    restoring: restoringResume,
+    savingProfile,
+  });
   const controlsLocked = busy || phase === "succeeded";
+
+  usePreventRemove(busy, () => undefined);
 
   function replaceImage(nextImage: PreparedAiImage | null) {
     const previousImage = ownedImage.current;
@@ -318,13 +402,28 @@ function AiCartoonSessionScreen() {
     setImage(nextImage);
   }
 
-  function resetForNewTest() {
+  async function resetForNewTest() {
+    try {
+      await clearSelectedChildAiCartoonResume();
+    } catch {
+      if (mounted.current) {
+        setSaveError(
+          "Det gamle billedjob kunne ikke afsluttes sikkert. Prøv igen.",
+        );
+      }
+      return;
+    }
+
     replaceImage(null);
     setError(null);
     updateJobId(null);
     clearOutputLink();
     setOutputLoadFailed(false);
     setRefreshingOutput(false);
+    setSavingProfile(false);
+    setProfileSaved(false);
+    setSaveError(null);
+    setPermissionDenied(false);
     setPhase("idle");
     requestId.current = null;
     pollCount.current = 0;
@@ -335,6 +434,7 @@ function AiCartoonSessionScreen() {
     imagePickRequest.current = pickRequest;
     setPicking(true);
     setError(null);
+    setPermissionDenied(false);
 
     try {
       const prepared = await pickPreparedAiImage();
@@ -345,10 +445,20 @@ function AiCartoonSessionScreen() {
           return;
         }
 
+        try {
+          await clearSelectedChildAiCartoonResume();
+        } catch {
+          disposePreparedAiImage(prepared);
+          setError("Det tidligere billedjob kunne ikke afsluttes. Prøv igen.");
+          return;
+        }
+
         replaceImage(prepared);
         updateJobId(null);
         clearOutputLink();
         setPhase("idle");
+        setProfileSaved(false);
+        setSaveError(null);
         requestId.current = randomUUID();
         pollCount.current = 0;
       }
@@ -358,8 +468,10 @@ function AiCartoonSessionScreen() {
       }
 
       if (caught instanceof AiImageInputError && caught.code === "permission") {
+        setPermissionDenied(Platform.OS !== "web");
         setError("Giv adgang til billedbiblioteket for at vælge et billede.");
       } else {
+        setPermissionDenied(false);
         setError("Billedet kunne ikke klargøres. Vælg et andet billede.");
       }
     } finally {
@@ -374,6 +486,8 @@ function AiCartoonSessionScreen() {
       return;
     }
 
+    const activeRequestId = requestId.current;
+
     setError(null);
     clearOutputLink();
     setOutputLoadFailed(false);
@@ -383,7 +497,7 @@ function AiCartoonSessionScreen() {
       const prepared = await submitAiCartoon({
         bytes: image.bytes,
         childProfileId: selectedChild.id,
-        clientRequestId: requestId.current,
+        clientRequestId: activeRequestId,
         mimeType: image.mimeType,
       });
 
@@ -393,6 +507,19 @@ function AiCartoonSessionScreen() {
 
       updateJobId(prepared.jobId);
       setPhase("processing");
+
+      try {
+        await saveSelectedChildAiCartoonResume({
+          jobId: prepared.jobId,
+          requestId: activeRequestId,
+        });
+      } catch {
+        if (mounted.current && currentJobId.current === prepared.jobId) {
+          setError(
+            "Billedet bliver lavet, men kan ikke genoptages endnu. Bliv på siden, til det er færdigt.",
+          );
+        }
+      }
     } catch (caught) {
       if (mounted.current) {
         setError(getAiMediaErrorMessage(caught));
@@ -401,133 +528,249 @@ function AiCartoonSessionScreen() {
     }
   }
 
+  async function saveProfilePicture() {
+    if (!jobId || profileSaved || savingProfile) {
+      return;
+    }
+
+    setSaveError(null);
+    setSavingProfile(true);
+
+    try {
+      await saveAiCartoonAsProfilePicture(jobId);
+      await clearSelectedChildAiCartoonResume().catch(() => undefined);
+
+      if (mounted.current && currentJobId.current === jobId) {
+        setProfileSaved(true);
+      }
+    } catch {
+      if (mounted.current && currentJobId.current === jobId) {
+        setSaveError(
+          "Profilbilledet kunne ikke gemmes. Prøv igen – vi bruger det samme billede.",
+        );
+      }
+    } finally {
+      if (mounted.current && currentJobId.current === jobId) {
+        setSavingProfile(false);
+      }
+    }
+  }
+
+  async function openAppSettings() {
+    try {
+      await Linking.openSettings();
+    } catch {
+      if (mounted.current) {
+        setError(
+          "Indstillinger kunne ikke åbnes. Åbn dem manuelt og giv adgang til billeder.",
+        );
+      }
+    }
+  }
+
   if (!selectedChild) {
     return (
-      <Screen contentStyle={styles.screen}>
-        <BackButton onPress={() => router.back()} />
-        <SurfaceCard style={styles.card}>
-          <Kicker>Vælg et barn først</Kicker>
-          <Title>Portrættet skal knyttes til en børneprofil</Title>
-          <Body>
-            Gå tilbage, opret eller vælg et barn, og åbn derefter
-            tegneserieportrættet igen.
-          </Body>
-        </SurfaceCard>
-      </Screen>
+      <>
+        <Stack.Screen options={{ gestureEnabled: !busy }} />
+        <Screen contentStyle={styles.screen}>
+          <BackButton onPress={() => router.back()} />
+          <SurfaceCard style={styles.card}>
+            <Kicker>Vælg en profil først</Kicker>
+            <Title>Profilbilledet skal høre til et barn</Title>
+            <Body>Gå tilbage, vælg et barn, og åbn profilbilledet igen.</Body>
+          </SurfaceCard>
+        </Screen>
+      </>
     );
   }
 
   return (
-    <Screen contentStyle={styles.screen}>
-      <BackButton disabled={busy} onPress={() => router.back()} />
-      <View style={styles.heading}>
-        <Kicker>Privat familieprototype</Kicker>
-        <Title>Lav {selectedChild.displayName} som tegneseriefigur</Title>
-        <Body>
-          Vælg et billede af {selectedChild.displayName}. Billedet og resultatet
-          gemmes privat for jeres familie.
-        </Body>
-      </View>
-
-      <SurfaceCard style={styles.card}>
-        <Text style={styles.stepTitle}>
-          Vælg ét billede af {selectedChild.displayName}
-        </Text>
-        {image && (
-          <Image
-            accessibilityLabel={`Valgt billede af ${selectedChild.displayName}`}
-            contentFit="cover"
-            source={{ uri: image.previewUri }}
-            style={styles.image}
-          />
-        )}
-        <ActionButton
-          disabled={controlsLocked}
-          variant="secondary"
-          onPress={() => void chooseImage()}
-        >
-          {picking
-            ? "Klargør billede…"
-            : image
-              ? "Vælg et andet"
-              : "Vælg fra bibliotek"}
-        </ActionButton>
-
-        {error && (
-          <View accessibilityRole="alert" style={styles.errorBox}>
-            <Text style={styles.errorText}>{error}</Text>
-          </View>
-        )}
-
-        <ActionButton
-          disabled={controlsLocked || !image}
-          onPress={() => void submit()}
-        >
-          {phase === "submitting"
-            ? "Uploader sikkert…"
-            : phase === "processing"
-              ? "Laver tegneserieportræt…"
-              : "Lav tegneserieportræt"}
-        </ActionButton>
-
-        {phase === "processing" && (
-          <View style={styles.processing}>
-            <ActivityIndicator color={colors.primaryDeep} />
-            <Body>
-              OpenAI GPT Image 2 laver billedet via OpenRouter. Det kan tage et
-              par minutter; vi starter ikke en ny betalt generering automatisk.
-            </Body>
-            <ActionButton variant="secondary" onPress={() => void refreshJob()}>
-              Tjek igen
-            </ActionButton>
-          </View>
-        )}
-      </SurfaceCard>
-
-      {phase === "succeeded" && (
-        <SurfaceCard style={styles.card}>
-          <Kicker>Privat resultat</Kicker>
-          {outputImageSource ? (
-            <Image
-              accessibilityLabel="Genereret 3D-tegneserieportræt"
-              cachePolicy="none"
-              contentFit="cover"
-              onError={() => {
-                clearOutputLink();
-                setOutputLoadFailed(true);
-              }}
-              source={outputImageSource}
-              style={styles.image}
-            />
-          ) : outputLoadFailed ? (
-            <View accessibilityRole="alert" style={styles.errorBox}>
-              <Text style={styles.errorText}>
-                Resultatlinket kunne ikke åbnes. Hent et nyt privat link til det
-                samme resultat.
-              </Text>
-            </View>
-          ) : (
-            <ActivityIndicator color={colors.primaryDeep} />
-          )}
+    <>
+      <Stack.Screen options={{ gestureEnabled: !busy }} />
+      <Screen contentStyle={styles.screen}>
+        <BackButton
+          disabled={busy}
+          label="Min profil"
+          onPress={() => router.back()}
+        />
+        <View style={styles.heading}>
+          <Kicker>Profilbillede</Kicker>
+          <Title>Lav et profilbillede til {selectedChild.displayName}</Title>
           <Body>
-            Resultatet er knyttet privat til {selectedChild.displayName}, men
-            det ændrer ikke automatisk barnets avatar eller profilbillede.
+            Vælg et tydeligt billede af ansigtet. Få en voksen til at hjælpe.
+            Kun din familie kan se billederne.
           </Body>
-          {outputLoadFailed && (
-            <ActionButton
-              disabled={refreshingOutput}
-              variant="secondary"
-              onPress={() => void refreshOutputUrl()}
-            >
-              {refreshingOutput ? "Henter link…" : "Hent resultat igen"}
-            </ActionButton>
+        </View>
+
+        {restoringResume && (
+          <SurfaceCard style={styles.card}>
+            <ActivityIndicator color={colors.primaryDeep} />
+            <Body>Finder dit seneste profilbillede…</Body>
+          </SurfaceCard>
+        )}
+
+        {!restoringResume && phase === "processing" && !image && (
+          <SurfaceCard style={styles.card}>
+            <Kicker>Vi tegner videre</Kicker>
+            <Title>Dit profilbillede er stadig på vej</Title>
+            <View style={styles.processing}>
+              <ActivityIndicator color={colors.primaryDeep} />
+              <Body>
+                Det kan tage et par minutter. Hvis appen lukker, finder vi
+                billedet igen her.
+              </Body>
+              <ActionButton
+                variant="secondary"
+                onPress={() => void refreshJob()}
+              >
+                Tjek igen
+              </ActionButton>
+            </View>
+          </SurfaceCard>
+        )}
+
+        {!restoringResume &&
+          !(phase === "processing" && !image) &&
+          (phase !== "succeeded" || image) && (
+            <SurfaceCard style={styles.card}>
+              <Text style={styles.stepTitle}>1. Vælg et billede</Text>
+              {image && (
+                <Image
+                  accessibilityLabel={`Valgt billede af ${selectedChild.displayName}`}
+                  contentFit="cover"
+                  source={{ uri: image.previewUri }}
+                  style={styles.image}
+                />
+              )}
+              <ActionButton
+                disabled={controlsLocked}
+                variant="secondary"
+                onPress={() => void chooseImage()}
+              >
+                {picking
+                  ? "Klargør billede…"
+                  : image
+                    ? "Vælg et andet"
+                    : "Vælg fra bibliotek"}
+              </ActionButton>
+              <Body>
+                Originalen bruges kun til at lave tegneseriebilledet og bliver
+                ikke dit profilbillede.
+              </Body>
+
+              {error && (
+                <View accessibilityRole="alert" style={styles.errorBox}>
+                  <Text style={styles.errorText}>{error}</Text>
+                </View>
+              )}
+              {permissionDenied && Platform.OS !== "web" && (
+                <ActionButton
+                  variant="secondary"
+                  onPress={() => void openAppSettings()}
+                >
+                  Åbn Indstillinger
+                </ActionButton>
+              )}
+
+              <ActionButton
+                disabled={controlsLocked || !image}
+                onPress={() => void submit()}
+              >
+                {phase === "submitting"
+                  ? "Uploader sikkert…"
+                  : phase === "processing"
+                    ? "Tegner profilbilledet…"
+                    : "Lav mit profilbillede"}
+              </ActionButton>
+
+              {phase === "processing" && (
+                <View style={styles.processing}>
+                  <ActivityIndicator color={colors.primaryDeep} />
+                  <Body>
+                    Vi tegner dit billede. Det kan tage et par minutter. Hvis
+                    appen lukker, finder vi billedet igen her.
+                  </Body>
+                  <ActionButton
+                    variant="secondary"
+                    onPress={() => void refreshJob()}
+                  >
+                    Tjek igen
+                  </ActionButton>
+                </View>
+              )}
+            </SurfaceCard>
           )}
-          <ActionButton variant="secondary" onPress={resetForNewTest}>
-            Lav et nyt portræt
-          </ActionButton>
-        </SurfaceCard>
-      )}
-    </Screen>
+
+        {phase === "succeeded" && (
+          <SurfaceCard style={styles.card}>
+            <Kicker>2. Se dit nye profilbillede</Kicker>
+            {outputImageSource ? (
+              <Image
+                accessibilityLabel="Genereret 3D-tegneserieportræt"
+                cachePolicy="none"
+                contentFit="cover"
+                onError={() => {
+                  clearOutputLink();
+                  setOutputLoadFailed(true);
+                }}
+                source={outputImageSource}
+                style={styles.image}
+              />
+            ) : outputLoadFailed ? (
+              <View accessibilityRole="alert" style={styles.errorBox}>
+                <Text style={styles.errorText}>
+                  Resultatlinket kunne ikke åbnes. Hent et nyt privat link til
+                  det samme resultat.
+                </Text>
+              </View>
+            ) : (
+              <ActivityIndicator color={colors.primaryDeep} />
+            )}
+            <View accessibilityLiveRegion="polite">
+              <Body>
+                {profileSaved
+                  ? `Profilbilledet er gemt på ${selectedChild.displayName}s profil.`
+                  : "Dit nye profilbillede er klar. Gem det, når du er glad for billedet."}
+              </Body>
+            </View>
+            {saveError && (
+              <View accessibilityRole="alert" style={styles.errorBox}>
+                <Text style={styles.errorText}>{saveError}</Text>
+              </View>
+            )}
+            {outputLoadFailed && (
+              <ActionButton
+                disabled={refreshingOutput}
+                variant="secondary"
+                onPress={() => void refreshOutputUrl()}
+              >
+                {refreshingOutput ? "Henter link…" : "Hent resultat igen"}
+              </ActionButton>
+            )}
+            {outputImageSource && !profileSaved && (
+              <ActionButton
+                disabled={savingProfile}
+                onPress={() => void saveProfilePicture()}
+              >
+                {savingProfile ? "Gemmer…" : "Brug som profilbillede"}
+              </ActionButton>
+            )}
+            {profileSaved && (
+              <ActionButton onPress={() => router.replace("/profile")}>
+                Gå til Min profil
+              </ActionButton>
+            )}
+            <ActionButton
+              disabled={savingProfile}
+              variant="secondary"
+              onPress={() => void resetForNewTest()}
+            >
+              Lav et andet billede
+            </ActionButton>
+          </SurfaceCard>
+        )}
+      </Screen>
+    </>
   );
 }
 

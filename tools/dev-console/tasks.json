@@ -1,6 +1,6 @@
 {
   "version": 3,
-  "updatedAt": "2026-08-23T17:37:03.000Z",
+  "updatedAt": "2026-08-24T06:59:36.000Z",
   "items": [
     {
       "id": "hosted-preview-safety",
@@ -100,6 +100,17 @@
       "priority": 5,
       "createdAt": "2026-08-21T10:30:00.000Z",
       "updatedAt": "2026-08-21T15:48:27.000Z"
+    },
+    {
+      "id": "child-topic-wardrobe-rendering",
+      "title": "Vis garderoben på barnets emnebillede",
+      "details": "Brug barnets private emnebillede som reference til en familieprivat visning af de valgte garderobeting, så hoved, krop, hånd, fødder og tilbehør følger de samme eksklusive slots som spilgarderoben.",
+      "implementationNotes": "Det private child+topic-referencefundament er færdigt. Denne opgave dækker den senere billedgenerering eller komposition, sikker promptversionering, review, fejltilstande og sammenhæng med den atomiske equip-state; den må ikke genbruge det offentlige 4×4-katalogjob eller profilbilledets pointer.",
+      "evidence": [],
+      "status": "todo",
+      "priority": 6,
+      "createdAt": "2026-08-24T06:59:36.000Z",
+      "updatedAt": "2026-08-24T06:59:36.000Z"
     },
     {
       "id": "admin-wardrobe-authoring",
@@ -480,6 +491,39 @@
       "priority": 18,
       "createdAt": "2026-08-23T11:12:53.000Z",
       "updatedAt": "2026-08-23T11:38:06.000Z"
+    },
+    {
+      "id": "mobile-child-profile-navigation",
+      "title": "Gør barnets startside enkel",
+      "details": "Husk det valgte barn, fjern voksen- og børnevælgeren fra barnets startside, og saml skift barn, opret barn og log ud under Min profil.",
+      "implementationNotes": "Det aktive barn huskes pr. voksen, familie, appvariant og backend. Ét barn åbnes automatisk, flere børn uden et gyldigt valg får én tydelig vælgerskærm, og barnets startside viser ikke længere voksenhandlinger. Min profil indeholder den adskilte voksensektion, og skift barn erstatter ruten sikkert uden at blande profiler.",
+      "evidence": [],
+      "status": "done",
+      "priority": 19,
+      "createdAt": "2026-08-24T06:59:36.000Z",
+      "updatedAt": "2026-08-24T06:59:36.000Z"
+    },
+    {
+      "id": "child-profile-cartoon-avatar",
+      "title": "Gem barnets tegneserieprofilbillede",
+      "details": "Lad en voksen vælge et ansigtsfoto, gennemse den genererede tegneserieversion og gemme den som barnets private profilbillede med preset-avatar som fallback.",
+      "implementationNotes": "Et færdigt GPT Image 2-portræt kan nu vælges eksplicit som profilbillede. Databasehandlingen validerer familie, barn, job, output og privat Storage, mens appen henter korte signerede links og viser billedet på forsiden, profilen og i børnevælgeren. Et aktivt eller færdigt job genoptages efter luk og genåbn uden at gemme billedbytes eller links lokalt. Originalfotoets korte retention bevares, og et erstattet profilbillede får en slettefrist. Fysisk Storage-oprydning forbliver den separate retention-worker-opgave.",
+      "evidence": [],
+      "status": "done",
+      "priority": 20,
+      "createdAt": "2026-08-24T06:59:36.000Z",
+      "updatedAt": "2026-08-24T06:59:36.000Z"
+    },
+    {
+      "id": "child-topic-reference-photo",
+      "title": "Tilføj privat emnebillede",
+      "details": "Vis rigtige publicerede emner og lad familien gemme ét frivilligt privat billede pr. barn og emne, så senere garderobepersonalisering kan bruge det uden at blande det sammen med profilbilledet.",
+      "implementationNotes": "Mobilen viser nu den publicerede emneliste og et børnevenligt emneflow med vælg, gennemse, gem, skift, fjern og spring over. Billedet gemmes i den private familie-bucket med én aktuel pointer pr. barn og emne; udskiftning er atomisk, tidligere billeder mister læseadgang og får slettefrist, og profilbilledet ændres aldrig. Et defekt valgfrit foto blokerer ikke emnelisten, og reservationer er begrænset pr. voksen og familie, indtil den separate retention-worker rydder bytes fysisk. Dette er referencefundamentet; den senere AI-garderobe-overlay er fortsat en separat opgave.",
+      "evidence": [],
+      "status": "done",
+      "priority": 21,
+      "createdAt": "2026-08-24T06:59:36.000Z",
+      "updatedAt": "2026-08-24T06:59:36.000Z"
     }
   ]
 }
