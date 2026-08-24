@@ -42,10 +42,12 @@ The three local fixture users are passwordless:
 The local schema includes a reusable AI-operation foundation and the
 `process-ai-job` Edge Function. The first operation is
 `portrait.cartoon_3d`. Immutable version 1 preserves the earlier unsuccessful
-Microsoft `microsoft/mai-image-2.5` Azure route as history. Active version 2
-sends one validated reference image to OpenAI `openai/gpt-image-2` through an
-OpenAI-only, no-fallback OpenRouter route and stores the generated PNG in the
-private `ai-media-private` bucket.
+Microsoft `microsoft/mai-image-2.5` Azure route as history, and version 2 keeps
+the first successful opaque OpenAI route. Active version 3 sends one validated
+reference image to OpenAI `openai/gpt-image-2` through an OpenAI-only,
+no-fallback OpenRouter route, removes the original background, and stores the
+person-only PNG on a plain white canvas in the private `ai-media-private`
+bucket.
 
 The prompt is an immutable, versioned database row, not client code. An
 authenticated content administrator can publish and atomically select a new

@@ -59,11 +59,12 @@ profile image. Short-lived signed URLs are minted when the image is read, and
 the preset avatar remains the safe fallback.
 
 The entry point has no feature toggle or tester allowlist. The current database
-migration selects GPT Image 2 as active version 2 without a separate enable
-state, while family access, active-child ownership, private storage, server-only
-credentials, per-job cost limits, and retry-safe job handling remain enforced.
-Automated tests and development evidence continue to use synthetic fixtures
-only.
+migration selects GPT Image 2 as active version 3 without a separate enable
+state. Its database prompt and provider options remove the source background
+and return a person-only PNG on a plain white canvas, while family access,
+active-child ownership, private storage, server-only credentials, per-job cost
+limits, and retry-safe job handling remain enforced. Automated tests and
+development evidence continue to use synthetic fixtures only.
 
 The client never receives or submits the prompt, model, provider settings, or
 OpenRouter key. It sends the stable operation key `portrait.cartoon_3d`; the
