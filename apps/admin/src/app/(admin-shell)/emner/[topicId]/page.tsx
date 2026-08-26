@@ -2,8 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { getAdminAccessSession } from "@/lib/auth/dal";
+import { buildTopicEditorHref } from "@/app/emner/ny/resume-topic-draft";
+import {
+  buildNewSkillHref,
+  buildSubjectDetailHref,
+} from "@/app/emner/subject-routes";
 import { WardrobeItemImage } from "@/app/emner/wardrobe-item-image";
+import { getAdminAccessSession } from "@/lib/auth/dal";
 
 import {
   loadAdminTopicDetail,
@@ -11,6 +16,7 @@ import {
   type AdminTopicDetailStatus,
   type AdminTopicDetailWardrobeItem,
 } from "./data";
+import { SkillPackageHistoryCleanup } from "./faerdigheder/ny/skill-package-history-cleanup";
 import styles from "./page.module.css";
 import { TopicLifecycleControls } from "./topic-lifecycle-controls";
 
@@ -23,7 +29,13 @@ export const revalidate = 0;
 
 type TopicDetailPageProps = {
   params: Promise<{ topicId: string }>;
+  searchParams: Promise<{
+    skillPackageHistory?: string | string[];
+  }>;
 };
+
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const dateFormatter = new Intl.DateTimeFormat("da-DK", {
   dateStyle: "medium",
@@ -163,10 +175,12 @@ function WardrobeUnlock({ item }: { item: AdminTopicDetailWardrobeItem }) {
 
 export default async function TopicDetailPage({
   params,
+  searchParams,
 }: TopicDetailPageProps) {
-  const [session, routeParams] = await Promise.all([
+  const [session, routeParams, query] = await Promise.all([
     getAdminAccessSession(),
     params,
+    searchParams,
   ]);
 
   if (session.access.kind !== "authorized" || !session.client) {
@@ -177,11 +191,20 @@ export default async function TopicDetailPage({
 
   if (!topic) notFound();
 
+  const historyCleanupId =
+    typeof query.skillPackageHistory === "string" &&
+    UUID_PATTERN.test(query.skillPackageHistory)
+      ? query.skillPackageHistory.toLowerCase()
+      : null;
+
   const goalCount = topic.goals.length;
   const exerciseCount = topic.goals.reduce(
     (total, goal) => total + goal.exercises.length,
     0,
   );
+  const wardrobeReviewCount = topic.wardrobeItems.filter(
+    (item) => item.editorialStatus !== "approved" || item.hasPendingRevision,
+  ).length;
   const hasPublishableDrafts =
     topic.goals.some(
       (goal) =>
@@ -196,6 +219,12 @@ export default async function TopicDetailPage({
 
   return (
     <article className={styles.page} aria-labelledby="topic-title">
+      {historyCleanupId ? (
+        <SkillPackageHistoryCleanup
+          canonicalHref={buildSubjectDetailHref(topic.id)}
+          cleanupId={historyCleanupId}
+        />
+      ) : null}
       <nav className={styles.breadcrumbs} aria-label="Brødkrummer">
         <Link href="/emner">Emner</Link>
         <span aria-hidden="true">/</span>
@@ -268,8 +297,8 @@ export default async function TopicDetailPage({
         <div>
           <dt>Indhold</dt>
           <dd>
-            {goalCount} {goalCount === 1 ? "mål" : "mål"} · {exerciseCount}{" "}
-            {exerciseCount === 1 ? "øvelse" : "øvelser"}
+            {goalCount} {goalCount === 1 ? "færdighed" : "færdigheder"} ·{" "}
+            {exerciseCount} {exerciseCount === 1 ? "øvelse" : "øvelser"}
           </dd>
         </div>
         <div>
@@ -281,22 +310,40 @@ export default async function TopicDetailPage({
       <section className={styles.section} aria-labelledby="goals-heading">
         <div className={styles.sectionHeading}>
           <div>
-            <p className={styles.eyebrow}>Træningsforløb</p>
-            <h2 id="goals-heading">Mål og øvelser</h2>
+            <p className={styles.eyebrow}>Færdigheder i emnet</p>
+            <h2 id="goals-heading">Færdigheder og øvelser</h2>
           </div>
-          <span className={styles.countPill}>
-            {goalCount} {goalCount === 1 ? "mål" : "mål"}
-          </span>
+          <div className={styles.sectionHeadingTools}>
+            <span className={styles.countPill}>
+              {goalCount} {goalCount === 1 ? "færdighed" : "færdigheder"}
+            </span>
+            <div className={styles.sectionActions}>
+              <Link
+                className={styles.addSkillButton}
+                href={buildNewSkillHref(topic.id)}
+              >
+                <span aria-hidden="true">+</span>
+                Ny færdighed
+              </Link>
+              <Link
+                className={styles.suggestSkillButton}
+                href={buildNewSkillHref(topic.id, { suggestWithAi: true })}
+              >
+                <span aria-hidden="true">✦</span>
+                Foreslå færdigheder med AI
+              </Link>
+            </div>
+          </div>
         </div>
 
         {topic.goals.length === 0 ? (
           <div className={styles.emptyState}>
             <span aria-hidden="true">🎯</span>
             <div>
-              <h3>Ingen træningsmål endnu</h3>
+              <h3>Ingen færdigheder endnu</h3>
               <p>
-                Tilføj et mål og nogle små øvelser, når emnet skal bygges
-                videre.
+                Opret den første færdighed, eller få AI til at foreslå et sæt,
+                der passer til emnet.
               </p>
             </div>
           </div>
@@ -306,21 +353,26 @@ export default async function TopicDetailPage({
               <li className={styles.goalCard} key={goal.id}>
                 <header className={styles.goalHeader}>
                   <div>
-                    <p className={styles.itemKicker}>Mål {goalIndex + 1}</p>
+                    <p className={styles.itemKicker}>
+                      Færdighed {goalIndex + 1}
+                    </p>
                     <h3>{goal.title}</h3>
-                    <p>{goal.summary || "Målet har endnu ingen forklaring."}</p>
+                    <p>
+                      {goal.summary ||
+                        "Færdigheden har endnu ingen forklaring."}
+                    </p>
                   </div>
                   <div className={styles.itemActions}>
                     <StatusBadge status={goal.status} />
                     <Link
-                      aria-label={`Rediger mål: ${goal.title}`}
+                      aria-label={`Rediger færdighed: ${goal.title}`}
                       className={styles.inlineEditButton}
                       href={getContentEditHref({
                         goalId: goal.id,
                         topicId: topic.id,
                       })}
                     >
-                      Rediger mål
+                      Rediger færdighed
                     </Link>
                   </div>
                 </header>
@@ -351,13 +403,13 @@ export default async function TopicDetailPage({
                   aria-labelledby={`exercises-${goal.id}`}
                 >
                   <div className={styles.exerciseHeading}>
-                    <h4 id={`exercises-${goal.id}`}>Deløvelser</h4>
+                    <h4 id={`exercises-${goal.id}`}>Øvelser</h4>
                     <span>{goal.exercises.length}</span>
                   </div>
 
                   {goal.exercises.length === 0 ? (
                     <p className={styles.inlineEmpty}>
-                      Der er endnu ikke tilknyttet deløvelser til dette mål.
+                      Der er endnu ikke tilknyttet øvelser til denne færdighed.
                     </p>
                   ) : (
                     <ol className={styles.exerciseList} role="list">
@@ -365,7 +417,7 @@ export default async function TopicDetailPage({
                         <li className={styles.exerciseCard} key={exercise.id}>
                           <div className={styles.exerciseNumber}>
                             <span className={styles.visuallyHidden}>
-                              Deløvelse {exerciseIndex + 1}
+                              Øvelse {exerciseIndex + 1}
                             </span>
                             <span aria-hidden="true">{exerciseIndex + 1}</span>
                           </div>
@@ -375,7 +427,7 @@ export default async function TopicDetailPage({
                               <div className={styles.itemActions}>
                                 <StatusBadge status={exercise.status} />
                                 <Link
-                                  aria-label={`Rediger deløvelse: ${exercise.title}`}
+                                  aria-label={`Rediger øvelse: ${exercise.title}`}
                                   className={styles.inlineEditButton}
                                   href={getContentEditHref({
                                     exerciseId: exercise.id,
@@ -383,7 +435,7 @@ export default async function TopicDetailPage({
                                     topicId: topic.id,
                                   })}
                                 >
-                                  Rediger deløvelse
+                                  Rediger øvelse
                                 </Link>
                               </div>
                             </div>
@@ -435,7 +487,27 @@ export default async function TopicDetailPage({
               motiverende belønninger.
             </p>
           </div>
-          <span className={styles.countPill}>{topic.wardrobeItems.length}</span>
+          <div className={styles.sectionHeadingTools}>
+            <span className={styles.countPill}>
+              {topic.wardrobeItems.length} ting
+              {topic.wardrobeItems.length > 0
+                ? wardrobeReviewCount > 0
+                  ? ` · ${wardrobeReviewCount} mangler gennemgang`
+                  : " · alle gennemgået"
+                : ""}
+            </span>
+            <Link
+              className={styles.manageWardrobeButton}
+              href={buildTopicEditorHref({
+                manageWardrobe: true,
+                topicId: topic.id,
+              })}
+            >
+              {topic.wardrobeItems.length > 0
+                ? "Gennemgå garderobe"
+                : "Administrer garderobe"}
+            </Link>
+          </div>
         </div>
 
         {topic.wardrobeItems.length === 0 ? (

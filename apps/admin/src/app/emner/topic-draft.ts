@@ -1,3 +1,5 @@
+import { getChildFacingCopyError } from "./child-facing-copy.ts";
+
 export const MAX_TOPIC_TITLE_LENGTH = 100;
 export const MAX_TOPIC_DESCRIPTION_LENGTH = 500;
 export const MAX_TOPIC_ICON_LENGTH = 16;
@@ -149,6 +151,11 @@ export function validateTopicDraftForm(
       "Beskrivelsen indeholder tegn, som ikke kan gemmes.";
   } else if (codePointLength(description) > MAX_TOPIC_DESCRIPTION_LENGTH) {
     fieldErrors.description = `Beskrivelsen må højst være ${MAX_TOPIC_DESCRIPTION_LENGTH} tegn.`;
+  } else {
+    const childFacingCopyError = getChildFacingCopyError(description);
+    if (childFacingCopyError) {
+      fieldErrors.description = childFacingCopyError;
+    }
   }
 
   if (SINGLE_LINE_CONTROL_CHARACTER_PATTERN.test(values.icon)) {

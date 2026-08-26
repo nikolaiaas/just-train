@@ -57,7 +57,7 @@ function SearchIcon() {
   );
 }
 
-function SparkleIcon() {
+function PlusIcon() {
   return (
     <svg
       className={styles.buttonIcon}
@@ -66,10 +66,9 @@ function SparkleIcon() {
       stroke="currentColor"
       strokeWidth="1.8"
       strokeLinecap="round"
-      strokeLinejoin="round"
       aria-hidden="true"
     >
-      <path d="m12 3 1.05 3.3A5.8 5.8 0 0 0 16.7 10L20 11l-3.3 1.05A5.8 5.8 0 0 0 13 15.7L12 19l-1.05-3.3A5.8 5.8 0 0 0 7.3 12L4 11l3.3-1.05A5.8 5.8 0 0 0 11 6.3L12 3Z" />
+      <path d="M12 5v14M5 12h14" />
     </svg>
   );
 }
@@ -126,7 +125,7 @@ export function ContentOverview({
     { value: topics.length, label: "emner i alt" },
     {
       value: topics.reduce((total, topic) => total + topic.goals, 0),
-      label: "træningsmål",
+      label: "færdigheder",
     },
     {
       value: countDraftTopics(topics),
@@ -143,13 +142,13 @@ export function ContentOverview({
             Emner
           </h1>
           <p className={styles.intro}>
-            Opret og vedligehold træningsmål, øvelser og belønninger.
+            Opret og vedligehold emner, færdigheder, øvelser og belønninger.
           </p>
         </div>
 
         <Link className={styles.primaryButton} href="/emner/ny">
-          <SparkleIcon />
-          Nyt emne med AI
+          <PlusIcon />
+          Nyt emne
         </Link>
       </div>
 
@@ -217,12 +216,12 @@ export function ContentOverview({
           <div className={styles.tableScroller}>
             <table className={styles.topicTable}>
               <caption className={styles.visuallyHidden}>
-                Emner med antal træningsmål, øvelser og status
+                Emner med antal færdigheder, øvelser og status
               </caption>
               <thead>
                 <tr>
                   <th scope="col">Emne</th>
-                  <th scope="col">Træningsmål</th>
+                  <th scope="col">Færdigheder</th>
                   <th scope="col">Status</th>
                   <th scope="col">
                     <span className={styles.visuallyHidden}>Handling</span>
@@ -246,9 +245,12 @@ export function ContentOverview({
                         </span>
                       </span>
                     </th>
-                    <td data-label="Træningsmål">
+                    <td data-label="Færdigheder">
                       <span className={styles.topicCounts}>
-                        <strong>{topic.goals} mål</strong>
+                        <strong>
+                          {topic.goals}{" "}
+                          {topic.goals === 1 ? "færdighed" : "færdigheder"}
+                        </strong>
                         <small>
                           {topic.exercises}{" "}
                           {topic.exercises === 1 ? "øvelse" : "øvelser"}

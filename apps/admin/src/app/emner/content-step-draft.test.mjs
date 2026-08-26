@@ -268,6 +268,41 @@ test("allows blank optional time, media, equipment, and safety fields", () => {
   );
 });
 
+test("requires child-visible goal and exercise copy to address the child", () => {
+  const goal = validateGoalDraftForm(
+    validGoalForm({ summary: "Barnet lærer at styre bolden." }),
+  );
+  const instructions = validateExerciseDraftForm(
+    validExerciseForm({ instructions: "Hjælp dit barn gennem banen." }),
+  );
+  const safety = validateExerciseDraftForm(
+    validExerciseForm({ safetyNote: "En voksen holder barnet i hånden." }),
+  );
+
+  assert.equal(goal.ok, false);
+  assert.match(
+    !goal.ok ? (goal.fieldErrors.summary ?? "") : "",
+    /direkte til barnet/,
+  );
+  assert.equal(instructions.ok, false);
+  assert.match(
+    !instructions.ok ? (instructions.fieldErrors.instructions ?? "") : "",
+    /direkte til barnet/,
+  );
+  assert.equal(safety.ok, false);
+  assert.match(
+    !safety.ok ? (safety.fieldErrors.safetyNote ?? "") : "",
+    /direkte til barnet/,
+  );
+
+  const directSafety = validateExerciseDraftForm(
+    validExerciseForm({
+      safetyNote: "Få hjælp af en voksen, hvis du har brug for det.",
+    }),
+  );
+  assert.equal(directSafety.ok, true);
+});
+
 test("bounds time and equipment while accepting database limits", () => {
   assert.equal(
     validateGoalDraftForm(validGoalForm({ estimatedMinutes: "180" })).ok,

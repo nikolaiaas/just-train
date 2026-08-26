@@ -36,9 +36,9 @@ type ExerciseFailureState =
 const DUPLICATE_TOPIC_MESSAGE =
   "Et emne med dette eller et meget lignende navn findes allerede. Vælg et andet navn.";
 const DUPLICATE_GOAL_MESSAGE =
-  "Et mål med dette eller et meget lignende navn findes allerede under emnet. Vælg et andet navn.";
+  "En færdighed med dette eller et meget lignende navn findes allerede under emnet. Vælg et andet navn.";
 const DUPLICATE_EXERCISE_MESSAGE =
-  "En deløvelse med dette eller et meget lignende navn findes allerede under målet. Vælg et andet navn.";
+  "En øvelse med dette eller et meget lignende navn findes allerede under færdigheden. Vælg et andet navn.";
 
 export function mapTopicCreationError(error: unknown): TopicFailureState {
   if (!(error instanceof AdminContentError)) {
@@ -132,14 +132,14 @@ export function mapGoalCreationError(error: unknown): GoalFailureState {
     return {
       status: "unavailable",
       message:
-        "Målkladden kunne ikke gemmes lige nu. Intet er publiceret. Prøv igen senere.",
+        "Færdighedskladden kunne ikke gemmes lige nu. Intet er publiceret. Prøv igen senere.",
     };
   }
 
   if (error.code === "admin_access_denied") {
     return {
       status: "denied",
-      message: "Din konto har ikke adgang til at oprette mål.",
+      message: "Din konto har ikke adgang til at oprette færdigheder.",
     };
   }
 
@@ -155,7 +155,7 @@ export function mapGoalCreationError(error: unknown): GoalFailureState {
     return {
       status: "invalid",
       message:
-        "Denne kladdeanmodning er allerede brugt til et andet mål. Genindlæs siden og prøv igen.",
+        "Denne kladdeanmodning er allerede brugt til en anden færdighed. Genindlæs siden og prøv igen.",
       fieldErrors: {},
     };
   }
@@ -163,7 +163,7 @@ export function mapGoalCreationError(error: unknown): GoalFailureState {
   return {
     status: "unavailable",
     message:
-      "Målkladden kunne ikke gemmes lige nu. Intet er publiceret. Prøv igen senere.",
+      "Færdighedskladden kunne ikke gemmes lige nu. Intet er publiceret. Prøv igen senere.",
   };
 }
 
@@ -172,14 +172,14 @@ export function mapGoalUpdateError(error: unknown): GoalFailureState {
     return {
       status: "unavailable",
       message:
-        "Målet kunne ikke opdateres lige nu. Intet er gemt. Prøv igen senere.",
+        "Færdigheden kunne ikke opdateres lige nu. Intet er gemt. Prøv igen senere.",
     };
   }
 
   if (error.code === "admin_access_denied") {
     return {
       status: "denied",
-      message: "Din konto har ikke adgang til at redigere mål.",
+      message: "Din konto har ikke adgang til at redigere færdigheder.",
     };
   }
 
@@ -195,7 +195,7 @@ export function mapGoalUpdateError(error: unknown): GoalFailureState {
     return {
       status: "unavailable",
       message:
-        "Målet kan ikke længere redigeres. Det kan være fjernet eller have ændret status. Genindlæs siden.",
+        "Færdigheden kan ikke længere redigeres. Den kan være fjernet eller have ændret status. Genindlæs siden.",
     };
   }
 
@@ -203,14 +203,14 @@ export function mapGoalUpdateError(error: unknown): GoalFailureState {
     return {
       status: "unavailable",
       message:
-        "Målet er ændret et andet sted. Dine ændringer er ikke gemt. Genindlæs siden, og prøv igen på den nyeste version.",
+        "Færdigheden er ændret et andet sted. Dine ændringer er ikke gemt. Genindlæs siden, og prøv igen på den nyeste version.",
     };
   }
 
   return {
     status: "unavailable",
     message:
-      "Målet kunne ikke opdateres lige nu. Intet er gemt. Prøv igen senere.",
+      "Færdigheden kunne ikke opdateres lige nu. Intet er gemt. Prøv igen senere.",
   };
 }
 
@@ -219,14 +219,14 @@ export function mapExerciseCreationError(error: unknown): ExerciseFailureState {
     return {
       status: "unavailable",
       message:
-        "Deløvelseskladden kunne ikke gemmes lige nu. Intet er publiceret. Prøv igen senere.",
+        "Øvelseskladden kunne ikke gemmes lige nu. Intet er publiceret. Prøv igen senere.",
     };
   }
 
   if (error.code === "admin_access_denied") {
     return {
       status: "denied",
-      message: "Din konto har ikke adgang til at oprette deløvelser.",
+      message: "Din konto har ikke adgang til at oprette øvelser.",
     };
   }
 
@@ -242,7 +242,7 @@ export function mapExerciseCreationError(error: unknown): ExerciseFailureState {
     return {
       status: "invalid",
       message:
-        "Denne kladdeanmodning er allerede brugt til en anden deløvelse. Genindlæs siden og prøv igen.",
+        "Denne kladdeanmodning er allerede brugt til en anden øvelse. Genindlæs siden og prøv igen.",
       fieldErrors: {},
     };
   }
@@ -250,7 +250,7 @@ export function mapExerciseCreationError(error: unknown): ExerciseFailureState {
   return {
     status: "unavailable",
     message:
-      "Deløvelseskladden kunne ikke gemmes lige nu. Intet er publiceret. Prøv igen senere.",
+      "Øvelseskladden kunne ikke gemmes lige nu. Intet er publiceret. Prøv igen senere.",
   };
 }
 
@@ -259,14 +259,14 @@ export function mapExerciseUpdateError(error: unknown): ExerciseFailureState {
     return {
       status: "unavailable",
       message:
-        "Deløvelsen kunne ikke opdateres lige nu. Intet er gemt. Prøv igen senere.",
+        "Øvelsen kunne ikke opdateres lige nu. Intet er gemt. Prøv igen senere.",
     };
   }
 
   if (error.code === "admin_access_denied") {
     return {
       status: "denied",
-      message: "Din konto har ikke adgang til at redigere deløvelser.",
+      message: "Din konto har ikke adgang til at redigere øvelser.",
     };
   }
 
@@ -282,7 +282,7 @@ export function mapExerciseUpdateError(error: unknown): ExerciseFailureState {
     return {
       status: "unavailable",
       message:
-        "Deløvelsen kan ikke længere redigeres. Den kan være fjernet eller have ændret status. Genindlæs siden.",
+        "Øvelsen kan ikke længere redigeres. Den kan være fjernet eller have ændret status. Genindlæs siden.",
     };
   }
 
@@ -290,13 +290,13 @@ export function mapExerciseUpdateError(error: unknown): ExerciseFailureState {
     return {
       status: "unavailable",
       message:
-        "Deløvelsen er ændret et andet sted. Dine ændringer er ikke gemt. Genindlæs siden, og prøv igen på den nyeste version.",
+        "Øvelsen er ændret et andet sted. Dine ændringer er ikke gemt. Genindlæs siden, og prøv igen på den nyeste version.",
     };
   }
 
   return {
     status: "unavailable",
     message:
-      "Deløvelsen kunne ikke opdateres lige nu. Intet er gemt. Prøv igen senere.",
+      "Øvelsen kunne ikke opdateres lige nu. Intet er gemt. Prøv igen senere.",
   };
 }

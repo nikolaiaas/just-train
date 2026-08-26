@@ -172,6 +172,20 @@ test("allows incomplete optional draft fields and maps blanks to null", () => {
   );
 });
 
+test("requires child-visible descriptions to address the child", () => {
+  for (const description of [
+    "Barnet leger med bolden og lærer nye finter.",
+    "Hjælp dit barn med at vælge en øvelse.",
+  ]) {
+    const result = validateTopicDraftForm(validForm({ description }));
+    assert.equal(result.ok, false, description);
+    assert.match(
+      !result.ok ? (result.fieldErrors.description ?? "") : "",
+      /direkte til barnet/,
+    );
+  }
+});
+
 test("returns field-specific Danish errors for invalid content", () => {
   const invalidTitle = validateTopicDraftForm(validForm({ title: "⚽️" }));
   const invalidControls = validateTopicDraftForm(

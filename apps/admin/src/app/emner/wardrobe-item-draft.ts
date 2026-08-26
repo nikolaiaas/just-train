@@ -5,6 +5,8 @@ import type {
   AdminWardrobeRarity,
 } from "@bare-traen/api-client";
 
+import { getChildFacingCopyError } from "./child-facing-copy.ts";
+
 export const MAX_WARDROBE_NAME_LENGTH = 80;
 export const MAX_WARDROBE_ICON_LENGTH = 16;
 export const MAX_WARDROBE_DESCRIPTION_LENGTH = 240;
@@ -222,6 +224,11 @@ export function validateWardrobeItemDraftForm(
     DISALLOWED_MULTILINE_CONTROL_CHARACTER_PATTERN.test(values.description)
   ) {
     fieldErrors.description = `Beskrivelsen må højst være ${MAX_WARDROBE_DESCRIPTION_LENGTH} tegn og må ikke indeholde skjulte kontroltegn.`;
+  } else {
+    const childFacingCopyError = getChildFacingCopyError(description);
+    if (childFacingCopyError) {
+      fieldErrors.description = childFacingCopyError;
+    }
   }
   if (
     imagePath.length > 0 &&
@@ -248,6 +255,11 @@ export function validateWardrobeItemDraftForm(
     SINGLE_LINE_CONTROL_CHARACTER_PATTERN.test(values.unlockRule)
   ) {
     fieldErrors.unlockRule = `Oplåsningsreglen skal stå på én linje og må højst være ${MAX_WARDROBE_UNLOCK_RULE_LENGTH} tegn.`;
+  } else {
+    const childFacingCopyError = getChildFacingCopyError(unlockRule);
+    if (childFacingCopyError) {
+      fieldErrors.unlockRule = childFacingCopyError;
+    }
   }
   if (
     codePointLength(editorialNote) > MAX_WARDROBE_EDITORIAL_NOTE_LENGTH ||

@@ -24,8 +24,8 @@ select results_eq(
       and operation.id = version.operation_id
     where operation.operation_key = 'content.draft_review'
   $$,
-  $$ values (3, 'openrouter'::text, 'openai'::text, 'openai/gpt-5-mini'::text) $$,
-  'the review operation pins its immutable OpenAI-only route'
+  $$ values (4, 'openrouter'::text, 'openai'::text, 'openai/gpt-5-mini'::text) $$,
+  'the child-directed review revision pins its immutable OpenAI-only route'
 );
 
 select is(
@@ -41,29 +41,54 @@ select is(
   'the review prompt explicitly forbids save, approval, and publication actions'
 );
 
-select is(
-  (
-    select version
+select results_eq(
+  $$
+    select
+      version.version,
+      version.id = operation.active_version_id as is_active
     from public.ai_operation_versions as version
     join public.ai_operations as operation
-      on operation.active_version_id = version.id
+      on operation.id = version.operation_id
     where operation.operation_key = 'content.topic_brief'
-  ),
-  2,
-  'the tested topic prompt revision is active as immutable version 2'
+    order by version.version
+  $$,
+  $$ values (1, false), (2, false), (3, true) $$,
+  'the child-directed topic revision is active beside both immutable predecessors'
 );
 
-select is(
+select ok(
   (
-    select right(prompt_template, 95)
+    select right(prompt_template, 95) =
+      'Kort beskrivelse skal være højst 400 tegn inklusive mellemrum. Skriv helst 1-2 korte sætninger.'
+    from public.ai_operation_versions as version
+    join public.ai_operations as operation
+      on operation.id = version.operation_id
+    where operation.operation_key = 'content.topic_brief'
+      and version.version = 2
+  )
+  and (
+    select prompt_template like '%[CHILD_AUDIENCE_V1]%tale direkte til barnet med du, dig og din%'
     from public.ai_operation_versions as version
     join public.ai_operations as operation
       on operation.active_version_id = version.id
+      and operation.id = version.operation_id
     where operation.operation_key = 'content.topic_brief'
   ),
-  'Kort beskrivelse skal være højst 400 tegn inklusive mellemrum. Skriv helst 1-2 korte sætninger.',
-  'topic prompt version 2 carries the tested short-description guidance'
+  'topic prompt version 2 keeps its length guidance and version 3 adds the child audience rule'
 );
+
+create temporary table topic_prompt_revision_baseline as
+select
+  active_version.version as active_version,
+  count(all_versions.id)::bigint as version_count
+from public.ai_operations as operation
+join public.ai_operation_versions as active_version
+  on active_version.id = operation.active_version_id
+  and active_version.operation_id = operation.id
+join public.ai_operation_versions as all_versions
+  on all_versions.operation_id = operation.id
+where operation.operation_key = 'content.topic_brief'
+group by active_version.version;
 
 savepoint preserve_newer_topic_prompt_versions;
 
@@ -85,7 +110,7 @@ insert into public.ai_operation_versions (
 select
   candidate.id,
   active_version.operation_id,
-  candidate.version,
+  active_version.version + candidate.version_offset,
   active_version.prompt_template || candidate.prompt_suffix,
   active_version.gateway,
   active_version.provider,
@@ -104,15 +129,15 @@ cross join (
   values
     (
       'a2000000-0000-4000-8000-000000000093'::uuid,
-      3,
-      ' Administrator revision 3.'::text
+      1,
+      ' Administrator revision A.'::text
     ),
     (
       'a2000000-0000-4000-8000-000000000094'::uuid,
-      4,
-      ' Administrator revision 4.'::text
+      2,
+      ' Administrator revision B.'::text
     )
-) as candidate(id, version, prompt_suffix)
+) as candidate(id, version_offset, prompt_suffix)
 where operation.operation_key = 'content.topic_brief';
 
 update public.ai_operations
@@ -143,7 +168,7 @@ select is(
       on operation.id = version.operation_id
     where operation.operation_key = 'content.topic_brief'
   ),
-  4::bigint,
+  (select version_count + 2 from topic_prompt_revision_baseline),
   'the seed upgrade does not append or replace a version beside newer revisions'
 );
 
@@ -185,8 +210,8 @@ insert into review_test_input(input_data)
 values ('{
   "message":"Gennemgå hele forløbet og peg på det vigtigste næste trin.",
   "topic":{"title":"Balanceeventyr","description":"Trygge balancelege med små succeser.","icon":"🧭","accentColor":"#53C987"},
-  "goal":{"title":"Gå på balancebane","summary":"Barnet gennemfører en kort og rolig balancebane.","difficulty":"beginner","estimatedMinutes":15,"equipment":["Malertape"]},
-  "exercise":{"title":"Følg stregen","instructions":"Gå langsomt hen over stregen med armene ud til siden.","measurement":"completion","targetValue":null,"recommendedMinutes":8,"equipment":["Malertape"],"safetyNote":"En voksen holder sig tæt på, og gulvet skal være frit."},
+  "goal":{"title":"Gå på balancebane","summary":"Gennemfør en kort og rolig balancebane.","difficulty":"beginner","estimatedMinutes":15,"equipment":["Malertape"]},
+  "exercise":{"title":"Følg stregen","instructions":"Gå langsomt hen over stregen med armene ud til siden.","measurement":"completion","targetValue":null,"recommendedMinutes":8,"equipment":["Malertape"],"safetyNote":"Få hjælp af en voksen, og sørg for, at gulvet er frit."},
   "wardrobeExamples":[
     {"name":"Stjernestøvler","icon":"⭐","category":"clothing","equipSlot":"feet","rarity":"common","points":100,"unlockRule":"","reason":"Et brandfrit eksempel til balanceeventyret."},
     {"name":"Regnbuespor","icon":"🌈","category":"effect","equipSlot":"accessory","rarity":"rare","points":250,"unlockRule":"","reason":"En synlig belønning uden køb eller brand."},

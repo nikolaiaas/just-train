@@ -130,6 +130,27 @@ database identity. A redaktør must explicitly copy a proposal into the form
 and save an unpublished draft. The review operation returns only a structured
 checklist and next actions; it has no save, approval, or publication shape.
 
+Subject creation and skill authoring are deliberately separate. Creating a
+subject stores only the topic draft and returns to its detail route. From there,
+`content.skill_suggestions` can propose several distinct child-facing skills
+against the canonical saved topic and existing skills. A single visible “build
+the whole skill” action then orchestrates three pinned jobs:
+`content.skill_package` for one skill and 2–8 ordered exercises,
+`content.wardrobe_grid_plan` for exactly 16 rewards informed by that topic and
+generated skill, and `content.wardrobe_grid_image` for the 4×4 image sheet and
+crops. These remain separate provider jobs so the structured-text token ceiling
+stays bounded.
+
+The final package is saved through one idempotent transaction bound to the
+canonical topic and exact succeeded job lineage. It either creates the skill,
+every exercise, and all 16 image-backed wardrobe rows, or creates nothing. All
+rows remain unpublished drafts, and wardrobe rows still require an explicit
+editorial decision before topic publication. Obvious parent- or
+narrator-addressed wording is rejected consistently in child-visible topic,
+skill, exercise, safety, wardrobe-description, and unlock fields at the Admin
+form, Edge normalization, and SQL completion/save boundaries. Editor replies
+and reasons are not child-visible and may continue to address the editor.
+
 The visual wardrobe flow deliberately uses two separately versioned
 operations. `content.wardrobe_grid_plan` turns the current topic title,
 description, and bounded editor direction into exactly 16 ordered item
@@ -160,8 +181,10 @@ category, exclusive body slot, rarity, editorial note, order, and an explicit
 `draft`, `approved`, or `rejected` decision. The dedicated public-read
 `wardrobe-images` bucket contains synthetic shared catalogue art only; writes
 remain service-role-only. It must never contain child photos or other personal
-media. AI output remains a transient 16-card proposal until an administrator
-opens a card in the editor and saves it. Published-row edits, including image
+media. The standalone wardrobe assistant remains a transient 16-card proposal
+until an administrator opens and saves individual cards. The complete skill
+builder can instead save all 16 reviewed cards atomically as draft wardrobe
+rows, but never approves or publishes them. Published-row edits, including image
 and description changes, stay in the private pending revision and become
 child-visible only after another approval and topic publication. Legacy rows
 may have no image, but new interfaces show an explicit missing-image state

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 
 import { getAdminAccessSession } from "@/lib/auth/dal";
 
+import { SubjectDraftWorkspace } from "./subject-draft-workspace";
 import { TopicDraftWorkspace } from "./topic-draft-workspace";
 import {
   loadResumableTopicDraft,
@@ -49,20 +50,27 @@ export default async function NewTopicPage({
     redirect("/emner");
   }
 
-  const loadedTopic = selection.topicId
-    ? await Promise.all([
-        loadResumableTopicDraft(session.client, selection.topicId, {
-          createExercise: selection.startingStep === "new-exercise",
-          exerciseId: selection.exerciseId,
-          goalId: selection.goalId,
-        }),
-        loadTopicEditorOutline(session.client, selection.topicId),
-      ])
-    : null;
-  const initialDraft = loadedTopic?.[0] ?? null;
-  const initialOutline = loadedTopic?.[1] ?? [];
+  if (selection.topicId === null) {
+    return (
+      <SubjectDraftWorkspace
+        assistantRequestId={randomUUID()}
+        profileName={session.access.profile.displayName}
+        topicRequestId={randomUUID()}
+      />
+    );
+  }
 
-  if (selection.topicId && !initialDraft) {
+  const [initialDraft, initialOutline] = await Promise.all([
+    loadResumableTopicDraft(session.client, selection.topicId, {
+      createExercise: selection.startingStep === "new-exercise",
+      createGoal: selection.startingStep === "new-goal",
+      exerciseId: selection.exerciseId,
+      goalId: selection.goalId,
+    }),
+    loadTopicEditorOutline(session.client, selection.topicId),
+  ]);
+
+  if (!initialDraft) {
     redirect("/emner");
   }
 

@@ -68,7 +68,7 @@ const wardrobeItem = {
   contentVersion: 1,
   createdAt: "2026-08-22T07:03:00.000Z",
   createdBy: "40000000-0000-4000-8000-000000000001",
-  description: "Et glimtende stjernedrys til barnets figur.",
+  description: "Et glimtende stjernedrys, du kan have på.",
   editorialNote: "Et syntetisk eksempel.",
   editorialStatus: "draft",
   equipSlot: "accessory",
@@ -151,6 +151,24 @@ test("resume selection strictly validates topic, goal, and exercise IDs", () => 
       topicId: topic.id,
     },
   );
+  assert.deepEqual(
+    parseResumeTopicSelection({ add: "goal", topic: topic.id }),
+    {
+      exerciseId: null,
+      goalId: null,
+      startingStep: "new-goal",
+      topicId: topic.id,
+    },
+  );
+  assert.deepEqual(
+    parseResumeTopicSelection({ add: "wardrobe", topic: topic.id }),
+    {
+      exerciseId: null,
+      goalId: null,
+      startingStep: "wardrobe",
+      topicId: topic.id,
+    },
+  );
 
   assert.equal(parseResumeTopicSelection({ goal: goal.id }), null);
   assert.equal(
@@ -175,6 +193,14 @@ test("resume selection strictly validates topic, goal, and exercise IDs", () => 
   );
   assert.equal(
     parseResumeTopicSelection({
+      add: "wardrobe",
+      goal: goal.id,
+      topic: topic.id,
+    }),
+    null,
+  );
+  assert.equal(
+    parseResumeTopicSelection({
       add: "exercise",
       exercise: exercise.id,
       goal: goal.id,
@@ -186,6 +212,14 @@ test("resume selection strictly validates topic, goal, and exercise IDs", () => 
     parseResumeTopicSelection({
       add: "goal",
       goal: goal.id,
+      topic: topic.id,
+    }),
+    null,
+  );
+  assert.equal(
+    parseResumeTopicSelection({
+      add: "goal",
+      exercise: exercise.id,
       topic: topic.id,
     }),
     null,
@@ -282,6 +316,20 @@ test("resume starts at the first unsaved authoring step", () => {
     getResumeStartingStep(
       {
         topic: { ...topic, status: "published" },
+        goal: null,
+        exercise: null,
+        wardrobeItems: [],
+        nextExerciseSortOrder: 0,
+        nextGoalSortOrder: 4,
+      },
+      "new-goal",
+    ),
+    "goal",
+  );
+  assert.equal(
+    getResumeStartingStep(
+      {
+        topic: { ...topic, status: "published" },
         goal,
         exercise,
         wardrobeItems: [],
@@ -291,6 +339,20 @@ test("resume starts at the first unsaved authoring step", () => {
       "exercise",
     ),
     "exercise",
+  );
+  assert.equal(
+    getResumeStartingStep(
+      {
+        topic: { ...topic, status: "published" },
+        goal: null,
+        exercise: null,
+        wardrobeItems: [],
+        nextExerciseSortOrder: 0,
+        nextGoalSortOrder: 4,
+      },
+      "wardrobe",
+    ),
+    "wardrobe",
   );
 });
 
@@ -773,6 +835,10 @@ test("editor links preserve the selected topic hierarchy and explicit add mode",
     }),
     `/emner/ny?topic=${topic.id}&goal=${goal.id}&add=exercise`,
   );
+  assert.equal(
+    buildTopicEditorHref({ createGoal: true, topicId: topic.id }),
+    `/emner/ny?topic=${topic.id}&add=goal`,
+  );
 });
 
 test("a newly saved exercise appears once in its goal outline as a draft", () => {
@@ -896,6 +962,69 @@ test("resume prepares a blank next exercise without replacing an existing one", 
         call.columns !== "sort_order",
     ).length,
     0,
+  );
+});
+
+test("resume prepares a blank next goal without loading an existing one", async () => {
+  const calls = [];
+  const responses = [
+    {
+      data: {
+        accent_color: topic.accentColor,
+        description: topic.description,
+        icon: topic.icon,
+        id: topic.id,
+        is_published: true,
+        published_at: "2026-08-22T06:00:00.000Z",
+        title: topic.title,
+        updated_at: topic.updatedAt,
+      },
+      error: null,
+    },
+    { data: { sort_order: 8 }, error: null },
+    { data: [], error: null },
+  ];
+  let responseIndex = 0;
+  const client = {
+    from(table) {
+      const response = responses[responseIndex++];
+      const query = {
+        eq(column, value) {
+          calls.push({ column, operation: "eq", table, value });
+          return query;
+        },
+        limit() {
+          return query;
+        },
+        maybeSingle: async () => response,
+        order() {
+          return query;
+        },
+        select(columns) {
+          calls.push({ columns, operation: "select", table });
+          return query;
+        },
+      };
+      return query;
+    },
+    rpc() {
+      return Promise.resolve(responses[responseIndex++]);
+    },
+  };
+
+  const result = await loadResumableTopicDraft(client, topic.id, {
+    createGoal: true,
+  });
+
+  assert.equal(result.goal, null);
+  assert.equal(result.exercise, null);
+  assert.equal(result.nextGoalSortOrder, 9);
+  assert.equal(result.nextExerciseSortOrder, 0);
+  assert.deepEqual(
+    calls.filter(
+      (call) => call.table === "goals" && call.operation === "select",
+    ),
+    [{ columns: "sort_order", operation: "select", table: "goals" }],
   );
 });
 

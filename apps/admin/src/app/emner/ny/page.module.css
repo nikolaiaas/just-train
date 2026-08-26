@@ -498,6 +498,14 @@
   align-items: start;
 }
 
+.subjectWorkspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(310px, 0.75fr);
+  gap: 18px;
+  align-items: start;
+  margin-top: 30px;
+}
+
 .assistantPanel,
 .draftPanel {
   min-width: 0;
@@ -511,6 +519,78 @@
 .assistantPanel {
   position: sticky;
   top: 18px;
+}
+
+.subjectAssistant details {
+  min-width: 0;
+}
+
+.subjectAssistantSummary {
+  display: flex;
+  min-height: 78px;
+  align-items: center;
+  gap: 11px;
+  padding: 17px 19px;
+  color: #183249;
+  cursor: pointer;
+  list-style: none;
+}
+
+.subjectAssistantSummary::-webkit-details-marker {
+  display: none;
+}
+
+.subjectAssistantSummary:focus-visible {
+  border-radius: 17px;
+  outline: 3px solid rgba(14, 158, 151, 0.22);
+  outline-offset: -3px;
+}
+
+.subjectAssistantSummary > span:nth-child(2) {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.subjectAssistantSummary strong {
+  font-size: 15px;
+  font-weight: 720;
+}
+
+.subjectAssistantSummary small {
+  color: #75848f;
+  font-size: 10px;
+  font-weight: 520;
+  line-height: 1.4;
+}
+
+.subjectAssistantChevron {
+  margin-left: auto;
+  color: #5d7080;
+  font-size: 19px;
+  line-height: 1;
+  transition: transform 160ms ease;
+}
+
+.subjectAssistant details[open] .subjectAssistantSummary {
+  border-bottom: 1px solid #e0e7e9;
+}
+
+.subjectAssistant details[open] .subjectAssistantChevron {
+  transform: rotate(180deg);
+}
+
+.subjectAssistantChat {
+  min-height: 230px;
+  max-height: 410px;
+}
+
+.subjectAssistant .chatForm button {
+  min-height: 48px;
+}
+
+.subjectSuggestion > div {
+  display: grid;
 }
 
 .panelHeader {
@@ -1575,6 +1655,10 @@
     grid-template-columns: 1fr;
   }
 
+  .subjectWorkspace {
+    grid-template-columns: 1fr;
+  }
+
   .assistantPanel {
     order: 2;
     position: static;
@@ -1719,6 +1803,11 @@
     flex-direction: column;
   }
 
+  .subjectAssistantSummary {
+    min-height: 72px;
+    padding: 14px 15px;
+  }
+
   .panelHeader > div {
     width: 100%;
   }
@@ -1763,6 +1852,10 @@
   .thinkingMessage span,
   .loadingMark {
     animation: none;
+  }
+
+  .subjectAssistantChevron {
+    transition: none;
   }
 
   .chat {

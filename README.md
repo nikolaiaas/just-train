@@ -36,7 +36,12 @@ The administration uses the same server boundary for synthetic wardrobe art:
 topic text is turned into exactly 16 descriptions, GPT Image 2 draws one 4×4
 sheet, and trusted code crops it into 16 catalogue images. Those prompts also
 remain database-versioned, so an administrator can improve them without an app
-release.
+release. Creating a subject is deliberately a short, independent action. From
+the saved subject, an administrator can then add a skill manually, ask for
+several skill ideas, or build one reviewed package containing the skill, its
+ordered exercises, and 16 topic-aware wardrobe-image drafts in one atomic save.
+Child-visible descriptions are validated to address the child directly rather
+than speaking to a parent or narrating about “the child”.
 
 ## Requirements
 

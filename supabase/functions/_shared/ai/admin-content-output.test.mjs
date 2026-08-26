@@ -185,6 +185,201 @@ test("fails closed when canonicalization removes required copy", () => {
   );
 });
 
+function skillSuggestion(ordinal, overrides = {}) {
+  return {
+    ordinal,
+    title: `Færdighed ${ordinal}`,
+    slug: `faerdighed-${ordinal}`,
+    childDescription: `Du lærer færdighed ${ordinal}.`,
+    difficulty: "beginner",
+    estimatedMinutes: 20,
+    editorialReason: "Et tydeligt trin i emnet.",
+    ...overrides,
+  };
+}
+
+function skillExercise(ordinal, overrides = {}) {
+  return {
+    ordinal,
+    title: `Øvelse ${ordinal}`,
+    slug: `oevelse-${ordinal}`,
+    childInstructions: "Du fører bolden roligt mellem keglerne.",
+    measurement: "completion",
+    targetValue: null,
+    recommendedMinutes: 10,
+    equipment: [" Bold ", "bold"],
+    childSafetyNote: "Få hjælp af en voksen, hvis banen er glat.",
+    editorialReason: "En enkel og tydelig øvelse.",
+    ...overrides,
+  };
+}
+
+test("normalizes ordered skill suggestions and complete exercise packages", () => {
+  const suggestions = normalizeAdminContentOutput("content.skill_suggestions", {
+    reply: " Tre muligheder. ",
+    skills: [skillSuggestion(1), skillSuggestion(2), skillSuggestion(3)],
+  });
+  const packageOutput = normalizeAdminContentOutput("content.skill_package", {
+    reply: " Et samlet udkast. ",
+    skill: {
+      title: " Dribling ",
+      slug: "dribling",
+      childDescription: " Du lærer at holde bolden tæt. ",
+      difficulty: "beginner",
+      estimatedMinutes: 30,
+      equipment: ["Bold", "bold", "4\t kegler"],
+      editorialReason: "Et godt første trin.",
+    },
+    exercises: [skillExercise(1), skillExercise(2)],
+  });
+
+  assert.equal(suggestions?.skills.length, 3);
+  assert.equal(suggestions?.reply, "Tre muligheder.");
+  assert.equal(packageOutput?.skill.title, "Dribling");
+  assert.deepEqual(packageOutput?.skill.equipment, ["Bold", "4 kegler"]);
+  assert.deepEqual(packageOutput?.exercises[0].equipment, ["Bold"]);
+});
+
+test("rejects reordered, duplicate, inconsistent, and parent-framed skill copy", () => {
+  const validSuggestions = [
+    skillSuggestion(1),
+    skillSuggestion(2),
+    skillSuggestion(3),
+  ];
+
+  for (const skills of [
+    validSuggestions.map((skill, index) =>
+      index === 1 ? { ...skill, ordinal: 3 } : skill,
+    ),
+    validSuggestions.map((skill, index) =>
+      index === 1 ? { ...skill, slug: "faerdighed-1" } : skill,
+    ),
+    validSuggestions.map((skill, index) =>
+      index === 1
+        ? { ...skill, childDescription: "Dit barn lærer at drible." }
+        : skill,
+    ),
+    validSuggestions.map((skill, index) =>
+      index === 1
+        ? { ...skill, childDescription: "Barnet lærer at drible." }
+        : skill,
+    ),
+    validSuggestions.map((skill, index) =>
+      index === 1
+        ? { ...skill, childDescription: "Forældre skal holde bolden." }
+        : skill,
+    ),
+    validSuggestions.map((skill, index) =>
+      index === 1
+        ? { ...skill, childDescription: "Børn kan øve sig med bolden." }
+        : skill,
+    ),
+    validSuggestions.map((skill, index) =>
+      index === 1
+        ? { ...skill, childDescription: "Forældre hjælper med øvelsen." }
+        : skill,
+    ),
+    validSuggestions.map((skill, index) =>
+      index === 1
+        ? { ...skill, childDescription: "Barn løber gennem banen." }
+        : skill,
+    ),
+    validSuggestions.map((skill, index) =>
+      index === 1
+        ? { ...skill, childDescription: "Børn dribler med bolden." }
+        : skill,
+    ),
+  ]) {
+    assert.equal(
+      normalizeAdminContentOutput("content.skill_suggestions", {
+        reply: "Tre muligheder.",
+        skills,
+      }),
+      null,
+    );
+  }
+
+  for (const exercises of [
+    [skillExercise(1, { targetValue: 3 }), skillExercise(2)],
+    [
+      skillExercise(1, {
+        childSafetyNote: "Sørg for at barnet bruger en sikker bane.",
+      }),
+      skillExercise(2),
+    ],
+  ]) {
+    assert.equal(
+      normalizeAdminContentOutput("content.skill_package", {
+        reply: "Et udkast.",
+        skill: {
+          title: "Dribling",
+          slug: "dribling",
+          childDescription: "Du lærer at holde bolden tæt.",
+          difficulty: "beginner",
+          estimatedMinutes: 30,
+          equipment: ["Bold"],
+          editorialReason: "Et godt trin.",
+        },
+        exercises,
+      }),
+      null,
+    );
+  }
+
+  assert.notEqual(
+    normalizeAdminContentOutput("content.skill_package", {
+      reply: "Et udkast.",
+      skill: {
+        title: "Dribling",
+        slug: "dribling",
+        childDescription: "Du lærer at holde bolden tæt.",
+        difficulty: "beginner",
+        estimatedMinutes: 30,
+        equipment: ["Bold"],
+        editorialReason: "Et godt trin.",
+      },
+      exercises: [
+        skillExercise(1, {
+          childSafetyNote: "Spørg dine forældre om hjælp.",
+        }),
+        skillExercise(2),
+      ],
+    }),
+    null,
+  );
+});
+
+test("rejects parent-framed copy from existing child-visible operations", () => {
+  for (const summary of [
+    "Dit barn lærer at drible.",
+    "Som forælder kan du stille keglerne frem.",
+    "Kære forældre, find en bold sammen.",
+    "Denne besked er til forældrene.",
+    "Forælderen bør hjælpe med banen.",
+    "Børn kan øve sig med bolden.",
+    "Barn løber gennem banen.",
+    "Børn dribler med bolden.",
+    "Forældre hjælper med øvelsen.",
+  ]) {
+    assert.equal(
+      normalizeAdminContentOutput("content.goal_draft", {
+        reply: "Forslag.",
+        suggestion: {
+          ready: true,
+          title: "Dribling",
+          summary,
+          difficulty: "beginner",
+          estimatedMinutes: 20,
+          equipment: ["Bold"],
+          reason: "Relevant.",
+        },
+      }),
+      null,
+      summary,
+    );
+  }
+});
+
 test("canonicalizes a non-mutating draft review without creating proposal data", () => {
   assert.deepEqual(
     normalizeAdminContentOutput("content.draft_review", {

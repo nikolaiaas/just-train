@@ -668,7 +668,7 @@ export function validateAssistantRequest(
       return {
         ok: false,
         message:
-          "Gennemgangen kræver et gemt emne, mål og deløvelse med alle obligatoriske felter.",
+          "Gennemgangen kræver et gemt emne, en færdighed og en øvelse med alle obligatoriske felter.",
       };
     }
 

@@ -1,6 +1,6 @@
 {
   "version": 3,
-  "updatedAt": "2026-08-24T14:41:16.000Z",
+  "updatedAt": "2026-08-26T09:18:05.000Z",
   "items": [
     {
       "id": "hosted-preview-safety",
@@ -113,13 +113,24 @@
       "updatedAt": "2026-08-21T15:48:27.000Z"
     },
     {
+      "id": "admin-skill-package-flow",
+      "title": "Gør oprettelse af færdigheder samlet og tydelig",
+      "details": "Hold oprettelse af et emne fri for tvungne færdigheder. Fra emnesiden skal redaktøren kunne tilføje en færdighed manuelt eller få AI-forslag og derefter oprette én komplet, menneskegodkendt kladde med færdighed, 2–8 ordnede øvelser og præcis 16 emnetilpassede garderobebilleder. Al offentlig beskrivende tekst skal tale direkte til barnet.",
+      "implementationNotes": "Den lette emneoprettelse, separate emneside og indgangene til manuel eller AI-hjælpet færdighed er bygget. Ét AI-forløb foreslår en komplet færdighed med 2–8 ordnede øvelser og præcis 16 emnetilpassede garderobebilleder, viser alle gemte felter til menneskelig gennemgang og gemmer pakken atomisk som upublicerede kladder. Barnets offentlige tekst valideres ens i Admin, Edge og database. Ren lokal reset, 1008 databaseassertions, concurrencytests, hele kvalitetssuiten samt autentificeret desktop- og 390 px-browserkontrol er grønne uden et betalt provider-kald. Kortet forbliver Doing, indtil den beskyttede merge, hosted migration/function-udrulning og et godkendt syntetisk hosted AI-smoke er verificeret.",
+      "evidence": [],
+      "status": "doing",
+      "priority": 0,
+      "createdAt": "2026-08-26T08:39:04.000Z",
+      "updatedAt": "2026-08-26T09:18:05.000Z"
+    },
+    {
       "id": "admin-wardrobe-authoring",
       "title": "Opret emnegarderobe og belønningseksempler",
       "details": "Tilføj en rigtig garderobemodel og en adminside, hvor man kan oprette, rette, godkende og afvise emnespecifikke ting med navn, billede, beskrivelse, type, sjældenhed, pointpris eller oplåsningsregel. AI skal bruge emnets titel og beskrivelse til at planlægge præcis 16 sikre syntetiske ting, tegne ét 4×4-billedark med GPT Image 2 og beskære det til 16 separate billeder uden brands, links eller børnedata.",
       "implementationNotes": "En rigtig garderobetabel med RLS, review-guardrails og typed API til oprettelse, redigering, godkendelse og afvisning er bygget. Hver manuel eller AI-foreslået ting får nu en eksklusiv placering på hoved, krop, i hånd, på fødder eller som tilbehør; én fødder-ting er et helt par sko. Prompt- og reviewkontrakter er versionsopgraderet uden at bryde ældre jobs, og redaktøren kan rette AI'ens valg. Ændringer til allerede publicerede ting gemmes som en privat revision og bliver først live efter godkendelse og ny publicering; barnets slot-snapshots opdateres atomisk. Den topic-aware GPT Image 2-strøm laver præcis ét 4×4-billedark, beskærer det server-side til 16 row-major katalogbilleder og viser billeder samt beskrivelser i admin og mobil uden item-emojis. Kortet forbliver Doing, fordi manuel rækkefølge og den endelige point-/belønningsøkonomi stadig mangler.",
       "evidence": [],
       "status": "doing",
-      "priority": 0,
+      "priority": 1,
       "createdAt": "2026-08-21T20:22:21.000Z",
       "updatedAt": "2026-08-23T17:37:03.000Z"
     },
@@ -136,7 +147,7 @@
         }
       ],
       "status": "doing",
-      "priority": 1,
+      "priority": 2,
       "createdAt": "2026-08-21T09:02:49.299Z",
       "updatedAt": "2026-08-21T09:02:49.299Z"
     },
@@ -147,31 +158,31 @@
       "implementationNotes": "EAS internal-distribution preview 1.2.0 (build 3) er færdig og installeret på ejerens registrerede iPhone. Builden bruger preview-kanalen og hentede kun de offentlige Supabase-klientvariabler fra EAS preview-miljøet. JavaScript-bundlen er indlejret, og den lokale Metro-server er stoppet. De native OTP-, link-, sessions-, logout- og galleritests mangler stadig, så opgaven forbliver Doing.",
       "evidence": [],
       "status": "doing",
-      "priority": 2,
+      "priority": 3,
       "createdAt": "2026-08-20T18:45:00.000Z",
       "updatedAt": "2026-08-21T19:23:40.000Z"
     },
     {
       "id": "admin-contextual-ai-assistant",
       "title": "Byg én AI-assistent til alle indholdstrin",
-      "details": "Udvid den serverstyrede AI-platform med admin-jobs og en genbrugelig chatboks, der kender det aktive emne, mål, deløvelse, garderobe eller reviewtrin og kun returnerer skemavaliderede forslag til menneskelig accept eller afvisning.",
-      "implementationNotes": "Fem serverstyrede handlinger er på plads til emne, mål, deløvelse, garderobe og samlet gennemgang. Den aktuelle hosted-fejl er fundet: Supabase-gatewayens legacy-JWT-kontrol afviste de nye ECC-sessioner før funktionen blev kørt. Begge funktioner er lokalt ændret til at lade deres eksisterende handler-auth, brugeridentitet og RLS beskytte kaldet; regressionstest, admin-typecheck og AI-worker-tests er grønne. Hosted funktionsdeploy og autentificeret browserkontrol mangler, ligesom eksplicit afvisning/fortryd og persistente samtaler.",
-      "evidence": [],
-      "status": "doing",
-      "priority": 3,
-      "createdAt": "2026-08-21T20:22:21.000Z",
-      "updatedAt": "2026-08-23T11:12:53.000Z"
-    },
-    {
-      "id": "admin-goal-exercise-editor",
-      "title": "Redigér mål og deløvelser i administrationen",
-      "details": "Byg den referencebaserede editor til mål, rækkefølge og deløvelser med validering af forklaring, måletype, måltal, træningstid, udstyr og sikkerhedstekst. AI-forslag skal vises som før/efter/hvorfor og kræve et aktivt valg.",
-      "implementationNotes": "Editorens emneoversigt viser nu hvert mål og alle deløvelser med deres egen kladde/publiceret-status. Redaktøren kan skifte direkte til en vilkårlig deløvelse, rette den eller oprette en ny deløvelse under det valgte mål uden at overskrive søskende. Ugemte ændringer er fortsat beskyttet, og nye deløvelser starter som kladder. Oprettelse af flere mål, manuel rækkefølge og video mangler fortsat.",
+      "details": "Udvid den serverstyrede AI-platform med admin-jobs og en genbrugelig chatboks, der kender det aktive emne, færdighed, øvelse, garderobe eller reviewtrin og kun returnerer skemavaliderede forslag til menneskelig accept eller afvisning.",
+      "implementationNotes": "Fem serverstyrede handlinger er på plads til emne, færdighed, øvelse, garderobe og samlet gennemgang. Den aktuelle hosted-fejl er fundet: Supabase-gatewayens legacy-JWT-kontrol afviste de nye ECC-sessioner før funktionen blev kørt. Begge funktioner er lokalt ændret til at lade deres eksisterende handler-auth, brugeridentitet og RLS beskytte kaldet; regressionstest, admin-typecheck og AI-worker-tests er grønne. Hosted funktionsdeploy og autentificeret browserkontrol mangler, ligesom eksplicit afvisning/fortryd og persistente samtaler.",
       "evidence": [],
       "status": "doing",
       "priority": 4,
       "createdAt": "2026-08-21T20:22:21.000Z",
-      "updatedAt": "2026-08-23T11:12:53.000Z"
+      "updatedAt": "2026-08-26T08:39:04.000Z"
+    },
+    {
+      "id": "admin-goal-exercise-editor",
+      "title": "Redigér færdigheder og øvelser i administrationen",
+      "details": "Byg den referencebaserede editor til færdigheder, rækkefølge og øvelser med validering af barnets forklaring, måletype, måltal, træningstid, udstyr og sikkerhedstekst. AI-forslag skal vises som før/efter/hvorfor og kræve et aktivt valg.",
+      "implementationNotes": "Editorens emneoversigt viser nu hver færdighed og alle dens øvelser med deres egen kladde/publiceret-status. Redaktøren kan skifte direkte til en vilkårlig øvelse, rette den eller oprette en ny øvelse under den valgte færdighed uden at overskrive søskende. En ny manuel færdighed kan nu startes fra emnesiden, og ugemte ændringer er fortsat beskyttet. Nye færdigheder og øvelser starter som kladder; manuel rækkefølge og video mangler fortsat.",
+      "evidence": [],
+      "status": "doing",
+      "priority": 5,
+      "createdAt": "2026-08-21T20:22:21.000Z",
+      "updatedAt": "2026-08-26T08:39:04.000Z"
     },
     {
       "id": "dev-console",

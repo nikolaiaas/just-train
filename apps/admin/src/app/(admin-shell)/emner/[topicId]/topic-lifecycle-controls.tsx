@@ -37,6 +37,8 @@ export function TopicLifecycleControls({
 }: TopicLifecycleControlsProps) {
   const router = useRouter();
   const cancelButtonRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const openerRef = useRef<HTMLButtonElement | null>(null);
   const [dialog, setDialog] = useState<TopicLifecycleOperation | null>(null);
   const [unpublishState, unpublishAction, unpublishPending] = useActionState(
     unpublishTopicAction,
@@ -80,16 +82,37 @@ export function TopicLifecycleControls({
   }, [publishState.status, router, unpublishState.status]);
 
   useEffect(() => {
-    if (!dialog) return;
+    const dialogElement = dialogRef.current;
+    if (!dialogElement) return;
 
+    if (!dialog) {
+      if (dialogElement.open) {
+        dialogElement.close();
+      } else {
+        openerRef.current?.focus();
+        openerRef.current = null;
+      }
+
+      return;
+    }
+
+    if (!dialogElement.open) dialogElement.showModal();
     cancelButtonRef.current?.focus();
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !pending) setDialog(null);
-    };
+  }, [dialog]);
 
-    window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [dialog, pending]);
+  const openDialog = (
+    operation: TopicLifecycleOperation,
+    opener: HTMLButtonElement,
+  ) => {
+    openerRef.current = opener;
+    setDialog(operation);
+  };
+
+  const restoreOpenerFocus = () => {
+    const opener = openerRef.current;
+    openerRef.current = null;
+    if (opener?.isConnected) opener.focus();
+  };
 
   return (
     <>
@@ -98,7 +121,7 @@ export function TopicLifecycleControls({
           className={styles.publishButton}
           type="button"
           aria-haspopup="dialog"
-          onClick={() => setDialog("publish")}
+          onClick={(event) => openDialog("publish", event.currentTarget)}
         >
           {isPublished ? "Publicér nye kladder" : "Publicér emne"}
         </button>
@@ -107,20 +130,28 @@ export function TopicLifecycleControls({
         className={isPublished ? styles.unpublishButton : styles.deleteButton}
         type="button"
         aria-haspopup="dialog"
-        onClick={() => setDialog(isPublished ? "unpublish" : "delete")}
+        onClick={(event) =>
+          openDialog(isPublished ? "unpublish" : "delete", event.currentTarget)
+        }
       >
         {isPublished ? "Fjern publicering" : "Slet emne"}
       </button>
 
-      {dialog ? (
-        <div className={styles.dialogBackdrop} role="presentation">
-          <section
-            aria-describedby="topic-lifecycle-description"
-            aria-labelledby="topic-lifecycle-title"
-            aria-modal="true"
-            className={styles.lifecycleDialog}
-            role="dialog"
-          >
+      <dialog
+        ref={dialogRef}
+        aria-describedby="topic-lifecycle-description"
+        aria-labelledby="topic-lifecycle-title"
+        className={styles.lifecycleDialog}
+        onCancel={(event) => {
+          if (pending) event.preventDefault();
+        }}
+        onClose={() => {
+          setDialog(null);
+          restoreOpenerFocus();
+        }}
+      >
+        {dialog ? (
+          <>
             <p className={styles.dialogEyebrow}>
               {dialog === "delete" ? "Permanent handling" : "Publicering"}
             </p>
@@ -133,9 +164,9 @@ export function TopicLifecycleControls({
             </h2>
             <p id="topic-lifecycle-description">
               {dialog === "delete"
-                ? "Emnet, dets mål, deløvelser og garderobeting bliver slettet. Emner med registreret børneaktivitet kan ikke slettes."
+                ? "Emnet, dets færdigheder, øvelser og garderobeting bliver slettet. Emner med registreret børneaktivitet kan ikke slettes."
                 : dialog === "publish"
-                  ? "Alle gemte mål og deløvelser bliver synlige for børnene med det samme. Kun godkendte garderobeting bliver publiceret."
+                  ? "Alle gemte færdigheder og øvelser bliver synlige for børnene med det samme. Kun godkendte garderobeting bliver publiceret."
                   : "Emnet forsvinder fra børnenes app, men alt indhold bevares og kan redigeres eller publiceres igen senere."}
             </p>
 
@@ -168,7 +199,7 @@ export function TopicLifecycleControls({
                 className={styles.dialogCancelButton}
                 type="button"
                 disabled={pending}
-                onClick={() => setDialog(null)}
+                onClick={() => dialogRef.current?.close()}
               >
                 {dialog === "delete"
                   ? "Behold emnet"
@@ -194,9 +225,9 @@ export function TopicLifecycleControls({
                       : "Fjern publicering"}
               </button>
             </form>
-          </section>
-        </div>
-      ) : null}
+          </>
+        ) : null}
+      </dialog>
     </>
   );
 }
