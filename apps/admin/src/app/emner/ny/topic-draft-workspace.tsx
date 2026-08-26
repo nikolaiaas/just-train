@@ -42,6 +42,8 @@ import {
   assistantResponseBelongsToContext,
   exerciseSnapshotHasChanges,
   getAssistantContextGreeting,
+  getAssistantMessagePlaceholder,
+  getTopicWorkspaceCopy,
   goalSnapshotHasChanges,
   syncExerciseMeasurementResetDefault,
   topicSnapshotHasChanges,
@@ -66,7 +68,10 @@ type TopicDraftWorkspaceProps = {
   initialDraft: ResumableTopicDraft | null;
   initialOutline: TopicEditorOutlineGoal[];
   initialStep:
-    Extract<ResumableEditorStep, "goal" | "exercise"> | "new-exercise" | null;
+    | Extract<ResumableEditorStep, "goal" | "exercise" | "wardrobe">
+    | "new-goal"
+    | "new-exercise"
+    | null;
   profileName: string;
   topicRequestId: string;
   wardrobeRequestId: string;
@@ -79,26 +84,18 @@ const initialAssistantState: AssistantState = { status: "idle" };
 
 const steps: Array<{ key: EditorStep; label: string; number: string }> = [
   { key: "topic", label: "Grundlag", number: "1" },
-  { key: "goal", label: "Mål", number: "2" },
-  { key: "exercise", label: "Deløvelser", number: "3" },
+  { key: "goal", label: "Færdighed", number: "2" },
+  { key: "exercise", label: "Øvelser", number: "3" },
   { key: "wardrobe", label: "Garderobe", number: "4" },
   { key: "review", label: "Gennemgang", number: "5" },
 ];
 
 const assistantLabels: Record<AssistantMode, string> = {
   topic: "Emne",
-  goal: "Mål",
-  exercise: "Deløvelse",
+  goal: "Færdighed",
+  exercise: "Øvelse",
   wardrobe: "Garderobe",
   review: "Gennemgang",
-};
-
-const assistantPlaceholders: Record<AssistantMode, string> = {
-  topic: "Fx: Lav et emne om balance og bevægelse",
-  goal: "Fx: Hjælp mig med et enkelt første mål",
-  exercise: "Fx: Lav en tryg deløvelse, barnet kan forstå",
-  wardrobe: "Fx: Foreslå fem sjove ting til garderoben",
-  review: "Fx: Gennemgå kladden for klarhed og sikkerhed",
 };
 
 const difficultyLabels = {
@@ -241,6 +238,15 @@ export function TopicDraftWorkspace({
   wardrobeRequestId,
 }: TopicDraftWorkspaceProps) {
   const isPublishedTopic = initialDraft?.topic.status === "published";
+  const isExistingTopic = initialDraft !== null;
+  const isAddingGoal = initialStep === "new-goal" && initialDraft !== null;
+  const isEditingExistingGoal = Boolean(initialDraft?.goal) && !isAddingGoal;
+  const isCreatingGoalForExistingTopic =
+    isExistingTopic && !isEditingExistingGoal;
+  const existingGoalTitles = useMemo(
+    () => initialOutline.map((goal) => goal.title),
+    [initialOutline],
+  );
   const isPublishedGoal = initialDraft?.goal?.status === "published";
   const isPublishedExercise = initialDraft?.exercise?.status === "published";
   const resumedTopicState: CreateTopicState = initialDraft
@@ -257,8 +263,8 @@ export function TopicDraftWorkspace({
     ? {
         status: "success",
         message: isPublishedGoal
-          ? "Det publicerede mål er hentet. Vælg Rediger for at ændre det direkte."
-          : "Målkladden er hentet. Vælg Rediger for at ændre den.",
+          ? "Den publicerede færdighed er hentet. Vælg Rediger for at ændre den direkte."
+          : "Færdighedskladden er hentet. Vælg Rediger for at ændre den.",
         goalId: initialDraft.goal.id,
         updatedAt: initialDraft.goal.updatedAt,
       }
@@ -267,8 +273,8 @@ export function TopicDraftWorkspace({
     ? {
         status: "success",
         message: isPublishedExercise
-          ? "Den publicerede deløvelse er hentet. Vælg Rediger for at ændre den direkte."
-          : "Deløvelsen er hentet. Vælg Rediger for at ændre den.",
+          ? "Den publicerede øvelse er hentet. Vælg Rediger for at ændre den direkte."
+          : "Øvelsen er hentet. Vælg Rediger for at ændre den.",
         exerciseId: initialDraft.exercise.id,
         updatedAt: initialDraft.exercise.updatedAt,
       }
@@ -404,7 +410,12 @@ export function TopicDraftWorkspace({
     {
       id: `welcome-${startingStep}`,
       role: "assistant",
-      content: getAssistantContextGreeting(startingStep),
+      content: getAssistantContextGreeting(startingStep, {
+        addingGoal: isCreatingGoalForExistingTopic,
+        currentGoalTitle: initialDraft?.goal?.title,
+        editingGoal: isEditingExistingGoal,
+        existingGoalTitles,
+      }),
     },
   ]);
   const [suggestion, setSuggestion] = useState<AssistantSuggestion | null>(
@@ -566,23 +577,36 @@ export function TopicDraftWorkspace({
       ? visibleExerciseState.fieldErrors
       : {};
 
-  function resetAssistantContext(mode: AssistantMode) {
-    setAssistantMode(mode);
-    setAssistantMessage("");
-    setAssistantErrorMessage(null);
-    setNextAssistantRequestId(window.crypto.randomUUID());
-    submittedAssistantMessage.current = null;
-    setAssistantSubmission(null);
-    setSuggestion(null);
-    setReviewResult(null);
-    setMessages([
-      {
-        id: `welcome-${mode}-${window.crypto.randomUUID()}`,
-        role: "assistant",
-        content: getAssistantContextGreeting(mode),
-      },
-    ]);
-  }
+  const resetAssistantContext = useCallback(
+    (mode: AssistantMode) => {
+      setAssistantMode(mode);
+      setAssistantMessage("");
+      setAssistantErrorMessage(null);
+      setNextAssistantRequestId(window.crypto.randomUUID());
+      submittedAssistantMessage.current = null;
+      setAssistantSubmission(null);
+      setSuggestion(null);
+      setReviewResult(null);
+      setMessages([
+        {
+          id: `welcome-${mode}-${window.crypto.randomUUID()}`,
+          role: "assistant",
+          content: getAssistantContextGreeting(mode, {
+            addingGoal: mode === "goal" && isCreatingGoalForExistingTopic,
+            currentGoalTitle: initialDraft?.goal?.title,
+            editingGoal: mode === "goal" && isEditingExistingGoal,
+            existingGoalTitles,
+          }),
+        },
+      ]);
+    },
+    [
+      existingGoalTitles,
+      initialDraft?.goal?.title,
+      isCreatingGoalForExistingTopic,
+      isEditingExistingGoal,
+    ],
+  );
 
   function focusStepAfterRender() {
     focusNextStep.current = true;
@@ -651,10 +675,10 @@ export function TopicDraftWorkspace({
       );
       setActiveStep("goal");
       resetAssistantContext("goal");
-      setStepAnnouncement("Emnekladden er gemt. Trin 2 af 5: Mål.");
+      setStepAnnouncement("Emnekladden er gemt. Trin 2 af 5: Færdighed.");
       focusStepAfterRender();
     }
-  }, [topicState]);
+  }, [resetAssistantContext, topicState]);
 
   useEffect(() => {
     if (
@@ -670,10 +694,10 @@ export function TopicDraftWorkspace({
       setNavigationWarning(null);
       setActiveStep("exercise");
       resetAssistantContext("exercise");
-      setStepAnnouncement("Målkladden er gemt. Trin 3 af 5: Deløvelse.");
+      setStepAnnouncement("Færdighedskladden er gemt. Trin 3 af 5: Øvelser.");
       focusStepAfterRender();
     }
-  }, [goalState]);
+  }, [goalState, resetAssistantContext]);
 
   useEffect(() => {
     if (
@@ -693,7 +717,7 @@ export function TopicDraftWorkspace({
             goalId: selectedGoalId,
             id: exerciseState.exerciseId,
             sortOrder: initialDraft?.nextExerciseSortOrder ?? 0,
-            title: normalizeText(exerciseTitle, 120) || "Ny deløvelse",
+            title: normalizeText(exerciseTitle, 120) || "Ny øvelse",
           }),
         );
 
@@ -712,7 +736,7 @@ export function TopicDraftWorkspace({
       }
       setActiveStep("wardrobe");
       resetAssistantContext("wardrobe");
-      setStepAnnouncement("Deløvelsen er gemt. Trin 4 af 5: Garderobe.");
+      setStepAnnouncement("Øvelsen er gemt. Trin 4 af 5: Garderobe.");
       focusStepAfterRender();
     }
   }, [
@@ -720,6 +744,7 @@ export function TopicDraftWorkspace({
     exerciseTitle,
     initialDraft?.nextExerciseSortOrder,
     initialDraft?.topic.id,
+    resetAssistantContext,
     selectedGoalId,
   ]);
 
@@ -785,8 +810,8 @@ export function TopicDraftWorkspace({
         setSuggestion(null);
         setStepAnnouncement(
           isPublishedGoal
-            ? "Det publicerede mål er opdateret. Ændringen er synlig med det samme."
-            : "Målkladden er opdateret og stadig upubliceret.",
+            ? "Den publicerede færdighed er opdateret. Ændringen er synlig med det samme."
+            : "Færdighedskladden er opdateret og stadig upubliceret.",
         );
         frame = window.requestAnimationFrame(() => {
           draftTitleRef.current?.focus({ preventScroll: true });
@@ -833,8 +858,8 @@ export function TopicDraftWorkspace({
         setSuggestion(null);
         setStepAnnouncement(
           isPublishedExercise
-            ? "Den publicerede deløvelse er opdateret. Ændringen er synlig med det samme."
-            : "Deløvelseskladden er opdateret og stadig upubliceret.",
+            ? "Den publicerede øvelse er opdateret. Ændringen er synlig med det samme."
+            : "Øvelseskladden er opdateret og stadig upubliceret.",
         );
         frame = window.requestAnimationFrame(() => {
           draftTitleRef.current?.focus({ preventScroll: true });
@@ -1118,9 +1143,9 @@ export function TopicDraftWorkspace({
       dirtyEditingStep === "topic"
         ? "emnekladden"
         : dirtyEditingStep === "goal"
-          ? "målkladden"
+          ? "færdighedskladden"
           : dirtyEditingStep === "exercise"
-            ? "deløvelseskladden"
+            ? "øvelseskladden"
             : "garderobeformularen";
     const message = `Du har ændringer i ${draftLabel}, som ikke er gemt. Gem eller vælg Annuller ændringer, før du ${destination}.`;
     setNavigationWarning(message);
@@ -1202,8 +1227,8 @@ export function TopicDraftWorkspace({
       step === "topic"
         ? "Emnekladden er åben for redigering."
         : step === "goal"
-          ? "Målkladden er åben for redigering."
-          : "Deløvelseskladden er åben for redigering.",
+          ? "Færdighedskladden er åben for redigering."
+          : "Øvelseskladden er åben for redigering.",
     );
 
     window.requestAnimationFrame(() => {
@@ -1249,8 +1274,8 @@ export function TopicDraftWorkspace({
       step === "topic"
         ? "Ændringerne i emnekladden er annulleret. Den senest gemte version er gendannet."
         : step === "goal"
-          ? "Ændringerne i målkladden er annulleret. Den senest gemte version er gendannet."
-          : "Ændringerne i deløvelseskladden er annulleret. Den senest gemte version er gendannet.",
+          ? "Ændringerne i færdighedskladden er annulleret. Den senest gemte version er gendannet."
+          : "Ændringerne i øvelseskladden er annulleret. Den senest gemte version er gendannet.",
     );
     window.requestAnimationFrame(() => {
       draftTitleRef.current?.focus({ preventScroll: true });
@@ -1433,18 +1458,19 @@ export function TopicDraftWorkspace({
     (total, goal) => total + goal.exercises.length,
     0,
   );
+  const workspaceCopy = getTopicWorkspaceCopy({
+    isAddingGoal,
+    isExistingTopic,
+    isPublishedTopic,
+    topicTitle: initialDraft?.topic.title ?? title,
+  });
 
   return (
     <main className={styles.viewport}>
       <p className={styles.visuallyHidden} role="status" aria-live="polite">
         {stepAnnouncement}
       </p>
-      <section
-        className={styles.appShell}
-        aria-label={
-          isPublishedTopic ? "Rediger publiceret emne" : "Opret nyt emne"
-        }
-      >
+      <section className={styles.appShell} aria-label={workspaceCopy.ariaLabel}>
         <header className={styles.topbar}>
           <div className={styles.brand}>
             <AppMark />
@@ -1468,47 +1494,28 @@ export function TopicDraftWorkspace({
         <div className={styles.pageBody}>
           <div className={styles.pageToolbar}>
             <div>
-              <p className={styles.eyebrow}>
-                {isPublishedTopic
-                  ? "Rediger publiceret emne"
-                  : initialDraft
-                    ? "Fortsæt kladde"
-                    : "Nyt emne"}
-              </p>
-              <h1>
-                {isPublishedTopic
-                  ? `Rediger ${initialDraft?.topic.title ?? "emnet"}`
-                  : initialDraft
-                    ? `Fortsæt ${initialDraft.topic.title}`
-                    : "Skab et forløb sammen med AI"}
-              </h1>
-              <p>
-                {isPublishedTopic
-                  ? "Gemte ændringer til dele, der allerede er publiceret, slår direkte igennem i børnenes forløb. Kladder og nye garderobeting forbliver upublicerede. AI ændrer aldrig felter uden dit valg."
-                  : "Opret emne, mål og deløvelse som kladder. AI hjælper i hvert trin, men ændrer aldrig felter eller publicerer uden dit valg."}
-              </p>
+              <p className={styles.eyebrow}>{workspaceCopy.eyebrow}</p>
+              <h1>{workspaceCopy.heading}</h1>
+              <p>{workspaceCopy.description}</p>
             </div>
             <Link
               className={styles.secondaryButton}
-              href="/emner"
+              href={
+                isExistingTopic && initialDraft
+                  ? `/emner/${initialDraft.topic.id}`
+                  : "/emner"
+              }
               onClick={(event) => {
-                if (
-                  preventDirtyNavigation(
-                    isPublishedTopic ? "lukker redigeringen" : "lukker kladden",
-                  )
-                ) {
+                if (preventDirtyNavigation(workspaceCopy.closeAction)) {
                   event.preventDefault();
                 }
               }}
             >
-              {isPublishedTopic ? "Luk redigering" : "Luk kladden"}
+              {workspaceCopy.closeLabel}
             </Link>
           </div>
 
-          <nav
-            className={styles.steps}
-            aria-label={isPublishedTopic ? "Emnets trin" : "Emnekladdens trin"}
-          >
+          <nav className={styles.steps} aria-label={workspaceCopy.stepsLabel}>
             {steps.map((step) => {
               const enabled = stepIsEnabled(step.key);
               return (
@@ -1537,22 +1544,27 @@ export function TopicDraftWorkspace({
               <header className={styles.contentOutlineHeader}>
                 <div>
                   <p className={styles.eyebrow}>Indhold i emnet</p>
-                  <h2 id="content-outline-title">Vælg mål eller deløvelse</h2>
+                  <h2 id="content-outline-title">
+                    Vælg færdighed eller øvelse
+                  </h2>
                   <p>
-                    Alle mål og deløvelser er samlet her. Vælg en for at
-                    redigere den, eller tilføj en ny deløvelse under det rette
-                    mål.
+                    Alle færdigheder og øvelser er samlet her. Vælg en for at
+                    redigere den, eller tilføj en ny øvelse under den rette
+                    færdighed.
                   </p>
                 </div>
                 <span className={styles.outlineCount}>
-                  {editorOutline.length} mål · {outlineExerciseCount}{" "}
-                  {outlineExerciseCount === 1 ? "deløvelse" : "deløvelser"}
+                  {editorOutline.length}{" "}
+                  {editorOutline.length === 1 ? "færdighed" : "færdigheder"} ·{" "}
+                  {outlineExerciseCount}{" "}
+                  {outlineExerciseCount === 1 ? "øvelse" : "øvelser"}
                 </span>
               </header>
 
               {editorOutline.length === 0 ? (
                 <p className={styles.outlineEmpty}>
-                  Der er ingen mål endnu. Opret det første mål på trin 2.
+                  Der er ingen færdigheder endnu. Opret en ny færdighed på trin
+                  2.
                 </p>
               ) : (
                 <div className={styles.outlineGoals}>
@@ -1589,7 +1601,7 @@ export function TopicDraftWorkspace({
                             }
                             if (
                               preventDirtyNavigation(
-                                `åbner målet ${goal.title}`,
+                                `åbner færdigheden ${goal.title}`,
                               )
                             ) {
                               event.preventDefault();
@@ -1600,7 +1612,7 @@ export function TopicDraftWorkspace({
                             {goalIndex + 1}
                           </span>
                           <span>
-                            <small>Mål</small>
+                            <small>Færdighed</small>
                             <strong id={`outline-goal-${goal.id}`}>
                               {goal.title}
                             </strong>
@@ -1641,7 +1653,7 @@ export function TopicDraftWorkspace({
                                   }
                                   if (
                                     preventDirtyNavigation(
-                                      `åbner deløvelsen ${exercise.title}`,
+                                      `åbner øvelsen ${exercise.title}`,
                                     )
                                   ) {
                                     event.preventDefault();
@@ -1683,7 +1695,7 @@ export function TopicDraftWorkspace({
                               }
                               if (
                                 preventDirtyNavigation(
-                                  `tilføjer en ny deløvelse under ${goal.title}`,
+                                  `tilføjer en ny øvelse under ${goal.title}`,
                                 )
                               ) {
                                 event.preventDefault();
@@ -1691,7 +1703,7 @@ export function TopicDraftWorkspace({
                             }}
                           >
                             <span aria-hidden="true">+</span>
-                            Ny deløvelse
+                            Ny øvelse
                           </Link>
                         </div>
                       </section>
@@ -1822,7 +1834,13 @@ export function TopicDraftWorkspace({
                     onChange={(event) =>
                       setAssistantMessage(event.target.value)
                     }
-                    placeholder={assistantPlaceholders[assistantMode]}
+                    placeholder={getAssistantMessagePlaceholder(assistantMode, {
+                      addingGoal:
+                        assistantMode === "goal" &&
+                        isCreatingGoalForExistingTopic,
+                      editingGoal:
+                        assistantMode === "goal" && isEditingExistingGoal,
+                    })}
                   />
                 </label>
                 <button
@@ -1868,12 +1886,13 @@ export function TopicDraftWorkspace({
                       {activeStep === "topic"
                         ? title || "Emnets grundlag"
                         : activeStep === "goal"
-                          ? goalTitle || "Første mål"
+                          ? goalTitle ||
+                            (isExistingTopic
+                              ? "Ny færdighed"
+                              : "Første færdighed")
                           : activeStep === "exercise"
                             ? exerciseTitle ||
-                              (addingExercise
-                                ? "Ny deløvelse"
-                                : "Første deløvelse")
+                              (addingExercise ? "Ny øvelse" : "Første øvelse")
                             : activeStep === "wardrobe"
                               ? "Garderobeeksempler"
                               : "Gennemgang"}
@@ -1983,7 +2002,7 @@ export function TopicDraftWorkspace({
                     </label>
 
                     <label className={styles.descriptionField}>
-                      <span>Kort beskrivelse</span>
+                      <span>Kort beskrivelse · barnet ser teksten</span>
                       <textarea
                         name="description"
                         rows={5}
@@ -1992,12 +2011,12 @@ export function TopicDraftWorkspace({
                         disabled={topicBusy || (topicCreated && !topicEditing)}
                         aria-invalid={Boolean(topicErrors.description)}
                         onChange={(event) => setDescription(event.target.value)}
-                        placeholder="Hvad skal barnet opleve og lære i dette emne?"
+                        placeholder="Fx: Leg med bolden og lær nye finter trin for trin."
                       />
                       <span className={styles.fieldMeta}>
                         <span>
                           {topicErrors.description ??
-                            "Beskriv emnet i et enkelt, børnevenligt sprog."}
+                            "Skriv direkte til barnet. Teksten vises ordret i appen."}
                         </span>
                         <span>{Array.from(description).length} / 500</span>
                       </span>
@@ -2042,7 +2061,7 @@ export function TopicDraftWorkspace({
                           ? isPublishedTopic
                             ? "Når du gemmer, bliver ændringerne synlige med det samme."
                             : "Gem ændringerne i den upublicerede emnekladde."
-                          : "Emnet gemmes som kladde. Derefter åbner det første mål."
+                          : "Emnet gemmes som kladde. Derefter åbner den første færdighed."
                         : visibleTopicState.message}
                     </p>
                     {topicCreated && !topicEditing ? (
@@ -2061,7 +2080,7 @@ export function TopicDraftWorkspace({
                           type="button"
                           onClick={() => openStep("goal")}
                         >
-                          Fortsæt til mål
+                          Fortsæt til færdighed
                         </button>
                       </>
                     ) : (
@@ -2150,7 +2169,7 @@ export function TopicDraftWorkspace({
 
                   <div className={styles.formGrid}>
                     <label className={styles.fullField}>
-                      <span>Navn på målet</span>
+                      <span>Navn på færdigheden</span>
                       <input
                         ref={goalTitleRef}
                         name="title"
@@ -2168,7 +2187,9 @@ export function TopicDraftWorkspace({
                     </label>
 
                     <label className={styles.fullField}>
-                      <span>Hvad skal barnet lære?</span>
+                      <span>
+                        Beskrivelse af færdigheden · barnet ser teksten
+                      </span>
                       <textarea
                         name="summary"
                         rows={4}
@@ -2177,11 +2198,16 @@ export function TopicDraftWorkspace({
                         disabled={goalBusy || (goalCreated && !goalEditing)}
                         aria-invalid={Boolean(goalErrors.summary)}
                         onChange={(event) => setGoalSummary(event.target.value)}
-                        placeholder="Beskriv et tydeligt og realistisk mål."
+                        placeholder="Fx: Du lærer at holde bolden tæt på fødderne."
                       />
                       {goalErrors.summary ? (
                         <small>{goalErrors.summary}</small>
-                      ) : null}
+                      ) : (
+                        <small className={styles.helpText}>
+                          Skriv direkte til barnet. Teksten vises ordret i
+                          appen.
+                        </small>
+                      )}
                     </label>
 
                     <label>
@@ -2263,9 +2289,11 @@ export function TopicDraftWorkspace({
                       {visibleGoalState.status === "idle"
                         ? goalEditing
                           ? isPublishedGoal
-                            ? "Når du gemmer, bliver målændringen synlig med det samme."
-                            : "Gem ændringerne i den upublicerede målkladde."
-                          : "Målet gemmes under emnet som en upubliceret kladde."
+                            ? "Når du gemmer, bliver færdighedsændringen synlig med det samme."
+                            : "Gem ændringerne i den upublicerede færdighedskladde."
+                          : isAddingGoal && editorOutline.length > 0
+                            ? `Færdigheden gemmes som nr. ${editorOutline.length + 1} efter de eksisterende og forbliver upubliceret.`
+                            : "Færdigheden gemmes under emnet som en upubliceret kladde."
                         : visibleGoalState.message}
                     </p>
                     {goalCreated && !goalEditing ? (
@@ -2276,15 +2304,15 @@ export function TopicDraftWorkspace({
                           onClick={() => beginEditingStep("goal")}
                         >
                           {isPublishedGoal
-                            ? "Rediger mål"
-                            : "Rediger målkladde"}
+                            ? "Rediger færdighed"
+                            : "Rediger færdighedskladde"}
                         </button>
                         <button
                           className={styles.primaryButton}
                           type="button"
                           onClick={() => openStep("exercise")}
                         >
-                          Fortsæt til deløvelse
+                          Fortsæt til øvelser
                         </button>
                       </>
                     ) : (
@@ -2308,7 +2336,7 @@ export function TopicDraftWorkspace({
                             ? "Gemmer…"
                             : goalEditing
                               ? "Gem ændringer"
-                              : "Gem målkladde"}
+                              : "Gem færdighedskladde"}
                         </button>
                       </>
                     )}
@@ -2375,7 +2403,7 @@ export function TopicDraftWorkspace({
 
                   <div className={styles.formGrid}>
                     <label className={styles.fullField}>
-                      <span>Navn på deløvelsen</span>
+                      <span>Navn på øvelsen</span>
                       <input
                         ref={exerciseTitleRef}
                         name="title"
@@ -2397,7 +2425,7 @@ export function TopicDraftWorkspace({
                     </label>
 
                     <label className={styles.fullField}>
-                      <span>Instruktion direkte til barnet</span>
+                      <span>Instruktion · barnet ser teksten</span>
                       <textarea
                         name="instructions"
                         rows={5}
@@ -2411,11 +2439,15 @@ export function TopicDraftWorkspace({
                         onChange={(event) =>
                           setExerciseInstructions(event.target.value)
                         }
-                        placeholder="Skriv kort, venligt og trin for trin."
+                        placeholder="Fx: Før bolden roligt gennem keglerne tre gange."
                       />
                       {exerciseErrors.instructions ? (
                         <small>{exerciseErrors.instructions}</small>
-                      ) : null}
+                      ) : (
+                        <small className={styles.helpText}>
+                          Skriv direkte til barnet, kort og trin for trin.
+                        </small>
+                      )}
                     </label>
 
                     <label>
@@ -2527,7 +2559,7 @@ export function TopicDraftWorkspace({
                     </label>
 
                     <label className={styles.fullField}>
-                      <span>Sikkerhed og voksenhjælp</span>
+                      <span>Sikkerhedstekst · barnet ser teksten</span>
                       <textarea
                         name="safetyNote"
                         rows={3}
@@ -2544,7 +2576,12 @@ export function TopicDraftWorkspace({
                       />
                       {exerciseErrors.safetyNote ? (
                         <small>{exerciseErrors.safetyNote}</small>
-                      ) : null}
+                      ) : (
+                        <small className={styles.helpText}>
+                          Skriv direkte til barnet. Du må gerne skrive “Få hjælp
+                          af en voksen”.
+                        </small>
+                      )}
                     </label>
                   </div>
 
@@ -2563,8 +2600,8 @@ export function TopicDraftWorkspace({
                         ? exerciseEditing
                           ? isPublishedExercise
                             ? "Når du gemmer, bliver ændringen synlig med det samme."
-                            : "Gem ændringerne i den upublicerede deløvelseskladde."
-                          : "Deløvelsen gemmes under målet som en upubliceret kladde."
+                            : "Gem ændringerne i den upublicerede øvelseskladde."
+                          : "Øvelsen gemmes under færdigheden som en upubliceret kladde."
                         : visibleExerciseState.message}
                     </p>
                     {exerciseCreated && !exerciseEditing ? (
@@ -2574,7 +2611,7 @@ export function TopicDraftWorkspace({
                           type="button"
                           onClick={() => beginEditingStep("exercise")}
                         >
-                          Rediger deløvelse
+                          Rediger øvelse
                         </button>
                         <button
                           className={styles.primaryButton}
@@ -2597,7 +2634,7 @@ export function TopicDraftWorkspace({
                               topicId: initialDraft.topic.id,
                             })}
                           >
-                            Annuller ny deløvelse
+                            Annuller ny øvelse
                           </Link>
                         ) : null}
                         {exerciseEditing ? (
@@ -2623,7 +2660,7 @@ export function TopicDraftWorkspace({
                             ? "Gemmer…"
                             : exerciseEditing
                               ? "Gem ændringer"
-                              : "Gem deløvelse"}
+                              : "Gem øvelse"}
                         </button>
                       </>
                     )}
@@ -2699,7 +2736,7 @@ export function TopicDraftWorkspace({
                     <article>
                       <span>2</span>
                       <div>
-                        <small>Mål</small>
+                        <small>Færdighed</small>
                         <strong>
                           {savedGoalSnapshot?.title ?? "Gemt titel mangler"}
                         </strong>
@@ -2712,8 +2749,8 @@ export function TopicDraftWorkspace({
                         className={styles.secondaryButton}
                         aria-label={
                           isPublishedGoal
-                            ? "Rediger det publicerede mål"
-                            : "Rediger målkladden"
+                            ? "Rediger den publicerede færdighed"
+                            : "Rediger færdighedskladden"
                         }
                         onClick={() => beginEditingStep("goal")}
                       >
@@ -2723,7 +2760,7 @@ export function TopicDraftWorkspace({
                     <article>
                       <span>3</span>
                       <div>
-                        <small>Deløvelse</small>
+                        <small>Øvelse</small>
                         <strong>
                           {savedExerciseSnapshot?.title ?? "Gemt titel mangler"}
                         </strong>
@@ -2738,8 +2775,8 @@ export function TopicDraftWorkspace({
                         className={styles.secondaryButton}
                         aria-label={
                           isPublishedExercise
-                            ? "Rediger den publicerede deløvelse"
-                            : "Rediger deløvelseskladden"
+                            ? "Rediger den publicerede øvelse"
+                            : "Rediger øvelseskladden"
                         }
                         onClick={() => beginEditingStep("exercise")}
                       >
@@ -2804,8 +2841,8 @@ export function TopicDraftWorkspace({
                         {(
                           [
                             ["topic", "Emne"],
-                            ["goal", "Mål"],
-                            ["exercise", "Deløvelse"],
+                            ["goal", "Færdighed"],
+                            ["exercise", "Øvelse"],
                             ["wardrobe", "Garderobe"],
                           ] as const
                         ).map(([key, label]) => {

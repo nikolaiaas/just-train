@@ -746,7 +746,7 @@ export function WardrobeAuthoring({
                 {fieldErrors.name ? <small>{fieldErrors.name}</small> : null}
               </label>
               <label className={styles.fullField}>
-                <span>Beskrivelse til barnet</span>
+                <span>Beskrivelse · barnet ser teksten</span>
                 <textarea
                   name="description"
                   rows={3}
@@ -755,14 +755,14 @@ export function WardrobeAuthoring({
                   disabled={busy}
                   aria-invalid={Boolean(fieldErrors.description)}
                   onChange={(event) => setDescription(event.target.value)}
-                  placeholder="Fx Et helt par blå sko med små stjerner"
+                  placeholder="Fx Et helt par blå sko, du kan tage på."
                 />
                 {fieldErrors.description ? (
                   <small>{fieldErrors.description}</small>
                 ) : (
                   <span className={styles.helpText}>
-                    Beskriv kort, hvad barnet kan se. Teksten vises også for
-                    skærmlæsere.
+                    Skriv direkte til barnet. Teksten vises ordret og bruges
+                    også af skærmlæsere.
                   </span>
                 )}
               </label>
@@ -889,7 +889,7 @@ export function WardrobeAuthoring({
                   </label>
                 ) : (
                   <label>
-                    <span>Regel</span>
+                    <span>Regel · barnet ser teksten</span>
                     <input type="hidden" name="points" value="0" />
                     <input
                       name="unlockRule"
@@ -898,11 +898,15 @@ export function WardrobeAuthoring({
                       disabled={busy}
                       aria-invalid={Boolean(fieldErrors.unlockRule)}
                       onChange={(event) => setUnlockRule(event.target.value)}
-                      placeholder="Fx Gennemfør tre deløvelser"
+                      placeholder="Fx Gennemfør tre øvelser"
                     />
                     {fieldErrors.unlockRule ? (
                       <small>{fieldErrors.unlockRule}</small>
-                    ) : null}
+                    ) : (
+                      <span className={styles.helpText}>
+                        Skriv direkte til barnet, fx “Gennemfør tre øvelser”.
+                      </span>
+                    )}
                   </label>
                 )}
               </fieldset>

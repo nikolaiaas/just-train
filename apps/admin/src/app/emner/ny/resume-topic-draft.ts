@@ -69,19 +69,25 @@ export type TopicEditorOutlineGoal = {
 
 export function buildTopicEditorHref({
   createExercise = false,
+  createGoal = false,
   exerciseId,
   goalId,
+  manageWardrobe = false,
   topicId,
 }: {
   createExercise?: boolean;
+  createGoal?: boolean;
   exerciseId?: string;
   goalId?: string;
+  manageWardrobe?: boolean;
   topicId: string;
 }): string {
   const search = new URLSearchParams({ topic: topicId });
   if (goalId) search.set("goal", goalId);
   if (exerciseId) search.set("exercise", exerciseId);
-  if (createExercise) search.set("add", "exercise");
+  if (createGoal) search.set("add", "goal");
+  else if (createExercise) search.set("add", "exercise");
+  else if (manageWardrobe) search.set("add", "wardrobe");
   return `/emner/ny?${search.toString()}`;
 }
 
@@ -145,6 +151,18 @@ export type ResumeTopicSelection =
       goalId: string;
       startingStep: "new-exercise";
       topicId: string;
+    }
+  | {
+      exerciseId: null;
+      goalId: null;
+      startingStep: "new-goal";
+      topicId: string;
+    }
+  | {
+      exerciseId: null;
+      goalId: null;
+      startingStep: "wardrobe";
+      topicId: string;
     };
 
 type ResumeTopicQuery = {
@@ -156,6 +174,7 @@ type ResumeTopicQuery = {
 
 type RequestedChildSelection = {
   createExercise?: boolean;
+  createGoal?: boolean;
   exerciseId?: string | null;
   goalId?: string | null;
 };
@@ -218,6 +237,28 @@ export function parseResumeTopicSelection(
     };
   }
 
+  if (hasAdd && query.add === "goal") {
+    if (hasGoal || hasExercise) return null;
+
+    return {
+      exerciseId: null,
+      goalId: null,
+      startingStep: "new-goal",
+      topicId,
+    };
+  }
+
+  if (hasAdd && query.add === "wardrobe") {
+    if (hasGoal || hasExercise) return null;
+
+    return {
+      exerciseId: null,
+      goalId: null,
+      startingStep: "wardrobe",
+      topicId,
+    };
+  }
+
   const goalId = parseResumeTopicId(query.goal);
   if (!goalId || (!hasGoal && hasExercise)) return null;
 
@@ -254,8 +295,17 @@ export function parseResumeTopicSelection(
 
 export function getResumeStartingStep(
   draft: ResumableTopicDraft | null,
-  requestedStep: "goal" | "exercise" | "new-exercise" | null = null,
+  requestedStep:
+    | "goal"
+    | "exercise"
+    | "wardrobe"
+    | "new-goal"
+    | "new-exercise"
+    | null = null,
 ): ResumableEditorStep {
+  if (requestedStep === "wardrobe" && draft) return "wardrobe";
+  if (requestedStep === "new-goal" && draft) return "goal";
+
   if (requestedStep === "new-exercise" && draft?.goal) return "exercise";
 
   if (requestedStep === "exercise" && draft?.goal && draft.exercise) {
@@ -305,25 +355,31 @@ export async function loadResumableTopicDraft(
     ? "published"
     : "draft";
 
-  let goalQuery = client
-    .from("goals")
-    .select(
-      "id, title, summary, difficulty, estimated_minutes, equipment, hero_media_url, sort_order, is_published, published_at, updated_at",
-    )
-    .eq("topic_id", topicId);
+  const goalResponsePromise = requestedChild.createGoal
+    ? Promise.resolve({ data: null, error: null })
+    : (() => {
+        let goalQuery = client
+          .from("goals")
+          .select(
+            "id, title, summary, difficulty, estimated_minutes, equipment, hero_media_url, sort_order, is_published, published_at, updated_at",
+          )
+          .eq("topic_id", topicId);
 
-  if (requestedChild.goalId) {
-    goalQuery = goalQuery.eq("id", requestedChild.goalId);
-  } else {
-    goalQuery = goalQuery
-      .order("sort_order", { ascending: true })
-      .order("created_at", { ascending: true })
-      .limit(1);
-  }
+        if (requestedChild.goalId) {
+          goalQuery = goalQuery.eq("id", requestedChild.goalId);
+        } else {
+          goalQuery = goalQuery
+            .order("sort_order", { ascending: true })
+            .order("created_at", { ascending: true })
+            .limit(1);
+        }
+
+        return goalQuery.maybeSingle();
+      })();
 
   const [goalResponse, latestGoalOrderResponse, wardrobeResponse] =
     await Promise.all([
-      goalQuery.maybeSingle(),
+      goalResponsePromise,
       client
         .from("goals")
         .select("sort_order")

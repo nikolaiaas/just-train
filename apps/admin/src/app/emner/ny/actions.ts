@@ -355,7 +355,7 @@ export async function createAdminGoalDraft(
     return session.access.kind === "denied"
       ? {
           status: "denied",
-          message: "Din konto har ikke adgang til at oprette mål.",
+          message: "Din konto har ikke adgang til at oprette færdigheder.",
         }
       : {
           status: "unavailable",
@@ -385,8 +385,8 @@ export async function createAdminGoalDraft(
     return {
       status: "success",
       message: result.created
-        ? "Målkladden er gemt og klar til næste trin."
-        : "Målkladden var allerede gemt og er hentet igen.",
+        ? "Færdighedskladden er gemt og klar til næste trin."
+        : "Færdighedskladden var allerede gemt og er hentet igen.",
       goalId: result.goal.id,
       updatedAt: result.goal.updatedAt,
     };
@@ -430,7 +430,7 @@ export async function updateAdminGoalDraft(
     return session.access.kind === "denied"
       ? {
           status: "denied",
-          message: "Din konto har ikke adgang til at redigere mål.",
+          message: "Din konto har ikke adgang til at redigere færdigheder.",
         }
       : {
           status: "unavailable",
@@ -464,8 +464,8 @@ export async function updateAdminGoalDraft(
       status: "success",
       message:
         expectedStatus === "published"
-          ? "Det publicerede mål er opdateret. Ændringen er synlig med det samme."
-          : "Målkladden er opdateret.",
+          ? "Den publicerede færdighed er opdateret. Ændringen er synlig med det samme."
+          : "Færdighedskladden er opdateret.",
       goalId: result.goal.id,
       updatedAt: result.goal.updatedAt,
     };
@@ -509,7 +509,7 @@ export async function createAdminExerciseDraft(
     return session.access.kind === "denied"
       ? {
           status: "denied",
-          message: "Din konto har ikke adgang til at oprette deløvelser.",
+          message: "Din konto har ikke adgang til at oprette øvelser.",
         }
       : {
           status: "unavailable",
@@ -541,8 +541,8 @@ export async function createAdminExerciseDraft(
     return {
       status: "success",
       message: result.created
-        ? "Deløvelseskladden er gemt og klar til næste trin."
-        : "Deløvelseskladden var allerede gemt og er hentet igen.",
+        ? "Øvelseskladden er gemt og klar til næste trin."
+        : "Øvelseskladden var allerede gemt og er hentet igen.",
       exerciseId: result.exercise.id,
       updatedAt: result.exercise.updatedAt,
     };
@@ -586,7 +586,7 @@ export async function updateAdminExerciseDraft(
     return session.access.kind === "denied"
       ? {
           status: "denied",
-          message: "Din konto har ikke adgang til at redigere deløvelser.",
+          message: "Din konto har ikke adgang til at redigere øvelser.",
         }
       : {
           status: "unavailable",
@@ -622,8 +622,8 @@ export async function updateAdminExerciseDraft(
       status: "success",
       message:
         expectedStatus === "published"
-          ? "Den publicerede deløvelse er opdateret. Ændringen er synlig med det samme."
-          : "Deløvelseskladden er opdateret.",
+          ? "Den publicerede øvelse er opdateret. Ændringen er synlig med det samme."
+          : "Øvelseskladden er opdateret.",
       exerciseId: result.exercise.id,
       updatedAt: result.exercise.updatedAt,
     };

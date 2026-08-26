@@ -5,6 +5,8 @@ import {
   assistantResponseBelongsToContext,
   exerciseSnapshotHasChanges,
   getAssistantContextGreeting,
+  getAssistantMessagePlaceholder,
+  getTopicWorkspaceCopy,
   goalSnapshotHasChanges,
   orderWardrobeSuggestions,
   syncExerciseMeasurementResetDefault,
@@ -63,6 +65,85 @@ test("every authoring step gets fresh, non-mutating assistant context copy", () 
 
   assert.match(getAssistantContextGreeting("review"), /Intet ændres/);
   assert.match(getAssistantContextGreeting("wardrobe"), /ikke gemt/i);
+  assert.match(getAssistantContextGreeting("goal"), /færdighed/i);
+  assert.doesNotMatch(getAssistantContextGreeting("goal"), /\bmål\b/i);
+  assert.match(getAssistantContextGreeting("exercise"), /øvelse/i);
+  assert.doesNotMatch(getAssistantContextGreeting("exercise"), /deløvelse/i);
+});
+
+test("additional-skill context preserves the existing skill sequence", () => {
+  const greeting = getAssistantContextGreeting("goal", {
+    addingGoal: true,
+    existingGoalTitles: [
+      "Styr bolden tæt",
+      "Skift retning",
+      "Se op under driblingen",
+    ],
+  });
+
+  assert.match(greeting, /tilføjer en ny færdighed/i);
+  assert.doesNotMatch(greeting, /første færdighed/i);
+  assert.ok(greeting.indexOf("1. Styr bolden tæt") >= 0);
+  assert.ok(
+    greeting.indexOf("1. Styr bolden tæt") <
+      greeting.indexOf("2. Skift retning"),
+  );
+  assert.ok(
+    greeting.indexOf("2. Skift retning") <
+      greeting.indexOf("3. Se op under driblingen"),
+  );
+});
+
+test("existing-skill editing never presents itself as the first skill", () => {
+  assert.equal(
+    getAssistantContextGreeting("goal", {
+      currentGoalTitle: "Dribling",
+      editingGoal: true,
+    }),
+    "Du redigerer den eksisterende færdighed “Dribling”. Jeg hjælper med at gøre færdigheden, tiden og udstyret tydeligt. Du vælger selv, om et forslag skal bruges.",
+  );
+  assert.equal(
+    getAssistantMessagePlaceholder("goal", { editingGoal: true }),
+    "Fx: Hjælp mig med at gøre denne færdighed tydeligere",
+  );
+  assert.doesNotMatch(
+    getAssistantContextGreeting("goal", { editingGoal: true }),
+    /første færdighed/i,
+  );
+});
+
+test("existing unpublished subjects use editing copy while new subjects keep creation copy", () => {
+  assert.deepEqual(
+    getTopicWorkspaceCopy({
+      isAddingGoal: false,
+      isExistingTopic: true,
+      isPublishedTopic: false,
+      topicTitle: "Fodbold",
+    }),
+    {
+      ariaLabel: "Rediger Fodbold",
+      closeAction: "lukker redigeringen",
+      closeLabel: "Luk redigering",
+      description:
+        "Emnet er allerede gemt som en upubliceret kladde. Du kan redigere emnet, dets færdigheder, øvelser og garderobe. AI ændrer aldrig felter eller publicerer uden dit valg.",
+      eyebrow: "Rediger emnekladde",
+      heading: "Rediger Fodbold",
+      stepsLabel: "Emnets trin",
+    },
+  );
+
+  const newSubject = getTopicWorkspaceCopy({
+    isAddingGoal: false,
+    isExistingTopic: false,
+    isPublishedTopic: false,
+    topicTitle: "",
+  });
+  assert.equal(newSubject.ariaLabel, "Opret nyt emne");
+  assert.equal(newSubject.eyebrow, "Nyt emne");
+  assert.equal(
+    getAssistantMessagePlaceholder("goal"),
+    "Fx: Hjælp mig med en enkel første færdighed",
+  );
 });
 
 test("measurement selection survives a native form reset", () => {
@@ -163,7 +244,7 @@ test("goal and exercise dirty checks cover every editable field", () => {
 test("wardrobe dirty checks cover content and unlock method", () => {
   const item = {
     category: "equipment",
-    description: "En farverig bold, som barnet kan holde i hånden.",
+    description: "En farverig bold, du kan holde i hånden.",
     editorialNote: "Passer til emnet.",
     equipSlot: "held",
     icon: "🌈",
@@ -181,7 +262,7 @@ test("wardrobe dirty checks cover content and unlock method", () => {
     wardrobeSnapshotHasChanges(
       {
         ...item,
-        description: "  En farverig bold, som barnet kan holde i hånden.\r\n",
+        description: "  En farverig bold, du kan holde i hånden.\r\n",
         editorialNote: "  Passer til emnet.\r\n",
         icon: "  🌈 ",
         imagePath: "  70000000-0000-4000-8000-000000000001/01.png ",

@@ -90,7 +90,7 @@ const exerciseTwoRow = Object.freeze({
 const wardrobeOneRow = Object.freeze({
   category: "effect",
   content_version: 1,
-  description: "Et glimtende stjernedrys omkring barnets figur.",
+  description: "Et glimtende stjernedrys, du kan have på.",
   editorial_status: "approved",
   equip_slot: "accessory",
   has_pending_revision: false,

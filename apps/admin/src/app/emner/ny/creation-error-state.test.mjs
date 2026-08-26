@@ -25,12 +25,12 @@ test("maps duplicate generated names to the visible title fields", () => {
     [
       mapGoalCreationError,
       new AdminContentStepError("goal_slug_conflict"),
-      "mål",
+      "færdighed",
     ],
     [
       mapExerciseCreationError,
       new AdminContentStepError("exercise_slug_conflict"),
-      "deløvelse",
+      "øvelse",
     ],
   ]) {
     const result = mapError(error);

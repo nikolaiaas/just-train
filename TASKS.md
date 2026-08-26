@@ -8,7 +8,7 @@ The pilot slice is:
 
 The administration slice is:
 
-`sign in → edit a subject, its goals and exercises → publish the current tree → see it in the child app`
+`sign in → create or edit a subject → add child-facing skills and exercises → review wardrobe drafts → publish the current tree → see it in the child app`
 
 ## Technical direction
 
@@ -238,10 +238,14 @@ Exit condition: a child cannot lose or duplicate a completed attempt because of 
 ## 9. Build the functional administration vertical slice
 
 - [x] Implement administrator sign-in and authorization guard.
-- [x] Implement the topic/goal library with the deliberately simple draft/published state used by this private play app.
-- [x] Implement editing every existing goal and exercise and adding another exercise from the selected goal.
-- [ ] Implement manual reordering of goals and exercises.
-- [x] Validate name, explanation, measurement type, target, training time, equipment, and safety text.
+- [x] Implement the subject/skill library with the deliberately simple draft/published state used by this private play app.
+- [x] Keep new-subject creation focused on the subject itself, then continue from the saved subject detail instead of forcing skills into the same creation flow.
+- [x] Implement editing every existing skill and exercise and adding another exercise from the selected skill.
+- [x] Let an editor start another skill manually from the subject detail and continue through its exercises without overwriting sibling skills.
+- [x] Implement subject-level AI skill suggestions and a reviewed one-go skill package that creates one skill, 2–8 ordered exercises, and exactly 16 topic-aware wardrobe image drafts in one atomic unpublished draft save.
+- [ ] Implement manual reordering of skills and exercises.
+- [x] Validate name, explanation, measurement type, target, training time, equipment, and safety text, including child-directed wording in the manual subject, skill, exercise, and wardrobe forms.
+- [x] Enforce the same child-directed wording invariant for AI-generated public descriptions at job completion and transactional save, with aligned Admin, Edge, and database tests.
 - [ ] Implement draft preview using the child-app presentation model.
 - [x] Implement human review and an explicit publish action.
 - [x] Publish or unpublish the current mutable topic tree atomically, with approved wardrobe items following publication, and permanently delete an unpublished topic only when no child activity or owned reward depends on it.

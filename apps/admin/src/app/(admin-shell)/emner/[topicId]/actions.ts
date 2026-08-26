@@ -44,7 +44,7 @@ function lifecycleErrorMessage(error: unknown): string {
     case "topic_not_found":
       return "Emnet findes ikke længere.";
     case "topic_not_ready":
-      return "Hvert mål skal have mindst én deløvelse, før emnet publiceres.";
+      return "Hver færdighed skal have mindst én øvelse, før emnet publiceres.";
     case "invalid_expected_updated_at":
     case "invalid_topic_id":
       return "Emnet kunne ikke genkendes. Genindlæs siden, og prøv igen.";
@@ -139,7 +139,7 @@ async function runTopicLifecycleAction(
   return {
     message:
       operation === "publish"
-        ? "Emnet og alle gemte mål og deløvelser er nu synlige for børnene."
+        ? "Emnet og alle gemte færdigheder og øvelser er nu synlige for børnene."
         : operation === "unpublish"
           ? "Emnet er nu skjult for børnene og kan stadig redigeres."
           : "Emnet og alt dets redaktionelle indhold er slettet.",

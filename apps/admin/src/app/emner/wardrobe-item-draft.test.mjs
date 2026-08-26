@@ -92,6 +92,33 @@ test("accepts an unlock rule only when points are zero", () => {
   }
 });
 
+test("validates child-visible copy without treating editorial notes as child copy", () => {
+  const description = validateWardrobeItemDraftForm(
+    draftForm({ description: "En bold, som barnet kan holde i hånden." }),
+  );
+  const unlockRule = validateWardrobeItemDraftForm(
+    draftForm({
+      points: "0",
+      unlockRule: "Når dit barn har gennemført tre deløvelser",
+    }),
+  );
+  const editorialNote = validateWardrobeItemDraftForm(
+    draftForm({ editorialNote: "Barnet skal kunne se begge sko tydeligt." }),
+  );
+
+  assert.equal(description.ok, false);
+  assert.match(
+    !description.ok ? (description.fieldErrors.description ?? "") : "",
+    /direkte til barnet/,
+  );
+  assert.equal(unlockRule.ok, false);
+  assert.match(
+    !unlockRule.ok ? (unlockRule.fieldErrors.unlockRule ?? "") : "",
+    /direkte til barnet/,
+  );
+  assert.equal(editorialNote.ok, true);
+});
+
 test("rejects duplicated, missing, and non-string fields", () => {
   const form = draftForm();
   form.append("name", "Et andet navn");

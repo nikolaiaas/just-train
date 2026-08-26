@@ -193,23 +193,23 @@
   background: #fff7f5;
 }
 
-.dialogBackdrop {
-  position: fixed;
-  z-index: 50;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  padding: 20px;
-  background: rgba(12, 31, 43, 0.58);
-}
-
 .lifecycleDialog {
-  width: min(100%, 510px);
+  box-sizing: border-box;
+  width: min(510px, calc(100% - 40px));
+  max-width: none;
+  max-height: calc(100dvh - 40px);
+  margin: auto;
+  overflow-y: auto;
   padding: clamp(22px, 4vw, 32px);
   border: 1px solid #dce4e6;
   border-radius: 20px;
   background: #fffefa;
   box-shadow: 0 26px 80px rgba(10, 31, 43, 0.25);
+  overscroll-behavior: contain;
+}
+
+.lifecycleDialog::backdrop {
+  background: rgba(12, 31, 43, 0.58);
 }
 
 .dialogEyebrow {
@@ -374,6 +374,7 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 20px;
   margin-bottom: 20px;
 }
@@ -411,6 +412,93 @@
   font-size: 11px;
   font-weight: 700;
   white-space: nowrap;
+}
+
+.sectionHeadingTools {
+  display: grid;
+  flex: 0 1 auto;
+  justify-items: end;
+  gap: 10px;
+}
+
+.sectionActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.addSkillButton,
+.suggestSkillButton,
+.manageWardrobeButton {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 9px 13px;
+  border-radius: 11px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.25;
+  text-align: center;
+  text-decoration: none;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    transform 160ms ease;
+}
+
+.addSkillButton {
+  border: 1px solid #08746f;
+  background: #08746f;
+  color: #fff;
+}
+
+.suggestSkillButton {
+  border: 1px solid #9fc5c2;
+  background: #eef9f7;
+  color: #08746f;
+}
+
+.manageWardrobeButton {
+  border: 1px solid #08746f;
+  background: #fff;
+  color: #08746f;
+}
+
+.addSkillButton > span,
+.suggestSkillButton > span {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.addSkillButton:hover,
+.suggestSkillButton:hover,
+.manageWardrobeButton:hover {
+  transform: translateY(-1px);
+}
+
+.addSkillButton:hover {
+  border-color: #065f5b;
+  background: #065f5b;
+}
+
+.suggestSkillButton:hover {
+  border-color: #66aaa4;
+  background: #ddf3f0;
+}
+
+.manageWardrobeButton:hover {
+  border-color: #66aaa4;
+  background: #eef9f7;
+}
+
+.addSkillButton:focus-visible,
+.suggestSkillButton:focus-visible,
+.manageWardrobeButton:focus-visible {
+  outline: 3px solid rgba(14, 158, 151, 0.22);
+  outline-offset: 2px;
 }
 
 .goalList,
@@ -937,6 +1025,26 @@
     flex-direction: column;
   }
 
+  .sectionHeadingTools,
+  .sectionActions {
+    width: 100%;
+  }
+
+  .sectionHeadingTools {
+    justify-items: start;
+  }
+
+  .sectionActions {
+    display: grid;
+    justify-content: stretch;
+  }
+
+  .addSkillButton,
+  .suggestSkillButton,
+  .manageWardrobeButton {
+    width: 100%;
+  }
+
   .goalFacts {
     grid-template-columns: 1fr;
   }
@@ -983,7 +1091,10 @@
 
 @media (prefers-reduced-motion: reduce) {
   .editButton,
-  .inlineEditButton {
+  .inlineEditButton,
+  .addSkillButton,
+  .suggestSkillButton,
+  .manageWardrobeButton {
     transition: none;
   }
 }

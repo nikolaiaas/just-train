@@ -1,3 +1,5 @@
+import { getChildFacingCopyError } from "./child-facing-copy.ts";
+
 export const MAX_CONTENT_TITLE_LENGTH = 120;
 export const MAX_GOAL_SUMMARY_LENGTH = 1_000;
 export const MAX_EXERCISE_INSTRUCTIONS_LENGTH = 1_500;
@@ -306,7 +308,8 @@ export function validateGoalDraftForm(
     return {
       ok: false,
       fieldErrors,
-      message: "Målformularen kunne ikke valideres. Ret felterne og prøv igen.",
+      message:
+        "Færdighedsformularen kunne ikke valideres. Ret felterne og prøv igen.",
     };
   }
 
@@ -329,7 +332,7 @@ export function validateGoalDraftForm(
   }
 
   if (!topicId) {
-    fieldErrors.topicId = "Vælg det emne, som målet skal høre til.";
+    fieldErrors.topicId = "Vælg det emne, som færdigheden skal høre til.";
   }
 
   if (!title) {
@@ -347,6 +350,11 @@ export function validateGoalDraftForm(
       "Beskrivelsen må højst være " +
       MAX_GOAL_SUMMARY_LENGTH +
       " tegn og må ikke indeholde ugyldige tegn.";
+  } else {
+    const childFacingCopyError = getChildFacingCopyError(summary);
+    if (childFacingCopyError) {
+      fieldErrors.summary = childFacingCopyError;
+    }
   }
 
   if (
@@ -384,7 +392,7 @@ export function validateGoalDraftForm(
     return {
       ok: false,
       fieldErrors,
-      message: "Ret felterne, før målkladden gemmes.",
+      message: "Ret felterne, før færdighedskladden gemmes.",
     };
   }
 
@@ -424,7 +432,7 @@ export function validateExerciseDraftForm(
       ok: false,
       fieldErrors,
       message:
-        "Deløvelsesformularen kunne ikke valideres. Ret felterne og prøv igen.",
+        "Øvelsesformularen kunne ikke valideres. Ret felterne og prøv igen.",
     };
   }
 
@@ -465,7 +473,7 @@ export function validateExerciseDraftForm(
   }
 
   if (!goalId) {
-    fieldErrors.goalId = "Vælg det mål, som deløvelsen skal høre til.";
+    fieldErrors.goalId = "Vælg den færdighed, som øvelsen skal høre til.";
   }
 
   if (!title) {
@@ -481,9 +489,14 @@ export function validateExerciseDraftForm(
     codePointLength(instructions) > MAX_EXERCISE_INSTRUCTIONS_LENGTH
   ) {
     fieldErrors.instructions =
-      "Forklar deløvelsen til barnet med højst " +
+      "Forklar øvelsen til barnet med højst " +
       MAX_EXERCISE_INSTRUCTIONS_LENGTH +
       " tegn.";
+  } else {
+    const childFacingCopyError = getChildFacingCopyError(instructions);
+    if (childFacingCopyError) {
+      fieldErrors.instructions = childFacingCopyError;
+    }
   }
 
   if (
@@ -491,13 +504,13 @@ export function validateExerciseDraftForm(
     values.measurement !== "repetitions" &&
     values.measurement !== "duration"
   ) {
-    fieldErrors.measurement = "Vælg, hvordan deløvelsen skal måles.";
+    fieldErrors.measurement = "Vælg, hvordan øvelsen skal måles.";
   }
 
   if (targetValue === undefined) {
     fieldErrors.targetValue =
       values.measurement === "completion"
-        ? "En deløvelse, der blot gennemføres, må ikke have et talmål."
+        ? "En øvelse, der blot gennemføres, må ikke have et talmål."
         : values.measurement === "duration"
           ? "Varigheden skal være et helt antal sekunder fra 1 til " +
             MAX_DURATION_TARGET_SECONDS +
@@ -529,6 +542,11 @@ export function validateExerciseDraftForm(
       "Sikkerhedsteksten må højst være " +
       MAX_EXERCISE_SAFETY_NOTE_LENGTH +
       " tegn og må ikke indeholde ugyldige tegn.";
+  } else {
+    const childFacingCopyError = getChildFacingCopyError(safetyNote);
+    if (childFacingCopyError) {
+      fieldErrors.safetyNote = childFacingCopyError;
+    }
   }
 
   if (videoUrl === undefined) {
@@ -544,7 +562,7 @@ export function validateExerciseDraftForm(
     return {
       ok: false,
       fieldErrors,
-      message: "Ret felterne, før deløvelseskladden gemmes.",
+      message: "Ret felterne, før øvelseskladden gemmes.",
     };
   }
 
