@@ -96,6 +96,19 @@ Never put child or family media in that bucket. Generated cards remain ordinary
 unpublished wardrobe proposals until an administrator saves, approves, and
 publishes them.
 
+Subject creation does not create skills. Two further immutable structured-text
+operations support the separate subject-detail skill builder:
+`content.skill_suggestions` returns 3–8 distinct skill ideas for one persisted
+topic, while `content.skill_package` returns one skill and 2–8 ordered
+exercises. The browser presents this as one flow and then reuses the existing
+wardrobe-plan and wardrobe-image operations with the generated skill context.
+One guarded, idempotent save RPC validates the exact topic-bound succeeded job
+lineage and atomically creates the skill, every exercise, and all 16 wardrobe
+image drafts. It never approves wardrobe items or publishes content. The form,
+Edge output normalizer, and SQL completion/save validators all reject obvious
+parent- or narrator-addressed wording in fields rendered to children while
+allowing direct child safety guidance such as “Få hjælp af en voksen”.
+
 Do not put that key in Expo, Next.js public variables, Git, task evidence, or
 logs. The hosted secret is already present, but a key alone does not deploy the
 migration or Edge Function.

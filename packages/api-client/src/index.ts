@@ -7,6 +7,7 @@ import {
 
 export * from "./auth.ts";
 export * from "./ai-media.ts";
+export * from "./admin-skills.ts";
 export * from "./child.ts";
 export * from "./child-topic-photo.ts";
 export * from "./child-topic-portrait.ts";

@@ -431,15 +431,16 @@ select results_eq(
     select
       version.version,
       (version.input_contract #>>
-        '{properties,wardrobeExamples,maxItems}')::integer
+        '{properties,wardrobeExamples,maxItems}')::integer,
+      version.prompt_template like '%[CHILD_AUDIENCE_V1]%'
     from public.ai_operations as operation
     join public.ai_operation_versions as version
       on version.operation_id = operation.id
     where operation.operation_key = 'content.draft_review'
     order by version.version
   $$,
-  $$ values (1, 6), (2, 6), (3, 16) $$,
-  'draft review appends a 16-item contract without changing pinned versions'
+  $$ values (1, 6, false), (2, 6, false), (3, 16, false), (4, 16, true) $$,
+  'draft review preserves pinned contracts and activates a child-directed revision'
 );
 
 select is(

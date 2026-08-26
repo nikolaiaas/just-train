@@ -4,7 +4,9 @@ export type AdminContentOperationKey =
   | "content.wardrobe_grid_plan"
   | "content.goal_draft"
   | "content.exercise_draft"
-  | "content.draft_review";
+  | "content.draft_review"
+  | "content.skill_suggestions"
+  | "content.skill_package";
 
 type JsonPrimitive = boolean | null | number | string;
 type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue };
@@ -20,6 +22,21 @@ const WARDROBE_EQUIP_SLOTS = new Set([
 ]);
 const WARDROBE_CATEGORIES = new Set(["clothing", "equipment", "effect"]);
 const WARDROBE_RARITIES = new Set(["common", "rare", "special"]);
+const SKILL_DIFFICULTIES = new Set(["beginner", "intermediate", "advanced"]);
+const EXERCISE_MEASUREMENTS = new Set([
+  "completion",
+  "repetitions",
+  "duration",
+]);
+
+// These phrases make persisted copy speak about a child to an adult. The
+// editor-facing reply/reason fields are deliberately excluded from this gate.
+// Child-directed safety such as "Få hjælp af en voksen" remains valid.
+const PARENT_FRAMED_CHILD_COPY_PATTERN =
+  /\b(?:(?:dit|jeres)\s+barn|barnets|barnet|børnenes|børnene|(?:som|kære)\s+(?:forælder(?:en)?|forældre(?:ne)?)|til\s+forældrene)\b/iu;
+
+const NARRATED_CHILD_OR_PARENT_SUBJECT_PATTERN =
+  /(?:^|[.!?;:])\s*(?:(?:(?:et|hvert)\s+)?barn|(?:(?:alle|nogle|andre|flere|mange|små|store)\s+)?børn|(?:en\s+)?forælder(?:en)?|(?:(?:dine|mine|sine|vores|jeres|deres)\s+)?forældre(?:ne)?)\s+\p{L}+/iu;
 
 const DISALLOWED_MULTILINE_CONTROL_CHARACTER_PATTERN =
   /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f]/gu;
@@ -80,6 +97,13 @@ function normalizeEquipment(value: unknown): string[] | null {
   return equipment;
 }
 
+function isChildFacing(value: string): boolean {
+  return (
+    !PARENT_FRAMED_CHILD_COPY_PATTERN.test(value) &&
+    !NARRATED_CHILD_OR_PARENT_SUBJECT_PATTERN.test(value)
+  );
+}
+
 function normalizeTopicOutput(value: UnknownRecord): JsonObject | null {
   const reply = normalizeRequiredMultiline(value.reply);
   const suggestion = value.suggestion;
@@ -97,6 +121,7 @@ function normalizeTopicOutput(value: UnknownRecord): JsonObject | null {
     icon === null ||
     reason === null ||
     typeof suggestion.accentColor !== "string" ||
+    !isChildFacing(description) ||
     (suggestion.ready &&
       (!title || !description || !icon || !suggestion.accentColor))
   ) {
@@ -136,6 +161,7 @@ function normalizeGoalOutput(value: UnknownRecord): JsonObject | null {
     reason === null ||
     equipment === null ||
     typeof suggestion.difficulty !== "string" ||
+    !isChildFacing(summary) ||
     (suggestion.ready && (!title || !summary || estimatedMinutes === null))
   ) {
     return null;
@@ -183,6 +209,8 @@ function normalizeExerciseOutput(value: UnknownRecord): JsonObject | null {
     reason === null ||
     equipment === null ||
     typeof suggestion.measurement !== "string" ||
+    !isChildFacing(instructions) ||
+    !isChildFacing(safetyNote) ||
     (suggestion.ready &&
       (!title ||
         !instructions ||
@@ -229,6 +257,7 @@ function normalizeWardrobeOutput(value: UnknownRecord): JsonObject | null {
       !icon ||
       unlockRule === null ||
       !reason ||
+      !isChildFacing(unlockRule) ||
       typeof candidate.category !== "string" ||
       typeof candidate.rarity !== "string" ||
       typeof candidate.points !== "number" ||
@@ -337,7 +366,9 @@ function normalizeWardrobeGridPlanOutput(
       !Number.isSafeInteger(points) ||
       points < 0 ||
       points > 1_000 ||
-      (points === 0 ? unlockRule.length === 0 : unlockRule.length !== 0)
+      (points === 0 ? unlockRule.length === 0 : unlockRule.length !== 0) ||
+      !isChildFacing(description) ||
+      !isChildFacing(unlockRule)
     ) {
       return null;
     }
@@ -357,6 +388,246 @@ function normalizeWardrobeGridPlanOutput(
   }
 
   return { items };
+}
+
+function isSlug(value: string): boolean {
+  return value.length <= 120 && /^[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(value);
+}
+
+function normalizeSkillSuggestionsOutput(
+  value: UnknownRecord,
+): JsonObject | null {
+  if (
+    !hasExactKeys(value, ["reply", "skills"]) ||
+    !Array.isArray(value.skills) ||
+    value.skills.length < 3 ||
+    value.skills.length > 8
+  ) {
+    return null;
+  }
+
+  const reply = normalizeRequiredMultiline(value.reply);
+  if (!isBoundedText(reply, 1500, true)) return null;
+
+  const skills: JsonObject[] = [];
+  const titles = new Set<string>();
+  const slugs = new Set<string>();
+  const keys = [
+    "ordinal",
+    "title",
+    "slug",
+    "childDescription",
+    "difficulty",
+    "estimatedMinutes",
+    "editorialReason",
+  ] as const;
+
+  for (const [index, candidate] of value.skills.entries()) {
+    if (!isRecord(candidate) || !hasExactKeys(candidate, keys)) return null;
+
+    const title = normalizeRequiredSingleLine(candidate.title);
+    const slug = normalizeRequiredSingleLine(candidate.slug);
+    const childDescription = normalizeRequiredMultiline(
+      candidate.childDescription,
+    );
+    const editorialReason = normalizeRequiredMultiline(
+      candidate.editorialReason,
+    );
+    const titleKey = title?.toLocaleLowerCase("da-DK");
+    const slugKey = slug?.toLocaleLowerCase("en-US");
+
+    if (
+      candidate.ordinal !== index + 1 ||
+      !Number.isSafeInteger(candidate.ordinal) ||
+      !isBoundedText(title, 120, true) ||
+      !isBoundedText(slug, 120, true) ||
+      !isSlug(slug) ||
+      !isBoundedText(childDescription, 600, true) ||
+      !isChildFacing(childDescription) ||
+      !SKILL_DIFFICULTIES.has(String(candidate.difficulty)) ||
+      !Number.isSafeInteger(candidate.estimatedMinutes) ||
+      Number(candidate.estimatedMinutes) < 1 ||
+      Number(candidate.estimatedMinutes) > 180 ||
+      !isBoundedText(editorialReason, 500, true) ||
+      !titleKey ||
+      !slugKey ||
+      titles.has(titleKey) ||
+      slugs.has(slugKey)
+    ) {
+      return null;
+    }
+
+    titles.add(titleKey);
+    slugs.add(slugKey);
+    skills.push({
+      childDescription,
+      difficulty: String(candidate.difficulty),
+      editorialReason,
+      estimatedMinutes: Number(candidate.estimatedMinutes),
+      ordinal: index + 1,
+      slug,
+      title,
+    });
+  }
+
+  return { reply, skills };
+}
+
+function normalizeSkillPackageOutput(value: UnknownRecord): JsonObject | null {
+  if (
+    !hasExactKeys(value, ["reply", "skill", "exercises"]) ||
+    !isRecord(value.skill) ||
+    !Array.isArray(value.exercises) ||
+    value.exercises.length < 2 ||
+    value.exercises.length > 8
+  ) {
+    return null;
+  }
+
+  const reply = normalizeRequiredMultiline(value.reply);
+  const skill = value.skill;
+  const skillKeys = [
+    "title",
+    "slug",
+    "childDescription",
+    "difficulty",
+    "estimatedMinutes",
+    "equipment",
+    "editorialReason",
+  ] as const;
+
+  if (!isBoundedText(reply, 1500, true) || !hasExactKeys(skill, skillKeys)) {
+    return null;
+  }
+
+  const title = normalizeRequiredSingleLine(skill.title);
+  const slug = normalizeRequiredSingleLine(skill.slug);
+  const childDescription = normalizeRequiredMultiline(skill.childDescription);
+  const equipment = normalizeEquipment(skill.equipment);
+  const editorialReason = normalizeRequiredMultiline(skill.editorialReason);
+
+  if (
+    !isBoundedText(title, 120, true) ||
+    !isBoundedText(slug, 120, true) ||
+    !isSlug(slug) ||
+    !isBoundedText(childDescription, 600, true) ||
+    !isChildFacing(childDescription) ||
+    !SKILL_DIFFICULTIES.has(String(skill.difficulty)) ||
+    !Number.isSafeInteger(skill.estimatedMinutes) ||
+    Number(skill.estimatedMinutes) < 1 ||
+    Number(skill.estimatedMinutes) > 180 ||
+    equipment === null ||
+    equipment.length > 12 ||
+    equipment.some((item) => item.length > 80) ||
+    !isBoundedText(editorialReason, 500, true)
+  ) {
+    return null;
+  }
+
+  const exercises: JsonObject[] = [];
+  const titles = new Set<string>();
+  const slugs = new Set<string>();
+  const exerciseKeys = [
+    "ordinal",
+    "title",
+    "slug",
+    "childInstructions",
+    "measurement",
+    "targetValue",
+    "recommendedMinutes",
+    "equipment",
+    "childSafetyNote",
+    "editorialReason",
+  ] as const;
+
+  for (const [index, candidate] of value.exercises.entries()) {
+    if (!isRecord(candidate) || !hasExactKeys(candidate, exerciseKeys)) {
+      return null;
+    }
+
+    const exerciseTitle = normalizeRequiredSingleLine(candidate.title);
+    const exerciseSlug = normalizeRequiredSingleLine(candidate.slug);
+    const childInstructions = normalizeRequiredMultiline(
+      candidate.childInstructions,
+    );
+    const childSafetyNote = normalizeRequiredMultiline(
+      candidate.childSafetyNote,
+    );
+    const exerciseEquipment = normalizeEquipment(candidate.equipment);
+    const exerciseReason = normalizeRequiredMultiline(
+      candidate.editorialReason,
+    );
+    const measurement = String(candidate.measurement);
+    const targetValue = candidate.targetValue;
+    const titleKey = exerciseTitle?.toLocaleLowerCase("da-DK");
+    const slugKey = exerciseSlug?.toLocaleLowerCase("en-US");
+    const targetIsValid =
+      (measurement === "completion" && targetValue === null) ||
+      (measurement === "repetitions" &&
+        Number.isSafeInteger(targetValue) &&
+        Number(targetValue) >= 1 &&
+        Number(targetValue) <= 10_000) ||
+      (measurement === "duration" &&
+        Number.isSafeInteger(targetValue) &&
+        Number(targetValue) >= 1 &&
+        Number(targetValue) <= 86_400);
+
+    if (
+      candidate.ordinal !== index + 1 ||
+      !Number.isSafeInteger(candidate.ordinal) ||
+      !isBoundedText(exerciseTitle, 120, true) ||
+      !isBoundedText(exerciseSlug, 120, true) ||
+      !isSlug(exerciseSlug) ||
+      !isBoundedText(childInstructions, 1000, true) ||
+      !isChildFacing(childInstructions) ||
+      !EXERCISE_MEASUREMENTS.has(measurement) ||
+      !targetIsValid ||
+      !Number.isSafeInteger(candidate.recommendedMinutes) ||
+      Number(candidate.recommendedMinutes) < 1 ||
+      Number(candidate.recommendedMinutes) > 180 ||
+      exerciseEquipment === null ||
+      exerciseEquipment.length > 12 ||
+      exerciseEquipment.some((item) => item.length > 80) ||
+      !isBoundedText(childSafetyNote, 600, true) ||
+      !isChildFacing(childSafetyNote) ||
+      !isBoundedText(exerciseReason, 500, true) ||
+      !titleKey ||
+      !slugKey ||
+      titles.has(titleKey) ||
+      slugs.has(slugKey)
+    ) {
+      return null;
+    }
+
+    titles.add(titleKey);
+    slugs.add(slugKey);
+    exercises.push({
+      childInstructions,
+      childSafetyNote,
+      editorialReason: exerciseReason,
+      equipment: exerciseEquipment,
+      measurement,
+      ordinal: index + 1,
+      recommendedMinutes: Number(candidate.recommendedMinutes),
+      slug: exerciseSlug,
+      targetValue: targetValue as JsonPrimitive,
+      title: exerciseTitle,
+    });
+  }
+
+  return {
+    exercises,
+    reply,
+    skill: {
+      childDescription,
+      difficulty: String(skill.difficulty),
+      editorialReason,
+      equipment,
+      estimatedMinutes: Number(skill.estimatedMinutes),
+      slug,
+      title,
+    },
+  };
 }
 
 function normalizeReviewCheck(
@@ -434,5 +705,9 @@ export function normalizeAdminContentOutput(
       return normalizeWardrobeGridPlanOutput(value);
     case "content.draft_review":
       return normalizeDraftReviewOutput(value);
+    case "content.skill_suggestions":
+      return normalizeSkillSuggestionsOutput(value);
+    case "content.skill_package":
+      return normalizeSkillPackageOutput(value);
   }
 }

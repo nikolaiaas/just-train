@@ -17,17 +17,19 @@ select results_eq(
       ('content.draft_review'::text),
       ('content.exercise_draft'::text),
       ('content.goal_draft'::text),
+      ('content.skill_package'::text),
+      ('content.skill_suggestions'::text),
       ('content.topic_brief'::text),
       ('content.wardrobe_examples'::text),
       ('content.wardrobe_grid_image'::text),
       ('content.wardrobe_grid_plan'::text)
   $$,
-  'all seven bounded administrator AI operations exist'
+  'all nine bounded administrator AI operations exist'
 );
 
 select results_eq(
   $$
-    select gateway, provider, model
+    select operation.operation_key, gateway, provider, model
     from public.ai_operation_versions as version
     join public.ai_operations as operation
       on operation.active_version_id = version.id
@@ -37,16 +39,34 @@ select results_eq(
   $$,
   $$
     values
-      ('openrouter'::text, 'openai'::text, 'openai/gpt-5-mini'::text),
-      ('openrouter'::text, 'openai'::text, 'openai/gpt-5-mini'::text),
-      ('openrouter'::text, 'openai'::text, 'openai/gpt-5-mini'::text),
-      ('openrouter'::text, 'openai'::text, 'openai/gpt-5-mini'::text),
-      ('openrouter'::text, 'openai'::text, 'openai/gpt-5-mini'::text),
-      ('openrouter'::text, 'openai'::text, 'openai/gpt-image-2'::text),
-      ('openrouter'::text, 'openai'::text, 'openai/gpt-5-mini'::text)
+      ('content.draft_review'::text, 'openrouter'::text, 'openai'::text, 'openai/gpt-5-mini'::text),
+      ('content.exercise_draft'::text, 'openrouter'::text, 'openai'::text, 'openai/gpt-5-mini'::text),
+      ('content.goal_draft'::text, 'openrouter'::text, 'openai'::text, 'openai/gpt-5-mini'::text),
+      ('content.skill_package'::text, 'openrouter'::text, 'openai'::text, 'openai/gpt-5-mini'::text),
+      ('content.skill_suggestions'::text, 'openrouter'::text, 'openai'::text, 'openai/gpt-5-mini'::text),
+      ('content.topic_brief'::text, 'openrouter'::text, 'openai'::text, 'openai/gpt-5-mini'::text),
+      ('content.wardrobe_examples'::text, 'openrouter'::text, 'openai'::text, 'openai/gpt-5-mini'::text),
+      ('content.wardrobe_grid_image'::text, 'openrouter'::text, 'openai'::text, 'openai/gpt-image-2'::text),
+      ('content.wardrobe_grid_plan'::text, 'openrouter'::text, 'openai'::text, 'openai/gpt-5-mini'::text)
   $$,
-  'all seven operations pin their intended OpenAI model on OpenRouter'
+  'all nine operations pin their intended OpenAI model on OpenRouter'
 );
+
+create temporary table prompt_revision_baseline as
+select
+  operation.operation_key,
+  operation.active_version_id,
+  version.version + 1 as expected_next_version
+from public.ai_operations as operation
+join public.ai_operation_versions as version
+  on version.id = operation.active_version_id
+  and version.operation_id = operation.id
+where operation.operation_key in (
+  'content.goal_draft',
+  'content.topic_brief'
+);
+
+grant select on prompt_revision_baseline to authenticated;
 
 select is(
   (
@@ -647,10 +667,18 @@ select results_eq(
     from public.publish_ai_operation_version(
       'content.goal_draft',
       'Opdateret testprompt til redaktionelle målforslag.',
-      'a2000000-0000-4000-8000-000000000005'
+      (
+        select active_version_id
+        from prompt_revision_baseline
+        where operation_key = 'content.goal_draft'
+      )
     )
   $$,
-  $$ values (2) $$,
+  $$
+    select expected_next_version
+    from prompt_revision_baseline
+    where operation_key = 'content.goal_draft'
+  $$,
   'an administrator can activate a new goal prompt version'
 );
 
@@ -673,7 +701,11 @@ select is(
     from public.ai_jobs
     where client_request_id = 'c3000000-0000-4000-8000-000000000040'
   ),
-  'a2000000-0000-4000-8000-000000000005'::uuid,
+  (
+    select active_version_id
+    from prompt_revision_baseline
+    where operation_key = 'content.goal_draft'
+  ),
   'the retried goal job remains pinned to its original immutable version'
 );
 
@@ -962,21 +994,27 @@ select results_eq(
       'Opdateret testprompt til redaktionelle emneforslag.',
       (
         select active_version_id
-        from public.ai_operations
+        from prompt_revision_baseline
         where operation_key = 'content.topic_brief'
       )
     )
   $$,
-  $$ values (3) $$,
+  $$
+    select expected_next_version
+    from prompt_revision_baseline
+    where operation_key = 'content.topic_brief'
+  $$,
   'an administrator can publish a reviewed prompt-only revision'
 );
 
 select results_eq(
   $$
     select gateway, provider, model, request_options
-    from public.ai_operation_versions
-    where operation_id = 'a1000000-0000-4000-8000-000000000002'
-      and version = 3
+    from public.ai_operations as operation
+    join public.ai_operation_versions as version
+      on version.id = operation.active_version_id
+      and version.operation_id = operation.id
+    where operation.operation_key = 'content.topic_brief'
   $$,
   $$
     values (

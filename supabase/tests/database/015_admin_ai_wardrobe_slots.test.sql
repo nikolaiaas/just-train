@@ -84,7 +84,10 @@ from wardrobe_ai_slot_fixtures as fixture;
 
 select results_eq(
   $$
-    select operation.operation_key, version.version
+    select
+      operation.operation_key,
+      version.version,
+      version.prompt_template like '%[CHILD_AUDIENCE_V1]%'
     from public.ai_operations as operation
     join public.ai_operation_versions as version
       on version.id = operation.active_version_id
@@ -97,10 +100,10 @@ select results_eq(
   $$,
   $$
     values
-      ('content.draft_review'::text, 3),
-      ('content.wardrobe_examples'::text, 2)
+      ('content.draft_review'::text, 4, true),
+      ('content.wardrobe_examples'::text, 3, true)
   $$,
-  'slot-aware wardrobe and review contracts are active immutable revisions'
+  'slot-aware wardrobe and review contracts use their active child-directed revisions'
 );
 
 select results_eq(
@@ -118,8 +121,8 @@ select results_eq(
   $$,
   $$
     values
-      ('content.draft_review'::text, 3::bigint),
-      ('content.wardrobe_examples'::text, 2::bigint)
+      ('content.draft_review'::text, 4::bigint),
+      ('content.wardrobe_examples'::text, 3::bigint)
   $$,
   'each operation keeps its immutable legacy version beside the new revision'
 );
