@@ -24,7 +24,8 @@ type StructuredTextOperationKey =
   | "content.exercise_draft"
   | "content.draft_review"
   | "content.skill_suggestions"
-  | "content.skill_package";
+  | "content.skill_package"
+  | "content.skill_curriculum";
 
 type Claim = {
   attempt_number: number;
@@ -178,7 +179,8 @@ function isStructuredTextOperation(
     operationKey === "content.exercise_draft" ||
     operationKey === "content.draft_review" ||
     operationKey === "content.skill_suggestions" ||
-    operationKey === "content.skill_package"
+    operationKey === "content.skill_package" ||
+    operationKey === "content.skill_curriculum"
   );
 }
 
@@ -200,6 +202,8 @@ function schemaName(operationKey: StructuredTextOperationKey): string {
       return "admin_skill_suggestions";
     case "content.skill_package":
       return "admin_skill_package";
+    case "content.skill_curriculum":
+      return "admin_skill_curriculum";
   }
 }
 
@@ -221,7 +225,7 @@ async function processJob(jobId: string): Promise<void> {
   }
 
   let claim = (existingClaimRows?.[0] ?? null) as Claim | null;
-  let usesSkillCompletion = false;
+  let completionRpc = "complete_admin_ai_job_for_worker";
 
   if (!claim) {
     const { data: skillClaimRows, error: skillClaimError } = await admin.rpc(
@@ -235,7 +239,22 @@ async function processJob(jobId: string): Promise<void> {
     }
 
     claim = (skillClaimRows?.[0] ?? null) as Claim | null;
-    usesSkillCompletion = claim !== null;
+    if (claim) completionRpc = "complete_admin_skill_job_for_worker";
+  }
+
+  if (!claim) {
+    const { data: curriculumClaimRows, error: curriculumClaimError } =
+      await admin.rpc("claim_admin_skill_curriculum_job_for_worker", {
+        p_job_id: jobId,
+      });
+
+    if (curriculumClaimError) {
+      console.error(JSON.stringify({ event: "admin_ai_claim_failed", jobId }));
+      return;
+    }
+
+    claim = (curriculumClaimRows?.[0] ?? null) as Claim | null;
+    if (claim) completionRpc = "complete_admin_skill_curriculum_job_for_worker";
   }
 
   if (!claim) return;
@@ -433,9 +452,6 @@ async function processJob(jobId: string): Promise<void> {
       p_provider_request_id: providerRequestId,
       p_usage: usage,
     };
-    const completionRpc = usesSkillCompletion
-      ? "complete_admin_skill_job_for_worker"
-      : "complete_admin_ai_job_for_worker";
     let { error: completeError } = await admin.rpc(
       completionRpc,
       completionPayload,

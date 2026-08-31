@@ -3,9 +3,11 @@ import test from "node:test";
 
 import {
   addExerciseToTopicEditorOutline,
+  addGoalToTopicEditorOutline,
   buildTopicEditorHref,
   getResumeStartingStep,
   isMissingWardrobeStorageError,
+  resolvePersistedTopicId,
   loadResumableTopicDraft,
   loadTopicEditorOutline,
   parseResumeTopicId,
@@ -881,6 +883,50 @@ test("a newly saved exercise appears once in its goal outline as a draft", () =>
     updated,
   );
   assert.equal(outline[0].exercises.length, 1);
+});
+
+test("a newly saved skill appears once in the outline as a draft", () => {
+  const existingGoal = {
+    exercises: [],
+    id: goal.id,
+    sortOrder: 3,
+    status: "published",
+    title: goal.title,
+  };
+  const newGoal = {
+    id: "20000000-0000-4000-8000-000000000002",
+    sortOrder: 4,
+    title: "Gå sikkert på line",
+  };
+
+  const updated = addGoalToTopicEditorOutline([existingGoal], newGoal);
+
+  assert.deepEqual(updated, [
+    existingGoal,
+    {
+      exercises: [],
+      id: newGoal.id,
+      sortOrder: 4,
+      status: "draft",
+      title: newGoal.title,
+    },
+  ]);
+  assert.deepEqual(addGoalToTopicEditorOutline(updated, newGoal), updated);
+});
+
+test("repeated exercises work for resumed and just-created topics", () => {
+  assert.equal(
+    resolvePersistedTopicId(
+      "10000000-0000-4000-8000-000000000001",
+      "10000000-0000-4000-8000-000000000002",
+    ),
+    "10000000-0000-4000-8000-000000000001",
+  );
+  assert.equal(
+    resolvePersistedTopicId(null, "10000000-0000-4000-8000-000000000002"),
+    "10000000-0000-4000-8000-000000000002",
+  );
+  assert.equal(resolvePersistedTopicId(null, null), null);
 });
 
 test("resume prepares a blank next exercise without replacing an existing one", async () => {

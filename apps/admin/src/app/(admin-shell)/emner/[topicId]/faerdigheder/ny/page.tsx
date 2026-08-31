@@ -8,6 +8,7 @@ import { parseSkillBuilderMode } from "@/app/emner/skill-package";
 
 import { loadAdminTopicDetail } from "../../data";
 import { SkillPackageWorkspace } from "./skill-package-workspace";
+import { SkillCurriculumWorkspace } from "./skill-curriculum-workspace";
 
 export const metadata: Metadata = {
   title: "Ny færdighed · Bare Træn Administration",
@@ -39,22 +40,37 @@ export default async function NewSkillPage({
   const topic = await loadAdminTopicDetail(session.client, routeParams.topicId);
   if (!topic) notFound();
 
+  const mode = parseSkillBuilderMode(query.mode);
+  const workspaceTopic = {
+    description: topic.description,
+    id: topic.id,
+    status: topic.status,
+    title: topic.title,
+    updatedAt: topic.updatedAt,
+  } as const;
+  const existingSkills = topic.goals.map((goal) => ({
+    childDescription: goal.summary,
+    title: goal.title,
+  }));
+
+  if (mode === "suggest") {
+    return (
+      <SkillCurriculumWorkspace
+        existingSkills={existingSkills}
+        requestId={randomUUID()}
+        topic={workspaceTopic}
+        wardrobeRequestId={randomUUID()}
+      />
+    );
+  }
+
   return (
     <SkillPackageWorkspace
-      existingSkills={topic.goals.map((goal) => ({
-        childDescription: goal.summary,
-        title: goal.title,
-      }))}
-      initialMode={parseSkillBuilderMode(query.mode)}
+      existingSkills={existingSkills}
+      initialMode={mode}
       packageRequestId={randomUUID()}
       suggestionRequestId={randomUUID()}
-      topic={{
-        description: topic.description,
-        id: topic.id,
-        status: topic.status,
-        title: topic.title,
-        updatedAt: topic.updatedAt,
-      }}
+      topic={workspaceTopic}
     />
   );
 }

@@ -240,6 +240,63 @@ test("normalizes ordered skill suggestions and complete exercise packages", () =
   assert.deepEqual(packageOutput?.exercises[0].equipment, ["Bold"]);
 });
 
+function skillCurriculum(skillCount = 2, exercisesPerSkill = 2) {
+  return {
+    reply: " Et helt forløb. ",
+    skills: Array.from({ length: skillCount }, (_, skillIndex) => ({
+      ordinal: skillIndex + 1,
+      title: ` Færdighed ${skillIndex + 1} `,
+      slug: `faerdighed-${skillIndex + 1}`,
+      childDescription: ` Du lærer trin ${skillIndex + 1}. `,
+      difficulty: "beginner",
+      estimatedMinutes: 30,
+      equipment: [" Bold ", "bold"],
+      editorialReason: "Et tydeligt trin.",
+      exercises: Array.from({ length: exercisesPerSkill }, (_, exerciseIndex) =>
+        skillExercise(exerciseIndex + 1, {
+          title: ` Øvelse ${skillIndex + 1}-${exerciseIndex + 1} `,
+          slug: `oevelse-${skillIndex + 1}-${exerciseIndex + 1}`,
+        }),
+      ),
+    })),
+  };
+}
+
+test("normalizes an ordered curriculum and rejects inconsistent dimensions", () => {
+  const valid = skillCurriculum(3, 4);
+  const normalized = normalizeAdminContentOutput(
+    "content.skill_curriculum",
+    valid,
+  );
+  assert.equal(normalized?.reply, "Et helt forløb.");
+  assert.equal(normalized?.skills.length, 3);
+  assert.equal(normalized?.skills[0].title, "Færdighed 1");
+  assert.equal(normalized?.skills[2].exercises.length, 4);
+  assert.deepEqual(normalized?.skills[0].equipment, ["Bold"]);
+
+  const uneven = structuredClone(valid);
+  uneven.skills[1].exercises.pop();
+  assert.equal(
+    normalizeAdminContentOutput("content.skill_curriculum", uneven),
+    null,
+  );
+
+  const duplicate = structuredClone(valid);
+  duplicate.skills[2].exercises[3].slug = duplicate.skills[0].exercises[0].slug;
+  assert.equal(
+    normalizeAdminContentOutput("content.skill_curriculum", duplicate),
+    null,
+  );
+
+  const parentFramed = structuredClone(valid);
+  parentFramed.skills[1].exercises[0].childInstructions =
+    "Forældre hjælper med øvelsen.";
+  assert.equal(
+    normalizeAdminContentOutput("content.skill_curriculum", parentFramed),
+    null,
+  );
+});
+
 test("rejects reordered, duplicate, inconsistent, and parent-framed skill copy", () => {
   const validSuggestions = [
     skillSuggestion(1),

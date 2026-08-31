@@ -6,7 +6,8 @@ export type AdminContentOperationKey =
   | "content.exercise_draft"
   | "content.draft_review"
   | "content.skill_suggestions"
-  | "content.skill_package";
+  | "content.skill_package"
+  | "content.skill_curriculum";
 
 type JsonPrimitive = boolean | null | number | string;
 type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue };
@@ -630,6 +631,111 @@ function normalizeSkillPackageOutput(value: UnknownRecord): JsonObject | null {
   };
 }
 
+function normalizeSkillCurriculumOutput(
+  value: UnknownRecord,
+): JsonObject | null {
+  if (
+    !hasExactKeys(value, ["reply", "skills"]) ||
+    !Array.isArray(value.skills) ||
+    value.skills.length < 2 ||
+    value.skills.length > 6
+  ) {
+    return null;
+  }
+
+  const reply = normalizeRequiredMultiline(value.reply);
+  if (!isBoundedText(reply, 1500, true)) return null;
+
+  const skills: JsonObject[] = [];
+  const titles = new Set<string>();
+  const slugs = new Set<string>();
+  const exerciseTitles = new Set<string>();
+  const exerciseSlugs = new Set<string>();
+  let exercisesPerSkill: number | null = null;
+  let exerciseCount = 0;
+  const skillKeys = [
+    "ordinal",
+    "title",
+    "slug",
+    "childDescription",
+    "difficulty",
+    "estimatedMinutes",
+    "equipment",
+    "editorialReason",
+    "exercises",
+  ] as const;
+
+  for (const [index, candidate] of value.skills.entries()) {
+    if (
+      !isRecord(candidate) ||
+      !hasExactKeys(candidate, skillKeys) ||
+      candidate.ordinal !== index + 1
+    ) {
+      return null;
+    }
+
+    const normalizedPackage = normalizeSkillPackageOutput({
+      exercises: candidate.exercises,
+      reply,
+      skill: {
+        childDescription: candidate.childDescription,
+        difficulty: candidate.difficulty,
+        editorialReason: candidate.editorialReason,
+        equipment: candidate.equipment,
+        estimatedMinutes: candidate.estimatedMinutes,
+        slug: candidate.slug,
+        title: candidate.title,
+      },
+    });
+    const normalizedSkill = normalizedPackage?.skill;
+    const normalizedExercises = normalizedPackage?.exercises;
+    if (
+      !isRecord(normalizedSkill) ||
+      !Array.isArray(normalizedExercises) ||
+      typeof normalizedSkill.title !== "string" ||
+      typeof normalizedSkill.slug !== "string"
+    ) {
+      return null;
+    }
+
+    exercisesPerSkill ??= normalizedExercises.length;
+    if (normalizedExercises.length !== exercisesPerSkill) return null;
+
+    const titleKey = normalizedSkill.title.toLocaleLowerCase("da-DK");
+    const slugKey = normalizedSkill.slug.toLocaleLowerCase("en-US");
+    if (titles.has(titleKey) || slugs.has(slugKey)) return null;
+    titles.add(titleKey);
+    slugs.add(slugKey);
+    for (const exercise of normalizedExercises) {
+      if (
+        !isRecord(exercise) ||
+        typeof exercise.title !== "string" ||
+        typeof exercise.slug !== "string"
+      ) {
+        return null;
+      }
+      const exerciseTitleKey = exercise.title.toLocaleLowerCase("da-DK");
+      const exerciseSlugKey = exercise.slug.toLocaleLowerCase("en-US");
+      if (
+        exerciseTitles.has(exerciseTitleKey) ||
+        exerciseSlugs.has(exerciseSlugKey)
+      ) {
+        return null;
+      }
+      exerciseTitles.add(exerciseTitleKey);
+      exerciseSlugs.add(exerciseSlugKey);
+    }
+    exerciseCount += normalizedExercises.length;
+    skills.push({
+      ...normalizedSkill,
+      exercises: normalizedExercises,
+      ordinal: index + 1,
+    });
+  }
+
+  return exerciseCount <= 32 ? { reply, skills } : null;
+}
+
 function normalizeReviewCheck(
   value: unknown,
   allowOptional: boolean,
@@ -709,5 +815,7 @@ export function normalizeAdminContentOutput(
       return normalizeSkillSuggestionsOutput(value);
     case "content.skill_package":
       return normalizeSkillPackageOutput(value);
+    case "content.skill_curriculum":
+      return normalizeSkillCurriculumOutput(value);
   }
 }

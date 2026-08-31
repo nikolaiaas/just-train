@@ -620,10 +620,10 @@ export function SkillPackageWorkspace({
       <header className={styles.hero}>
         <div>
           <p className={styles.eyebrow}>Færdighedsbygger</p>
-          <h1 id="skill-builder-title">Byg én færdighed helt færdig</h1>
+          <h1 id="skill-builder-title">Byg én færdighed med alle øvelser</h1>
           <p>
-            AI samler en færdighed, alle øvelserne og 16 garderobebelønninger.
-            Du gennemgår hele pakken, før noget gemmes som kladde.
+            AI samler færdigheden med 2–8 øvelser og 16 garderobebelønninger. Du
+            gennemgår hele pakken, før noget gemmes som kladde.
           </p>
         </div>
         <Link
@@ -650,13 +650,13 @@ export function SkillPackageWorkspace({
           aria-current={initialMode === "create" ? "page" : undefined}
           href={buildNewSkillHref(topic.id, { suggestWithAi: false })}
         >
-          Jeg kender færdigheden
+          Byg én færdighed
         </Link>
         <Link
           aria-current={initialMode === "suggest" ? "page" : undefined}
           href={buildNewSkillHref(topic.id, { suggestWithAi: true })}
         >
-          Foreslå færdigheder med AI
+          Planlæg flere med AI
         </Link>
       </nav>
 

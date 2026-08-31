@@ -67,6 +67,35 @@ export type TopicEditorOutlineGoal = {
   title: string;
 };
 
+export function resolvePersistedTopicId(
+  resumedTopicId: string | null,
+  createdTopicId: string | null,
+): string | null {
+  return resumedTopicId ?? createdTopicId;
+}
+
+export function addGoalToTopicEditorOutline(
+  outline: TopicEditorOutlineGoal[],
+  input: {
+    id: string;
+    sortOrder: number;
+    title: string;
+  },
+): TopicEditorOutlineGoal[] {
+  if (outline.some((goal) => goal.id === input.id)) return outline;
+
+  return [
+    ...outline,
+    {
+      exercises: [],
+      id: input.id,
+      sortOrder: input.sortOrder,
+      status: "draft" as const,
+      title: input.title,
+    },
+  ].sort((left, right) => left.sortOrder - right.sortOrder);
+}
+
 export function buildTopicEditorHref({
   createExercise = false,
   createGoal = false,

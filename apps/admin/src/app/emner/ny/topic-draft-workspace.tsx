@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   useActionState,
   useCallback,
@@ -32,8 +33,10 @@ import {
 import styles from "./page.module.css";
 import {
   addExerciseToTopicEditorOutline,
+  addGoalToTopicEditorOutline,
   buildTopicEditorHref,
   getResumeStartingStep,
+  resolvePersistedTopicId,
   type ResumableEditorStep,
   type ResumableTopicDraft,
   type TopicEditorOutlineGoal,
@@ -237,6 +240,7 @@ export function TopicDraftWorkspace({
   topicRequestId,
   wardrobeRequestId,
 }: TopicDraftWorkspaceProps) {
+  const router = useRouter();
   const isPublishedTopic = initialDraft?.topic.status === "published";
   const isExistingTopic = initialDraft !== null;
   const isAddingGoal = initialStep === "new-goal" && initialDraft !== null;
@@ -489,6 +493,10 @@ export function TopicDraftWorkspace({
   const topicCreated = topicState.status === "success";
   const goalCreated = goalState.status === "success";
   const exerciseCreated = exerciseState.status === "success";
+  const persistedTopicId = resolvePersistedTopicId(
+    initialDraft?.topic.id ?? null,
+    topicState.status === "success" ? topicState.topicId : null,
+  );
   const selectedGoalId =
     goalState.status === "success"
       ? goalState.goalId
@@ -497,10 +505,7 @@ export function TopicDraftWorkspace({
     exerciseState.status === "success"
       ? exerciseState.exerciseId
       : (initialDraft?.exercise?.id ?? null);
-  const addingExercise =
-    initialStep === "new-exercise" &&
-    !exerciseCreated &&
-    Boolean(selectedGoalId);
+  const addingExercise = !exerciseCreated && Boolean(selectedGoalId);
   const currentTopicSnapshot: TopicEditorSnapshot = {
     accentColor,
     description,
@@ -692,12 +697,37 @@ export function TopicDraftWorkspace({
       pendingGoalSnapshot.current = null;
       setGoalUpdatedAt(goalState.updatedAt);
       setNavigationWarning(null);
+      setEditorOutline((current) =>
+        addGoalToTopicEditorOutline(current, {
+          id: goalState.goalId,
+          sortOrder: initialDraft?.nextGoalSortOrder ?? 0,
+          title: normalizeText(goalTitle, 120) || "Ny færdighed",
+        }),
+      );
+
+      const topicId = initialDraft?.topic.id;
+      if (topicId) {
+        router.replace(
+          buildTopicEditorHref({
+            createExercise: true,
+            goalId: goalState.goalId,
+            topicId,
+          }),
+        );
+      }
       setActiveStep("exercise");
       resetAssistantContext("exercise");
       setStepAnnouncement("Færdighedskladden er gemt. Trin 3 af 5: Øvelser.");
       focusStepAfterRender();
     }
-  }, [goalState, resetAssistantContext]);
+  }, [
+    goalState,
+    goalTitle,
+    initialDraft?.nextGoalSortOrder,
+    initialDraft?.topic.id,
+    resetAssistantContext,
+    router,
+  ]);
 
   useEffect(() => {
     if (
@@ -720,31 +750,19 @@ export function TopicDraftWorkspace({
             title: normalizeText(exerciseTitle, 120) || "Ny øvelse",
           }),
         );
-
-        const topicId = initialDraft?.topic.id;
-        if (topicId) {
-          window.history.replaceState(
-            null,
-            "",
-            buildTopicEditorHref({
-              exerciseId: exerciseState.exerciseId,
-              goalId: selectedGoalId,
-              topicId,
-            }),
-          );
-        }
       }
-      setActiveStep("wardrobe");
-      resetAssistantContext("wardrobe");
-      setStepAnnouncement("Øvelsen er gemt. Trin 4 af 5: Garderobe.");
-      focusStepAfterRender();
+      setActiveStep("exercise");
+      setStepAnnouncement(
+        "Øvelsen er gemt. Tilføj endnu en øvelse, eller afslut øvelserne og fortsæt til garderoben.",
+      );
+      window.requestAnimationFrame(() => {
+        draftTitleRef.current?.focus({ preventScroll: true });
+      });
     }
   }, [
     exerciseState,
     exerciseTitle,
     initialDraft?.nextExerciseSortOrder,
-    initialDraft?.topic.id,
-    resetAssistantContext,
     selectedGoalId,
   ]);
 
@@ -1375,6 +1393,18 @@ export function TopicDraftWorkspace({
   function openReviewAssistant() {
     selectAssistantMode("review");
     window.requestAnimationFrame(() => assistantInputRef.current?.focus());
+  }
+
+  function startAnotherExercise() {
+    if (!persistedTopicId || !selectedGoalId) return;
+
+    window.location.assign(
+      buildTopicEditorHref({
+        createExercise: true,
+        goalId: selectedGoalId,
+        topicId: persistedTopicId,
+      }),
+    );
   }
 
   const handleWardrobeItemsChange = useCallback(
@@ -2162,7 +2192,9 @@ export function TopicDraftWorkspace({
                     name="sortOrder"
                     value={
                       goalCreated
-                        ? (initialDraft?.goal?.sortOrder ?? 0)
+                        ? (initialDraft?.goal?.sortOrder ??
+                          initialDraft?.nextGoalSortOrder ??
+                          0)
                         : (initialDraft?.nextGoalSortOrder ?? 0)
                     }
                   />
@@ -2606,20 +2638,31 @@ export function TopicDraftWorkspace({
                     </p>
                     {exerciseCreated && !exerciseEditing ? (
                       <>
-                        <button
-                          className={styles.secondaryButton}
-                          type="button"
-                          onClick={() => beginEditingStep("exercise")}
-                        >
-                          Rediger øvelse
-                        </button>
-                        <button
-                          className={styles.primaryButton}
-                          type="button"
-                          onClick={() => openStep("wardrobe")}
-                        >
-                          Fortsæt til garderobe
-                        </button>
+                        <div className={styles.inlineActions}>
+                          <button
+                            className={styles.secondaryButton}
+                            type="button"
+                            onClick={() => beginEditingStep("exercise")}
+                          >
+                            Rediger den gemte øvelse
+                          </button>
+                          {persistedTopicId && selectedGoalId ? (
+                            <button
+                              className={styles.primaryButton}
+                              type="button"
+                              onClick={startAnotherExercise}
+                            >
+                              + Tilføj endnu en øvelse
+                            </button>
+                          ) : null}
+                          <button
+                            className={styles.secondaryButton}
+                            type="button"
+                            onClick={() => openStep("wardrobe")}
+                          >
+                            Færdig med øvelser · fortsæt til garderobe
+                          </button>
+                        </div>
                       </>
                     ) : (
                       <>

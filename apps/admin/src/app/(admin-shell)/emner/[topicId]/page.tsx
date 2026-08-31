@@ -323,14 +323,14 @@ export default async function TopicDetailPage({
                 href={buildNewSkillHref(topic.id)}
               >
                 <span aria-hidden="true">+</span>
-                Ny færdighed
+                Byg én færdighed
               </Link>
               <Link
                 className={styles.suggestSkillButton}
                 href={buildNewSkillHref(topic.id, { suggestWithAi: true })}
               >
                 <span aria-hidden="true">✦</span>
-                Foreslå færdigheder med AI
+                Planlæg flere færdigheder med AI
               </Link>
             </div>
           </div>
@@ -342,8 +342,8 @@ export default async function TopicDetailPage({
             <div>
               <h3>Ingen færdigheder endnu</h3>
               <p>
-                Opret den første færdighed, eller få AI til at foreslå et sæt,
-                der passer til emnet.
+                Byg én færdighed med alle dens øvelser, eller lad AI planlægge
+                flere færdigheder med flere øvelser i hver.
               </p>
             </div>
           </div>
@@ -404,7 +404,20 @@ export default async function TopicDetailPage({
                 >
                   <div className={styles.exerciseHeading}>
                     <h4 id={`exercises-${goal.id}`}>Øvelser</h4>
-                    <span>{goal.exercises.length}</span>
+                    <div className={styles.itemActions}>
+                      <span>{goal.exercises.length}</span>
+                      <Link
+                        aria-label={`Tilføj øvelse til ${goal.title}`}
+                        className={styles.inlineEditButton}
+                        href={buildTopicEditorHref({
+                          createExercise: true,
+                          goalId: goal.id,
+                          topicId: topic.id,
+                        })}
+                      >
+                        Tilføj øvelse
+                      </Link>
+                    </div>
                   </div>
 
                   {goal.exercises.length === 0 ? (

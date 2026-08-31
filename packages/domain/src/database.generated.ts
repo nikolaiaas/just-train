@@ -1578,6 +1578,25 @@ export type Database = {
           timeout_ms: number;
         }[];
       };
+      claim_admin_skill_curriculum_job_for_worker: {
+        Args: { p_job_id: string };
+        Returns: {
+          attempt_number: number;
+          capability: string;
+          gateway: string;
+          input_contract: Json;
+          input_data: Json;
+          job_id: string;
+          max_cost_microusd: number;
+          model: string;
+          operation_key: string;
+          output_contract: Json;
+          prompt_template: string;
+          provider: string;
+          request_options: Json;
+          timeout_ms: number;
+        }[];
+      };
       claim_admin_skill_job_for_worker: {
         Args: { p_job_id: string };
         Returns: {
@@ -1641,6 +1660,17 @@ export type Database = {
         }[];
       };
       complete_admin_ai_job_for_worker: {
+        Args: {
+          p_attempt_number: number;
+          p_cost_microusd: number;
+          p_job_id: string;
+          p_output_data: Json;
+          p_provider_request_id: string;
+          p_usage: Json;
+        };
+        Returns: undefined;
+      };
+      complete_admin_skill_curriculum_job_for_worker: {
         Args: {
           p_attempt_number: number;
           p_cost_microusd: number;
@@ -2004,6 +2034,17 @@ export type Database = {
           job_status: Database["public"]["Enums"]["ai_job_status"];
         }[];
       };
+      prepare_admin_skill_curriculum_job: {
+        Args: {
+          p_client_request_id: string;
+          p_input_data: Json;
+          p_topic_id: string;
+        };
+        Returns: {
+          job_id: string;
+          job_status: Database["public"]["Enums"]["ai_job_status"];
+        }[];
+      };
       prepare_admin_topic_ai_job: {
         Args: {
           p_client_request_id: string;
@@ -2116,6 +2157,16 @@ export type Database = {
           version: number;
         }[];
       };
+      read_admin_skill_curriculum_job: {
+        Args: { p_job_id: string };
+        Returns: {
+          job_id: string;
+          job_status: Database["public"]["Enums"]["ai_job_status"];
+          operation_key: string;
+          output_data: Json;
+          public_error_code: string;
+        }[];
+      };
       read_admin_topic_ai_job: {
         Args: { p_job_id: string };
         Returns: {
@@ -2146,6 +2197,23 @@ export type Database = {
           delete_after: string;
           removed: boolean;
           removed_media_asset_id: string;
+        }[];
+      };
+      save_admin_skill_curriculum_draft: {
+        Args: {
+          p_client_request_id: string;
+          p_curriculum_job_id: string;
+          p_expected_updated_at: string;
+          p_topic_id: string;
+          p_wardrobe_image_job_id: string;
+          p_wardrobe_plan_job_id: string;
+        };
+        Returns: {
+          changed: boolean;
+          exercise_ids: string[];
+          goal_ids: string[];
+          updated_at: string;
+          wardrobe_item_ids: string[];
         }[];
       };
       save_admin_skill_package_draft: {

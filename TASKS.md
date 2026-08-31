@@ -242,7 +242,9 @@ Exit condition: a child cannot lose or duplicate a completed attempt because of 
 - [x] Keep new-subject creation focused on the subject itself, then continue from the saved subject detail instead of forcing skills into the same creation flow.
 - [x] Implement editing every existing skill and exercise and adding another exercise from the selected skill.
 - [x] Let an editor start another skill manually from the subject detail and continue through its exercises without overwriting sibling skills.
-- [x] Implement subject-level AI skill suggestions and a reviewed one-go skill package that creates one skill, 2–8 ordered exercises, and exactly 16 topic-aware wardrobe image drafts in one atomic unpublished draft save.
+- [x] Implement subject-level AI skill suggestions and the original reviewed one-skill package with 2–8 ordered exercises and exactly 16 topic-aware wardrobe image drafts in one atomic unpublished draft save.
+- [x] Make the manual skill flow continue through repeated exercise creation until the editor explicitly finishes the skill.
+- [x] Extend subject-level AI planning to one reviewed curriculum with 2–6 skills, 2–8 ordered exercises per skill and at most 32 exercises total, followed by one shared topic-aware 16-image wardrobe grid and one atomic unpublished draft save.
 - [ ] Implement manual reordering of skills and exercises.
 - [x] Validate name, explanation, measurement type, target, training time, equipment, and safety text, including child-directed wording in the manual subject, skill, exercise, and wardrobe forms.
 - [x] Enforce the same child-directed wording invariant for AI-generated public descriptions at job completion and transactional save, with aligned Admin, Edge, and database tests.
