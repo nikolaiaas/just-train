@@ -122,7 +122,7 @@ test("accepts only bounded server-owned text options", () => {
 
   for (const unsafeOptions of [
     { ...OPTIONS, max_tokens: 0 },
-    { ...OPTIONS, max_tokens: 4_097 },
+    { ...OPTIONS, max_tokens: 16_001 },
     { ...OPTIONS, tools: [] },
     {
       ...OPTIONS,
@@ -173,6 +173,26 @@ test("accepts the wardrobe grid plan token ceiling pinned by the database", () =
   });
 
   assert.equal(request.max_tokens, 4_096);
+});
+
+test("accepts the bounded curriculum token ceiling pinned by the database", () => {
+  const curriculumOptions = {
+    ...OPTIONS,
+    max_tokens: 16_000,
+  };
+
+  assert.deepEqual(
+    parseOpenRouterStructuredTextOptions(curriculumOptions),
+    curriculumOptions,
+  );
+
+  const request = createOpenRouterStructuredTextRequest({
+    ...REQUEST_INPUT,
+    options: curriculumOptions,
+    schemaName: "admin_skill_curriculum",
+  });
+
+  assert.equal(request.max_tokens, 16_000);
 });
 
 test("builds strict JSON-schema chat messages without tools or browsing", () => {

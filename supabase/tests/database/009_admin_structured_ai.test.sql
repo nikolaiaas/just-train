@@ -17,6 +17,7 @@ select results_eq(
       ('content.draft_review'::text),
       ('content.exercise_draft'::text),
       ('content.goal_draft'::text),
+      ('content.skill_curriculum'::text),
       ('content.skill_package'::text),
       ('content.skill_suggestions'::text),
       ('content.topic_brief'::text),
@@ -24,7 +25,7 @@ select results_eq(
       ('content.wardrobe_grid_image'::text),
       ('content.wardrobe_grid_plan'::text)
   $$,
-  'all nine bounded administrator AI operations exist'
+  'all ten bounded administrator AI operations exist'
 );
 
 select results_eq(
@@ -42,6 +43,7 @@ select results_eq(
       ('content.draft_review'::text, 'openrouter'::text, 'openai'::text, 'openai/gpt-5-mini'::text),
       ('content.exercise_draft'::text, 'openrouter'::text, 'openai'::text, 'openai/gpt-5-mini'::text),
       ('content.goal_draft'::text, 'openrouter'::text, 'openai'::text, 'openai/gpt-5-mini'::text),
+      ('content.skill_curriculum'::text, 'openrouter'::text, 'openai'::text, 'openai/gpt-5-mini'::text),
       ('content.skill_package'::text, 'openrouter'::text, 'openai'::text, 'openai/gpt-5-mini'::text),
       ('content.skill_suggestions'::text, 'openrouter'::text, 'openai'::text, 'openai/gpt-5-mini'::text),
       ('content.topic_brief'::text, 'openrouter'::text, 'openai'::text, 'openai/gpt-5-mini'::text),
@@ -49,7 +51,7 @@ select results_eq(
       ('content.wardrobe_grid_image'::text, 'openrouter'::text, 'openai'::text, 'openai/gpt-image-2'::text),
       ('content.wardrobe_grid_plan'::text, 'openrouter'::text, 'openai'::text, 'openai/gpt-5-mini'::text)
   $$,
-  'all nine operations pin their intended OpenAI model on OpenRouter'
+  'all ten operations pin their intended OpenAI model on OpenRouter'
 );
 
 create temporary table prompt_revision_baseline as

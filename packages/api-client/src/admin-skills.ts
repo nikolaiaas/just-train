@@ -9,6 +9,7 @@ export type AdminSkillWardrobeEquipSlot =
 export type AdminTopicAiOperationKey =
   | "content.skill_suggestions"
   | "content.skill_package"
+  | "content.skill_curriculum"
   | "content.wardrobe_grid_plan"
   | "content.wardrobe_grid_image";
 
@@ -42,6 +43,15 @@ export type AdminSkillPackageInput = {
   topic: AdminAiTopicContext;
 };
 
+export type AdminSkillCurriculumInput = {
+  existingSkills: Array<{ slug: string; title: string }>;
+  exercisesPerSkill: number;
+  history: AdminAiHistoryItem[];
+  message: string;
+  skillCount: number;
+  topic: AdminAiTopicContext;
+};
+
 export type AdminWardrobeGridPlanInput = {
   history: AdminAiHistoryItem[];
   message: string;
@@ -61,6 +71,7 @@ export type AdminWardrobeGridImageInput = {
 export type AdminTopicAiInputData =
   | AdminSkillSuggestionsInput
   | AdminSkillPackageInput
+  | AdminSkillCurriculumInput
   | AdminWardrobeGridPlanInput
   | AdminWardrobeGridImageInput;
 
@@ -129,6 +140,16 @@ export type AdminSkillPackageOutput = {
   skill: AdminSkillPackage;
 };
 
+export type AdminSkillCurriculumSkill = AdminSkillPackage & {
+  exercises: AdminSkillPackageExercise[];
+  ordinal: number;
+};
+
+export type AdminSkillCurriculumOutput = {
+  reply: string;
+  skills: AdminSkillCurriculumSkill[];
+};
+
 export type SaveAdminSkillPackageDraftInput = {
   clientRequestId: string;
   expectedUpdatedAt: string;
@@ -142,6 +163,23 @@ export type SaveAdminSkillPackageDraftResult = {
   changed: boolean;
   exerciseIds: string[];
   goalId: string;
+  updatedAt: string;
+  wardrobeItemIds: string[];
+};
+
+export type SaveAdminSkillCurriculumDraftInput = {
+  clientRequestId: string;
+  curriculumJobId: string;
+  expectedUpdatedAt: string;
+  topicId: string;
+  wardrobeImageJobId: string;
+  wardrobePlanJobId: string;
+};
+
+export type SaveAdminSkillCurriculumDraftResult = {
+  changed: boolean;
+  exerciseIds: string[];
+  goalIds: string[];
   updatedAt: string;
   wardrobeItemIds: string[];
 };
@@ -189,6 +227,7 @@ const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/u;
 const OPERATION_KEYS = new Set<AdminTopicAiOperationKey>([
   "content.skill_suggestions",
   "content.skill_package",
+  "content.skill_curriculum",
   "content.wardrobe_grid_plan",
   "content.wardrobe_grid_image",
 ]);
@@ -449,6 +488,126 @@ export function parseAdminSkillPackageOutput(
   };
 }
 
+export function parseAdminSkillCurriculumOutput(
+  value: unknown,
+  expected?: { exercisesPerSkill: number; skillCount: number },
+): AdminSkillCurriculumOutput | null {
+  if (
+    !isRecord(value) ||
+    !exactKeys(value, ["reply", "skills"]) ||
+    !boundedString(value.reply, 1, 1500) ||
+    !Array.isArray(value.skills) ||
+    value.skills.length < 2 ||
+    value.skills.length > 6
+  ) {
+    return null;
+  }
+
+  if (
+    expected &&
+    (!boundedInteger(expected.skillCount, 2, 6) ||
+      !boundedInteger(expected.exercisesPerSkill, 2, 8) ||
+      expected.skillCount * expected.exercisesPerSkill > 32 ||
+      value.skills.length !== expected.skillCount)
+  ) {
+    return null;
+  }
+
+  const skillTitles = new Set<string>();
+  const skillSlugs = new Set<string>();
+  const exerciseTitles = new Set<string>();
+  const exerciseSlugs = new Set<string>();
+  const skills: AdminSkillCurriculumSkill[] = [];
+  let exercisesPerSkill: number | null = null;
+  let exerciseCount = 0;
+
+  for (const [index, candidate] of value.skills.entries()) {
+    if (
+      !isRecord(candidate) ||
+      !exactKeys(candidate, [
+        "ordinal",
+        "title",
+        "slug",
+        "childDescription",
+        "difficulty",
+        "estimatedMinutes",
+        "equipment",
+        "editorialReason",
+        "exercises",
+      ]) ||
+      candidate.ordinal !== index + 1
+    ) {
+      return null;
+    }
+
+    const parsed = parseAdminSkillPackageOutput({
+      exercises: candidate.exercises,
+      reply: value.reply,
+      skill: {
+        childDescription: candidate.childDescription,
+        difficulty: candidate.difficulty,
+        editorialReason: candidate.editorialReason,
+        equipment: candidate.equipment,
+        estimatedMinutes: candidate.estimatedMinutes,
+        slug: candidate.slug,
+        title: candidate.title,
+      },
+    });
+    if (!parsed) return null;
+
+    exercisesPerSkill ??= parsed.exercises.length;
+    if (
+      parsed.exercises.length !== exercisesPerSkill ||
+      (expected && parsed.exercises.length !== expected.exercisesPerSkill)
+    ) {
+      return null;
+    }
+
+    const titleKey = parsed.skill.title.toLocaleLowerCase("da-DK");
+    const slugKey = parsed.skill.slug.toLocaleLowerCase("en-US");
+    if (skillTitles.has(titleKey) || skillSlugs.has(slugKey)) return null;
+    skillTitles.add(titleKey);
+    skillSlugs.add(slugKey);
+    for (const exercise of parsed.exercises) {
+      const exerciseTitleKey = exercise.title.toLocaleLowerCase("da-DK");
+      const exerciseSlugKey = exercise.slug.toLocaleLowerCase("en-US");
+      if (
+        exerciseTitles.has(exerciseTitleKey) ||
+        exerciseSlugs.has(exerciseSlugKey)
+      ) {
+        return null;
+      }
+      exerciseTitles.add(exerciseTitleKey);
+      exerciseSlugs.add(exerciseSlugKey);
+    }
+    exerciseCount += parsed.exercises.length;
+    skills.push({
+      ...parsed.skill,
+      exercises: parsed.exercises,
+      ordinal: index + 1,
+    });
+  }
+
+  if (exerciseCount > 32) return null;
+  return { reply: value.reply, skills };
+}
+
+export function buildAdminSkillCurriculumWardrobeMessage(
+  curriculum: AdminSkillCurriculumOutput,
+): string {
+  const clip = (value: string, length: number) =>
+    Array.from(value).slice(0, length).join("").trim();
+  const sequence = curriculum.skills
+    .map(
+      (skill) =>
+        `${skill.ordinal}. ${clip(skill.title, 10)}: ${skill.exercises
+          .map((exercise) => clip(exercise.title, 6))
+          .join(", ")}`,
+    )
+    .join(" · ");
+  return `Lav 16 garderobeting til hele forløbet. Færdigheder og øvelser i rækkefølge: ${sequence}. Tingene skal passe til hele emnet og alle færdigheder.`;
+}
+
 export async function prepareAdminTopicAiJob(
   client: BareTraenClient,
   input: PrepareAdminTopicAiJobInput,
@@ -460,12 +619,19 @@ export async function prepareAdminTopicAiJob(
   }
   let response;
   try {
-    response = await callUntypedRpc(client, "prepare_admin_topic_ai_job", {
-      p_client_request_id: clientRequestId,
-      p_input_data: input.inputData,
-      p_operation_key: input.operationKey,
-      p_topic_id: topicId,
-    });
+    response =
+      input.operationKey === "content.skill_curriculum"
+        ? await callUntypedRpc(client, "prepare_admin_skill_curriculum_job", {
+            p_client_request_id: clientRequestId,
+            p_input_data: input.inputData,
+            p_topic_id: topicId,
+          })
+        : await callUntypedRpc(client, "prepare_admin_topic_ai_job", {
+            p_client_request_id: clientRequestId,
+            p_input_data: input.inputData,
+            p_operation_key: input.operationKey,
+            p_topic_id: topicId,
+          });
   } catch {
     throw new AdminSkillPackageError("prepare_failed");
   }
@@ -500,9 +666,13 @@ export async function loadAdminTopicAiJob(
   }
   let response;
   try {
-    response = await callUntypedRpc(client, "read_admin_topic_ai_job", {
-      p_job_id: jobId,
-    });
+    response = await callUntypedRpc(
+      client,
+      input.expectedOperationKey === "content.skill_curriculum"
+        ? "read_admin_skill_curriculum_job"
+        : "read_admin_topic_ai_job",
+      { p_job_id: jobId },
+    );
   } catch {
     throw new AdminSkillPackageError("load_failed");
   }
@@ -581,6 +751,74 @@ export async function saveAdminSkillPackageDraft(
     changed: row.changed,
     exerciseIds: row.exercise_ids as string[],
     goalId: row.goal_id,
+    updatedAt: row.updated_at,
+    wardrobeItemIds: row.wardrobe_item_ids as string[],
+  };
+}
+
+export async function saveAdminSkillCurriculumDraft(
+  client: BareTraenClient,
+  input: SaveAdminSkillCurriculumDraftInput,
+): Promise<SaveAdminSkillCurriculumDraftResult> {
+  const topicId = uuid(input.topicId);
+  const curriculumJobId = uuid(input.curriculumJobId);
+  const wardrobePlanJobId = uuid(input.wardrobePlanJobId);
+  const wardrobeImageJobId = uuid(input.wardrobeImageJobId);
+  const clientRequestId = uuid(input.clientRequestId);
+  const expectedUpdatedAt = timestamp(input.expectedUpdatedAt);
+  let response;
+  try {
+    response = await callUntypedRpc(
+      client,
+      "save_admin_skill_curriculum_draft",
+      {
+        p_client_request_id: clientRequestId,
+        p_curriculum_job_id: curriculumJobId,
+        p_expected_updated_at: expectedUpdatedAt,
+        p_topic_id: topicId,
+        p_wardrobe_image_job_id: wardrobeImageJobId,
+        p_wardrobe_plan_job_id: wardrobePlanJobId,
+      },
+    );
+  } catch {
+    throw new AdminSkillPackageError("save_failed");
+  }
+  if (response.error) throw mappedError(response.error, "save_failed");
+  const row = Array.isArray(response.data) ? response.data[0] : null;
+  if (
+    !Array.isArray(response.data) ||
+    response.data.length !== 1 ||
+    !isRecord(row) ||
+    typeof row.changed !== "boolean" ||
+    !Array.isArray(row.goal_ids) ||
+    row.goal_ids.length < 2 ||
+    row.goal_ids.length > 6 ||
+    row.goal_ids.some(
+      (id) => typeof id !== "string" || !UUID_PATTERN.test(id),
+    ) ||
+    new Set(row.goal_ids).size !== row.goal_ids.length ||
+    !Array.isArray(row.exercise_ids) ||
+    row.exercise_ids.length < 4 ||
+    row.exercise_ids.length > 32 ||
+    row.exercise_ids.some(
+      (id) => typeof id !== "string" || !UUID_PATTERN.test(id),
+    ) ||
+    new Set(row.exercise_ids).size !== row.exercise_ids.length ||
+    !Array.isArray(row.wardrobe_item_ids) ||
+    row.wardrobe_item_ids.length !== 16 ||
+    row.wardrobe_item_ids.some(
+      (id) => typeof id !== "string" || !UUID_PATTERN.test(id),
+    ) ||
+    new Set(row.wardrobe_item_ids).size !== row.wardrobe_item_ids.length ||
+    typeof row.updated_at !== "string" ||
+    !Number.isFinite(Date.parse(row.updated_at))
+  ) {
+    throw new AdminSkillPackageError("invalid_result");
+  }
+  return {
+    changed: row.changed,
+    exerciseIds: row.exercise_ids as string[],
+    goalIds: row.goal_ids as string[],
     updatedAt: row.updated_at,
     wardrobeItemIds: row.wardrobe_item_ids as string[],
   };
