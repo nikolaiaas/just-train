@@ -132,17 +132,20 @@ checklist and next actions; it has no save, approval, or publication shape.
 
 Subject creation and skill authoring are deliberately separate. Creating a
 subject stores only the topic draft and returns to its detail route. From there,
-`content.skill_suggestions` can propose several distinct child-facing skills
-against the canonical saved topic and existing skills. A single visible “build
-the whole skill” action then orchestrates three pinned jobs:
-`content.skill_package` for one skill and 2–8 ordered exercises,
-`content.wardrobe_grid_plan` for exactly 16 rewards informed by that topic and
-generated skill, and `content.wardrobe_grid_image` for the 4×4 image sheet and
-crops. These remain separate provider jobs so the structured-text token ceiling
-stays bounded.
+manual authoring can create one skill and then repeat the exercise step until
+the editor explicitly finishes. `content.skill_suggestions` can propose several
+distinct child-facing skills against the canonical saved topic and existing
+skills. The AI curriculum planner first runs `content.skill_curriculum` to
+produce one reviewable learning sequence with exactly 2–6 skills and 2–8
+ordered exercises per skill, capped at 32 exercises in total. Only after that
+review does it run `content.wardrobe_grid_plan` for one shared set of exactly 16
+rewards informed by the topic and complete curriculum, followed by
+`content.wardrobe_grid_image` for the 4×4 image sheet and crops. These remain
+separate provider jobs so the structured-text token ceiling stays bounded and
+the wardrobe is generated once for the whole curriculum.
 
-The final package is saved through one idempotent transaction bound to the
-canonical topic and exact succeeded job lineage. It either creates the skill,
+The final curriculum is saved through one idempotent transaction bound to the
+canonical topic and exact succeeded job lineage. It either creates every skill,
 every exercise, and all 16 image-backed wardrobe rows, or creates nothing. All
 rows remain unpublished drafts, and wardrobe rows still require an explicit
 editorial decision before topic publication. Obvious parent- or
@@ -183,10 +186,11 @@ category, exclusive body slot, rarity, editorial note, order, and an explicit
 remain service-role-only. It must never contain child photos or other personal
 media. The standalone wardrobe assistant remains a transient 16-card proposal
 until an administrator opens and saves individual cards. The complete skill
-builder can instead save all 16 reviewed cards atomically as draft wardrobe
-rows, but never approves or publishes them. Published-row edits, including image
-and description changes, stay in the private pending revision and become
-child-visible only after another approval and topic publication. Legacy rows
+curriculum planner can instead save all 16 shared reviewed cards atomically with
+every planned skill and exercise as draft rows, but never approves or publishes
+them. Published-row edits, including image and description changes, stay in the
+private pending revision and become child-visible only after another approval
+and topic publication. Legacy rows
 may have no image, but new interfaces show an explicit missing-image state
 rather than presenting the old emoji as catalogue artwork.
 

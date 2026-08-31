@@ -248,7 +248,8 @@
 }
 
 .directionForm input,
-.directionForm textarea {
+.directionForm textarea,
+.directionForm select {
   width: 100%;
   min-height: 48px;
   padding: 12px 14px;
@@ -261,9 +262,60 @@
 
 .directionForm input:hover,
 .directionForm textarea:hover,
+.directionForm select:hover,
 .directionForm input:focus,
-.directionForm textarea:focus {
+.directionForm textarea:focus,
+.directionForm select:focus {
   border-color: #168983;
+}
+
+.plannerCounts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.planSummary {
+  margin: -4px 0 0;
+  padding: 13px 14px;
+  border-radius: 11px;
+  background: #eef7f4;
+  color: #315d5a;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.existingSkills {
+  display: grid;
+  gap: 9px;
+  margin-top: 20px;
+  padding: 14px 16px;
+  border: 1px solid #d7e1e2;
+  border-radius: 13px;
+  background: #f7f8f5;
+}
+
+.existingSkills strong {
+  color: #29485a;
+  font-size: 12px;
+}
+
+.existingSkills ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.existingSkills li {
+  padding: 6px 9px;
+  border-radius: 999px;
+  background: #e7eeeb;
+  color: #526b70;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .directionForm button,
@@ -398,6 +450,7 @@
 
 .suggestionGrid h3,
 .exerciseTitle h3,
+.exerciseTitle h4,
 .rewardBody h3 {
   margin: 0;
   color: #183249;
@@ -565,6 +618,74 @@
 .exerciseList {
   display: grid;
   gap: 12px;
+}
+
+.curriculumList {
+  display: grid;
+  gap: 14px;
+  margin: 24px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.curriculumList > li {
+  overflow: hidden;
+  border: 1px solid #d7e1e2;
+  border-radius: 17px;
+  background: #fcfcf8;
+}
+
+.curriculumList summary {
+  display: flex;
+  min-height: 68px;
+  align-items: center;
+  gap: 13px;
+  padding: 15px 18px;
+  color: #183249;
+  cursor: pointer;
+  list-style: none;
+}
+
+.curriculumList summary::-webkit-details-marker {
+  display: none;
+}
+
+.curriculumList summary::after {
+  content: "+";
+  margin-left: auto;
+  color: #08746f;
+  font-size: 23px;
+  font-weight: 500;
+}
+
+.curriculumList details[open] > summary::after {
+  content: "−";
+}
+
+.curriculumList summary > span:nth-child(2) {
+  display: grid;
+  gap: 3px;
+}
+
+.curriculumList summary strong {
+  font-size: 18px;
+}
+
+.curriculumList summary small {
+  color: #667a84;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.curriculumSkillBody {
+  display: grid;
+  gap: 16px;
+  padding: 0 18px 18px 65px;
+  border-top: 1px solid #e4e9e8;
+}
+
+.curriculumSkillBody > .childCopy {
+  margin-top: 18px;
 }
 
 .exerciseList > li {
@@ -767,6 +888,7 @@
   }
 
   .suggestionGrid,
+  .plannerCounts,
   .facts {
     grid-template-columns: 1fr;
   }
@@ -834,6 +956,10 @@
 
   .exerciseList > li {
     padding: 14px;
+  }
+
+  .curriculumSkillBody {
+    padding: 0 14px 14px;
   }
 
   .exerciseFacts {

@@ -2,11 +2,15 @@
 
 import {
   AdminSkillPackageError,
+  buildAdminSkillCurriculumWardrobeMessage,
   loadAdminTopicAiJob,
+  parseAdminSkillCurriculumOutput,
   parseAdminSkillPackageOutput,
   parseAdminSkillSuggestionsOutput,
   prepareAdminTopicAiJob,
+  saveAdminSkillCurriculumDraft,
   saveAdminSkillPackageDraft,
+  type AdminSkillCurriculumOutput,
   type AdminSkillPackageOutput,
   type AdminSkillSuggestionsOutput,
   type AdminTopicAiJob,
@@ -32,6 +36,11 @@ import {
   type CompleteSkillPackage,
   type SkillDifficulty,
 } from "@/app/emner/skill-package";
+import {
+  deriveCurriculumStageRequestId,
+  parseSkillCurriculumCounts,
+  type CompleteSkillCurriculum,
+} from "@/app/emner/skill-curriculum";
 
 type SkillActionError = {
   message: string;
@@ -57,12 +66,46 @@ export type GenerateSkillPackageState =
       status: "success";
     };
 
+export type GenerateSkillCurriculumState =
+  | { status: "idle" }
+  | SkillActionError
+  | {
+      curriculum: AdminSkillCurriculumOutput;
+      curriculumJobId: string;
+      exercisesPerSkill: number;
+      requestId: string;
+      skillCount: number;
+      status: "success";
+    };
+
+export type GenerateSkillCurriculumWardrobeState =
+  | { status: "idle" }
+  | SkillActionError
+  | {
+      curriculum: CompleteSkillCurriculum;
+      exercisesPerSkill: number;
+      requestId: string;
+      skillCount: number;
+      status: "success";
+    };
+
 export type SaveSkillPackageState =
   | { status: "idle" }
   | SkillActionError
   | {
       exerciseCount: number;
       goalId: string;
+      status: "success";
+      topicId: string;
+      wardrobeCount: number;
+    };
+
+export type SaveSkillCurriculumState =
+  | { status: "idle" }
+  | SkillActionError
+  | {
+      exerciseCount: number;
+      goalIds: string[];
       status: "success";
       topicId: string;
       wardrobeCount: number;
@@ -363,6 +406,205 @@ export async function suggestAdminSkills(
   }
 }
 
+export async function generateAdminSkillCurriculum(
+  _previousState: GenerateSkillCurriculumState,
+  formData: FormData,
+): Promise<GenerateSkillCurriculumState> {
+  const topicId = readUuid(formData, "topicId");
+  const requestId = readUuid(formData, "requestId");
+  const message = normalizeMessage(readUniqueField(formData, "message"));
+  const counts = parseSkillCurriculumCounts({
+    exercisesPerSkill: readUniqueField(formData, "exercisesPerSkill") ?? "",
+    skillCount: readUniqueField(formData, "skillCount") ?? "",
+  });
+  if (!topicId || !requestId || !message || !counts) {
+    return actionError(
+      "Vælg mellem 2 og 6 færdigheder og mindst 2 øvelser til hver.",
+    );
+  }
+
+  const access = await getAuthorizedClient();
+  if (!access.ok) return access.error;
+
+  try {
+    const topic = await loadCanonicalTopic(access.client, topicId);
+    if (!topic) return actionError("Emnet kunne ikke hentes.", "start_new");
+
+    const curriculumRequestId = await deriveCurriculumStageRequestId(
+      requestId,
+      "curriculum",
+    );
+    const prepared = await prepareAdminTopicAiJob(access.client, {
+      clientRequestId: curriculumRequestId,
+      inputData: {
+        existingSkills: topic.existingForPackage,
+        exercisesPerSkill: counts.exercisesPerSkill,
+        history: [],
+        message,
+        skillCount: counts.skillCount,
+        topic: { description: topic.description, title: topic.title },
+      },
+      operationKey: "content.skill_curriculum",
+      topicId,
+    });
+    const job = await runPreparedJob(access.client, prepared);
+    if (isActionError(job)) return job;
+
+    const curriculum = parseAdminSkillCurriculumOutput(job.outputData, {
+      exercisesPerSkill: counts.exercisesPerSkill,
+      skillCount: counts.skillCount,
+    });
+    if (!curriculum) {
+      return actionError(
+        "Færdighedsplanen havde et ukendt format og blev derfor ikke vist.",
+        "start_new",
+      );
+    }
+
+    return {
+      curriculum,
+      curriculumJobId: job.jobId,
+      exercisesPerSkill: counts.exercisesPerSkill,
+      requestId,
+      skillCount: counts.skillCount,
+      status: "success",
+    };
+  } catch (error) {
+    return mapContractError(error);
+  }
+}
+
+export async function generateAdminSkillCurriculumWardrobe(
+  _previousState: GenerateSkillCurriculumWardrobeState,
+  formData: FormData,
+): Promise<GenerateSkillCurriculumWardrobeState> {
+  const topicId = readUuid(formData, "topicId");
+  const requestId = readUuid(formData, "requestId");
+  const curriculumJobId = readUuid(formData, "curriculumJobId");
+  const counts = parseSkillCurriculumCounts({
+    exercisesPerSkill: readUniqueField(formData, "exercisesPerSkill") ?? "",
+    skillCount: readUniqueField(formData, "skillCount") ?? "",
+  });
+  if (!topicId || !requestId || !curriculumJobId || !counts) {
+    return actionError(
+      "Færdighedsplanen kunne ikke forbindes sikkert med garderoben.",
+      "start_new",
+    );
+  }
+
+  const access = await getAuthorizedClient();
+  if (!access.ok) return access.error;
+
+  try {
+    const topic = await loadCanonicalTopic(access.client, topicId);
+    if (!topic) return actionError("Emnet kunne ikke hentes.", "start_new");
+
+    const curriculumJob = await loadAdminTopicAiJob(access.client, {
+      expectedOperationKey: "content.skill_curriculum",
+      jobId: curriculumJobId,
+    });
+    if (
+      curriculumJob.status === "failed" ||
+      curriculumJob.status === "cancelled"
+    ) {
+      return mapJobFailure(curriculumJob);
+    }
+    const curriculum = parseAdminSkillCurriculumOutput(
+      curriculumJob.outputData,
+      {
+        exercisesPerSkill: counts.exercisesPerSkill,
+        skillCount: counts.skillCount,
+      },
+    );
+    if (curriculumJob.status !== "succeeded" || !curriculum) {
+      return actionError(
+        "Færdighedsplanen er ikke klar længere. Lav en ny plan.",
+        "start_new",
+      );
+    }
+
+    const wardrobePlanRequestId = await deriveCurriculumStageRequestId(
+      requestId,
+      "curriculum-wardrobe-plan",
+    );
+    const wardrobeInput = {
+      history: [],
+      message: buildAdminSkillCurriculumWardrobeMessage(curriculum),
+      topic: { description: topic.description, title: topic.title },
+    };
+    const preparedPlan = await prepareAdminTopicAiJob(access.client, {
+      clientRequestId: wardrobePlanRequestId,
+      inputData: wardrobeInput,
+      operationKey: "content.wardrobe_grid_plan",
+      topicId,
+    });
+    const planJob = await runPreparedJob(access.client, preparedPlan);
+    if (isActionError(planJob)) return planJob;
+    const parsedPlan = parseAssistantOutput("wardrobe", planJob.outputData);
+    if (!parsedPlan || parsedPlan.items.length !== 16) {
+      return actionError(
+        "Garderobeplanen havde et ukendt format og blev derfor ikke vist.",
+        "start_new",
+      );
+    }
+
+    const imageRequestId = await deriveWardrobeGridImageRequestId(
+      wardrobePlanRequestId,
+    );
+    const preparedImage = await prepareAdminTopicAiJob(access.client, {
+      clientRequestId: imageRequestId,
+      inputData: createWardrobeGridImageInput(
+        wardrobeInput.topic,
+        parsedPlan.items,
+      ),
+      operationKey: "content.wardrobe_grid_image",
+      topicId,
+    });
+    const imageJob = await runPreparedJob(access.client, preparedImage);
+    if (isActionError(imageJob)) return imageJob;
+    const imageOutput = parseWardrobeGridImageOutput(
+      imageJob.outputData,
+      imageJob.jobId,
+    );
+    if (!imageOutput) {
+      return actionError(
+        "Billedarket havde et ukendt format og blev derfor ikke vist.",
+        "start_new",
+      );
+    }
+
+    const wardrobeItems = attachWardrobeGridImages(
+      parsedPlan.items,
+      imageOutput,
+      (path) =>
+        access.client.storage.from("wardrobe-images").getPublicUrl(path).data
+          .publicUrl,
+    );
+    if (!wardrobeItems) {
+      return actionError(
+        "De 16 billeder kunne ikke forbindes sikkert med forslagene.",
+        "start_new",
+      );
+    }
+
+    return {
+      curriculum: {
+        curriculum,
+        curriculumJobId,
+        imageJobId: imageJob.jobId,
+        wardrobeItems,
+        wardrobePlanJobId: planJob.jobId,
+      },
+      exercisesPerSkill: counts.exercisesPerSkill,
+      requestId,
+      skillCount: counts.skillCount,
+      status: "success",
+    };
+  } catch (error) {
+    return mapContractError(error);
+  }
+}
+
 export async function generateAdminSkillPackage(
   _previousState: GenerateSkillPackageState,
   formData: FormData,
@@ -539,6 +781,60 @@ export async function saveGeneratedAdminSkillPackage(
     return {
       exerciseCount: result.exerciseIds.length,
       goalId: result.goalId,
+      status: "success",
+      topicId,
+      wardrobeCount: result.wardrobeItemIds.length,
+    };
+  } catch (error) {
+    return mapContractError(error);
+  }
+}
+
+export async function saveGeneratedAdminSkillCurriculum(
+  _previousState: SaveSkillCurriculumState,
+  formData: FormData,
+): Promise<SaveSkillCurriculumState> {
+  const topicId = readUuid(formData, "topicId");
+  const clientRequestId = readUuid(formData, "requestId");
+  const curriculumJobId = readUuid(formData, "curriculumJobId");
+  const wardrobePlanJobId = readUuid(formData, "wardrobePlanJobId");
+  const wardrobeImageJobId = readUuid(formData, "wardrobeImageJobId");
+  const expectedUpdatedAt = readUniqueField(formData, "expectedUpdatedAt");
+  const reviewed = readUniqueField(formData, "reviewed") === "yes";
+
+  if (
+    !topicId ||
+    !clientRequestId ||
+    !curriculumJobId ||
+    !wardrobePlanJobId ||
+    !wardrobeImageJobId ||
+    !expectedUpdatedAt ||
+    !reviewed
+  ) {
+    return actionError(
+      "Gennemgå alle færdigheder, øvelser og billeder, før du gemmer planen.",
+    );
+  }
+
+  const access = await getAuthorizedClient();
+  if (!access.ok) return access.error;
+
+  try {
+    const result = await saveAdminSkillCurriculumDraft(access.client, {
+      clientRequestId,
+      curriculumJobId,
+      expectedUpdatedAt,
+      topicId,
+      wardrobeImageJobId,
+      wardrobePlanJobId,
+    });
+
+    revalidatePath("/emner");
+    revalidatePath(`/emner/${topicId}`);
+
+    return {
+      exerciseCount: result.exerciseIds.length,
+      goalIds: result.goalIds,
       status: "success",
       topicId,
       wardrobeCount: result.wardrobeItemIds.length,

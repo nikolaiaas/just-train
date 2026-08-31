@@ -37,11 +37,14 @@ topic text is turned into exactly 16 descriptions, GPT Image 2 draws one 4×4
 sheet, and trusted code crops it into 16 catalogue images. Those prompts also
 remain database-versioned, so an administrator can improve them without an app
 release. Creating a subject is deliberately a short, independent action. From
-the saved subject, an administrator can then add a skill manually, ask for
-several skill ideas, or build one reviewed package containing the skill, its
-ordered exercises, and 16 topic-aware wardrobe-image drafts in one atomic save.
-Child-visible descriptions are validated to address the child directly rather
-than speaking to a parent or narrating about “the child”.
+the saved subject, an administrator can add one skill manually, keep adding
+ordered exercises until explicitly finishing that skill, or ask AI to plan one
+reviewed curriculum with 2–6 skills and 2–8 exercises per skill, capped at 32
+exercises in total. After the curriculum review, AI creates one shared,
+topic-aware 4×4 wardrobe sheet; trusted code crops it into 16 image drafts, and
+the complete curriculum and wardrobe are saved atomically as unpublished
+drafts. Child-visible descriptions are validated to address the child directly
+rather than speaking to a parent or narrating about “the child”.
 
 ## Requirements
 

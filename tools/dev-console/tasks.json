@@ -115,13 +115,13 @@
     {
       "id": "admin-skill-package-flow",
       "title": "Gør oprettelse af færdigheder samlet og tydelig",
-      "details": "Hold oprettelse af et emne fri for tvungne færdigheder. Fra emnesiden skal redaktøren kunne tilføje en færdighed manuelt eller få AI-forslag og derefter oprette én komplet, menneskegodkendt kladde med færdighed, 2–8 ordnede øvelser og præcis 16 emnetilpassede garderobebilleder. Al offentlig beskrivende tekst skal tale direkte til barnet.",
-      "implementationNotes": "Den lette emneoprettelse, separate emneside og indgangene til manuel eller AI-hjælpet færdighed er bygget. Ét AI-forløb foreslår en komplet færdighed med 2–8 ordnede øvelser og præcis 16 emnetilpassede garderobebilleder, viser alle gemte felter til menneskelig gennemgang og gemmer pakken atomisk som upublicerede kladder. Barnets offentlige tekst valideres ens i Admin, Edge og database. Ren lokal reset, 1008 databaseassertions, concurrencytests, hele kvalitetssuiten samt autentificeret desktop- og 390 px-browserkontrol er grønne uden et betalt provider-kald. Kortet forbliver Doing, indtil den beskyttede merge, hosted migration/function-udrulning og et godkendt syntetisk hosted AI-smoke er verificeret.",
+      "details": "Hold oprettelse af et emne fri for tvungne færdigheder. Fra emnesiden skal redaktøren enten kunne tilføje én færdighed manuelt, fortsætte med flere ordnede øvelser og afslutte tydeligt eller få AI til at planlægge ét samlet, menneskegodkendt forløb med 2–6 færdigheder, 2–8 øvelser pr. færdighed og højst 32 øvelser i alt. Derefter skal AI lave ét fælles emnetilpasset 4×4-garderobeark, som beskæres til 16 billeder, før hele forløbet gemmes atomisk som upublicerede kladder. Al offentlig beskrivende tekst skal tale direkte til barnet.",
+      "implementationNotes": "Den lette emneoprettelse, separate emneside og indgangene til manuel eller AI-hjælpet færdighed er bygget. Den manuelle øvelsesrække kan gentages og afsluttes tydeligt, mens AI-forløbet først viser alle planlagte færdigheder og øvelser til gennemgang og derefter laver én fælles garderobe med 16 emnetilpassede billeder. Hele forløbet gemmes atomisk som kladder, og barnets offentlige tekst valideres ens i Admin, Edge og database. Den endelige lokale migration er verificeret med en ren database-reset; databasen består 1050/1050 assertions, concurrency 5/5, API-klienten 162/162, AI-workeren 61/61 og Admin 157/157. Et autentificeret lokalt browserforløb med den rigtige provider oprettede præcis 2 færdigheder med 2 øvelser hver samt én fælles garderobe med 16 billeder og gemte alt atomisk. Fodbold-emnet stod derefter med 3 færdigheder, 7 øvelser og 16 garderobekladder. Kortet forbliver Doing, fordi merge, deploy og hosted rollout ikke er bestilt eller udført.",
       "evidence": [],
       "status": "doing",
       "priority": 0,
       "createdAt": "2026-08-26T08:39:04.000Z",
-      "updatedAt": "2026-08-26T09:18:05.000Z"
+      "updatedAt": "2026-08-31T20:18:53.000Z"
     },
     {
       "id": "admin-wardrobe-authoring",
